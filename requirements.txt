@@ -1,0 +1,8 @@
+# CaseFlow engine (Python 3.11+). Install PyTorch with CUDA from pytorch.org for GPU speed;
+# the solver also runs on CPU, slowly.
+torch>=2.3
+numpy>=1.26
+fastapi>=0.110
+uvicorn>=0.29
+pydantic>=2.6
+pytest>=8
