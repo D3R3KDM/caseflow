@@ -4,6 +4,8 @@
 
 ![CaseFlow](docs/screens/caseflow_main.png)
 
+**Walkthrough with figures, diagrams and a video (Chinese): [docs/GUIDE.md](docs/GUIDE.md)** · [30 s demo video](docs/media/caseflow_tour.mp4)
+
 You tell CaseFlow what is in your PC: case, graphics card, CPU cooler, and where the fans are and which way they blow. It builds the case on a 6 mm grid and then:
 
 - solves the air flow with its own GPU lattice-Boltzmann solver;
