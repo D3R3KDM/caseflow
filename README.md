@@ -49,7 +49,7 @@ Fan speeds and power are **settings**, not readings from the PC, and utilisation
 | Spare fans | 80 %: ≈1200 rpm | Model unknown: a typical 120 mm fan (1500 rpm, 55 CFM, 1.6 mmH₂O). |
 | Fan flow | rated CFM × speed × 0.6, then the operating point against the case pressure | Rated flow and static pressure from the spec sheets; 0.6 is an estimate. The current layout takes in 130 CFM. |
 | CPU cooler and GPU fans | fixed: ≈53 CFM through the cooler, 1.6 m/s (≈66 CFM) through the GPU | Set. The real 5080 FE stops its fans at light load and runs them at about 1,500 rpm in games. |
-| CPU power | 88 W | The 9700X's power limit (PPT): all cores busy. Games use about 70 W. Not readable without a sensor driver. |
+| CPU power | 88 W | The 9700X's power limit (PPT): all cores busy. Games use about 70 W. Measured live, with no driver, from Windows' Energy Meter counters (RAPL); *use my last 10 min of gaming* fills in your real average. |
 | GPU power | 300 W | Typical in games (limit 360 W). Read live with `nvidia-smi`; *use my last 10 min of gaming* fills in your real average. |
 | Utilisation | not used | Heat follows watts, not % busy. |
 | Room | 25 °C | Set. |
@@ -81,7 +81,7 @@ Room temperature and cooler conductance shift every layout by the same amount, s
 **Absolute temperatures.**
 - CPU: within the range of reviews (about 57–72 °C at 88 W) once the in-case pre-heat and the room temperature are taken out.
 - GPU: probably about 5 °C low. Reviews give about 66 °C (64–68) at a room of about 20–23 °C; the model gives 60 °C at 22 °C. On this PC at 154 W the GPU read 49.9 °C with its fans at 30 %, where the model gives about 45 °C at 25 °C.
-- A gaming session removes this: Configure → *use my last 10 min of gaming* fills in the real GPU power and calibrates the cooler. Then set the room temperature and the fan speeds you see in Armoury Crate.
+- A gaming session removes this: Configure → *use my last 10 min of gaming* fills in the real CPU and GPU power and calibrates the GPU cooler. Then set the room temperature and the fan speeds you see in Armoury Crate.
 
 ## Run
 
@@ -112,7 +112,7 @@ cd web && npm install && npm run dev                              # http://local
 
 The views (your layout, lowest CPU, worst) and the full 32-layout ranking are precomputed in `web/public/data/`, so the app also works with the engine off. With the engine running you can also:
 
-- read live GPU temperature and power (`nvidia-smi`), and keep the last 30 minutes so a gaming session can be used;
+- read live GPU temperature and power (`nvidia-smi`) and CPU package power (Windows' Energy Meter counters), and keep the last 30 minutes so a gaming session can be used;
 - detect the CPU, motherboard and RAM;
 - edit the build and run new simulations (about 40 s each);
 - calibrate the cooler with a measured GPU temperature.
@@ -163,7 +163,7 @@ engine/
   sim.py          build → grid, fan operating point, airflow + heat + dust, web packaging
   thermal.py      air temperature (advection–diffusion), cooler calibration
   optimize.py     exhaustive layout search
-  hardware.py     CPU / board / RAM (Windows CIM), GPU sensors (nvidia-smi)
+  hardware.py     CPU / board / RAM (Windows CIM), GPU sensors (nvidia-smi), CPU power (Energy Meter)
 server/app.py     FastAPI: /api/health, /hardware, /hardware/session, /library, /default_build, /simulate, /job/{id}
 scripts/          precompute.py (web views), serve.sh (engine with auto-restart),
                   check_convergence.py, sanity_check.py, sensitivity.py (checks)

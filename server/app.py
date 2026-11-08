@@ -45,6 +45,7 @@ def hardware(refresh: bool = False) -> dict:
         _hw.update(detect())
     else:
         _hw["gpus"] = gpu_sensors()
+    _hw["cpu_power_w"] = _log.latest().get("cpu_power_w")      # Windows Energy Meter (RAPL), sampled every 2 s
     return _hw
 
 

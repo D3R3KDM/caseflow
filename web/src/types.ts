@@ -19,6 +19,7 @@ export interface HW {
   cpu: { name: string }; board: string; ram_gb: number
   gpus: { name: string; temp_c: number | null; power_w: number | null; fan_pct: number | null }[]
   cpu_temp_c: number | null
+  cpu_power_w?: number | null      // Windows Energy Meter (RAPL), no driver needed
 }
 
 export interface PartRes { intake_rise_c: number; temp_c: number; watts: number; calibrated?: boolean }
@@ -44,7 +45,7 @@ export interface Opt {
   objective: string; dust_weight?: number; space?: string; minutes?: number
 }
 
-export interface SessionAvg { gpu_temp_c: number | null; gpu_power_w: number | null; gpu_fan_pct: number | null; gpu_util_pct: number | null; gpu_clock_mhz: number | null; cpu_util: number | null }
+export interface SessionAvg { gpu_temp_c: number | null; gpu_power_w: number | null; gpu_fan_pct: number | null; gpu_util_pct: number | null; gpu_clock_mhz: number | null; cpu_util: number | null; cpu_power_w?: number | null }
 export interface Session { minutes: number; samples: number; period_s: number; min_gpu_w: number; load_seconds: number; sim_seconds?: number; all: SessionAvg; load: SessionAvg | null; gpu_temp_max: number | null }
 
 export type ViewKey = 'current' | 'best' | 'cpu' | 'worst' | 'custom'

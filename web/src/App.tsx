@@ -225,8 +225,8 @@ export default function App() {
             isOn={(r) => { const v = viewOf(r); return (!!v && v === view) || (view === 'custom' && views.custom?.label === `Custom: ${r.name}`) }} />
         </Holo>) },
       { id: 'cpu', title: 'CPU', pos: [-1.6, 1.08, 0.5], yaw: 0.06, anchor: 'cpu', content: (
-        <Holo tag="CPU" sub={cpuName} width={250} flashKey={'cpu' + flash}>
-          <PartPanel part="cpu" res={res} cur={cur} compare={compare} name={cooler?.name.replace('Thermalright ', '').replace(' ARGB', '') ?? 'cooler'}
+        <Holo tag="CPU" sub={cpuName} live={hw?.cpu_power_w != null} width={250} flashKey={'cpu' + flash}>
+          <PartPanel part="cpu" res={res} cur={cur} compare={compare} name={hw?.cpu_power_w != null ? `live ${hw.cpu_power_w.toFixed(0)} W now` : (cooler?.name.replace('Thermalright ', '').replace(' ARGB', '') ?? 'cooler')}
             extra={[['cooler', `${(res.parts.cpu as { g_w_per_k?: number }).g_w_per_k?.toFixed(1) ?? '2.0'} W/K`]]} />
         </Holo>) },
       { id: 'gpu', title: 'GPU', pos: [-1.6, -0.78, 0.6], yaw: 0.06, anchor: 'gpu', content: (
@@ -278,6 +278,7 @@ export default function App() {
           ))}
         </nav>
         <div className="status">
+          {hw?.cpu_power_w != null && <span className="mono">CPU {hw.cpu_power_w.toFixed(0)} W</span>}
           {g0 && <span className="mono">GPU {g0.temp_c?.toFixed(0)}°C · {g0.power_w?.toFixed(0)} W</span>}
           <span className="mono"><i className={'led' + (online ? ' on' : '')} />{online ? 'ENGINE ONLINE' : 'OFFLINE · PRECOMPUTED'}</span>
         </div>
@@ -380,11 +381,11 @@ export default function App() {
                   setSess(s)
                   if (!s.load || s.load_seconds < 60) return setMsg(`No gaming load in the last 10 min: the GPU drew ${s.min_gpu_w} W or more for only ${s.load_seconds.toFixed(0)} s${s.sim_seconds ? ` (${s.sim_seconds.toFixed(0)} s while CaseFlow itself was simulating are left out)` : ''}. Leave the engine running, play for a few minutes, then press again.`)
                   const L = s.load
-                  if (L.gpu_power_w) setBuild({ ...build, load: { ...build.load, gpu_w: Math.round(L.gpu_power_w) } })
+                  if (L.gpu_power_w) setBuild({ ...build, load: { ...build.load, gpu_w: Math.round(L.gpu_power_w), ...(L.cpu_power_w ? { cpu_w: Math.round(L.cpu_power_w) } : {}) } })
                   if (L.gpu_temp_c != null && L.gpu_power_w != null) setCal({ temp: L.gpu_temp_c.toFixed(1), watts: L.gpu_power_w.toFixed(0) })
                 } catch (e) { setMsg(String(e)) }
               }}>use my last 10 min of gaming</button>
-              {sess?.load && <p className="fine">Under load for {(sess.load_seconds / 60).toFixed(1)} min: GPU {sess.load.gpu_power_w?.toFixed(0)} W · {sess.load.gpu_temp_c?.toFixed(1)} °C · fans {sess.load.gpu_fan_pct?.toFixed(0)} % · {sess.load.gpu_util_pct?.toFixed(0)} % busy · CPU {sess.load.cpu_util?.toFixed(0)} % busy. GPU W and the calibration are filled in; set Room °C to your room's temperature, then run.</p>}
+              {sess?.load && <p className="fine">Under load for {(sess.load_seconds / 60).toFixed(1)} min: GPU {sess.load.gpu_power_w?.toFixed(0)} W · {sess.load.gpu_temp_c?.toFixed(1)} °C · fans {sess.load.gpu_fan_pct?.toFixed(0)} % · {sess.load.gpu_util_pct?.toFixed(0)} % busy · CPU {sess.load.cpu_power_w != null ? `${sess.load.cpu_power_w.toFixed(0)} W, ` : ''}{sess.load.cpu_util?.toFixed(0)} % busy. CPU W, GPU W and the calibration are filled in; set Room °C to your room's temperature, then run.</p>}
             </div>
             <button className="run" disabled={!online || !!job} onClick={() => simulate(build, 'edited layout')}>{online ? 'Run simulation' : 'Engine offline'}</button>
             <p className="fine">About 45 s on the GPU: airflow, then heat, then dust. The engine samples the GPU every 2 s in the background, so a game played while it runs can be used here (time spent on CaseFlow's own simulations is left out). Calibrate only under load (150 W or more); idle readings are ignored.</p>
@@ -398,7 +399,7 @@ export default function App() {
               <p><span className="lbl">Fans</span>Each case fan runs at its operating point: a linear fan curve (rated flow and static pressure, scaled by fan laws) against one case pressure, which the passive openings balance as orifices. This is why "all intake, no exhaust" does not win: its fans stall against +7.8 Pa.</p>
               <p><span className="lbl">Heat</span>CPU and GPU power enters the air in their fin stacks and is carried by the solved flow (conservative advection–diffusion, iterated to convergence; all 388 W leave through the openings). Part temperature = intake air rise + power / cooler conductance.</p>
               <p><span className="lbl">Dust</span>40 000 particles of 20 µm enter where air comes in (the bottom filter stops 85%), drift with the flow plus turbulent diffusion and settling, and stick where they touch. Dust × is the rate at which outside dust settles inside (unfiltered intake × share that settles), relative to your layout.</p>
-              <p><span className="lbl">Inputs</span>Fan speeds, CPU W and GPU W are settings, not readings: Windows cannot see case-fan rpm or CPU power without a sensor driver. Defaults: stock fans 70 %, your fans 80 % of top speed; CPU 88 W (the 9700X's power limit, all cores busy; games use about 70 W); GPU 300 W (typical in games). Utilisation is not used: heat follows watts, not % busy. Room °C and cooler conductance shift every layout equally. Fan speed and the CPU / GPU split can reorder them, so 3 loads and 5 fan-speed settings were tested: the worst layouts never moved, and the recommended one was never meaningfully worse than yours (see the guide).</p>
+              <p><span className="lbl">Inputs</span>Fan speeds, CPU W and GPU W are settings, not readings. Windows cannot see case-fan rpm or CPU temperature without a sensor driver; GPU power (nvidia-smi) and CPU package power (Windows' Energy Meter counters) are measured live, and a gaming session fills them in. Defaults: stock fans 70 %, your fans 80 % of top speed; CPU 88 W (the 9700X's power limit, all cores busy; games use about 70 W); GPU 300 W (typical in games). Utilisation is not used: heat follows watts, not % busy. Room °C and cooler conductance shift every layout equally. Fan speed and the CPU / GPU split can reorder them, so 3 loads and 5 fan-speed settings were tested: the worst layouts never moved, and the recommended one was never meaningfully worse than yours (see the guide).</p>
               <p><span className="lbl">Search</span>Every placement and direction of your three fans (4 mounts × in / out = {n || 32} layouts) is simulated in full, about 45 s each.</p>
               <p><span className="lbl">Limits</span>Mount positions, opening porosity and cooler conductance are estimates; trust the differences between layouts more than the absolute °C. A measured GPU temperature calibrates the cooler.</p>
             </div>
