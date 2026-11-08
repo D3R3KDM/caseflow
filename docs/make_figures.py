@@ -177,7 +177,11 @@ def fig_fields():
     cmap_v = LinearSegmentedColormap.from_list("v", ["#0d1824", "#17698d", CY, "#d6f2ff"])
     cmap_t = LinearSegmentedColormap.from_list("t", ["#120d0a", "#7a3c14", AM, "#ffe2c2"])
     fig, axes = plt.subplots(2, 2, figsize=(10.5, 10.6))
-    for row, (key, title) in enumerate([("current", "Your layout (#1 of 32)"), ("worst", "Worst layout (#32): rear fan blowing in")]):
+    opt = json.loads((ROOT / "data" / "optimize.json").read_text())
+    rk = {r["name"]: i + 1 for i, r in enumerate(opt["ranking"])}
+    cur_name = next(r["name"] for r in opt["ranking"] if r.get("current"))
+    for row, (key, title) in enumerate([("current", f"Your layout (#{rk[cur_name]} of {len(rk)})"),
+                                        ("worst", f"Worst layout (#{rk[opt['worst']]}): {opt['worst']}")]):
         d, u, T = load_view(key)
         j = gpu_slice_index(d)
         m = build_model(d["build"], lib)
@@ -234,21 +238,22 @@ def fig_ranking():
         else:                                                        # ... or the top edge
             ax.text(s - yhi + 0.06, yhi - 0.05, f"Σ {s}", color=MUTED, fontsize=8, ha="left", va="top")
     marks = {r["name"]: i for i, r in enumerate(rows)}
-    notes = [(next(i for i, r in enumerate(rows) if r.get("current")), "your layout: all three out", (10, -30)),
-             (marks[opt["cpu"]], "lowest CPU: 2 top fans in", (-20, -62)),
-             (marks["top-mid + top-rear + rear in"], "all 7 fans in, none out", (-170, 6)),
-             (marks[opt["worst"]], "worst: rear fan in", (-110, -48))]
+    notes = [(next(i for i, r in enumerate(rows) if r.get("current")), "your layout", (60, 6)),
+             (marks[opt["top"]], "best: all three on top, out", (50, -12)),
+             (marks[opt["cpu"]], "lowest CPU: all three on top, in", (20, 30)),
+             (marks["rear in · top-front + top-mid out"], "rear fan in", (12, -44)),
+             (marks[opt["worst"]], "worst: all 7 fans in", (-190, -50))]
     for i, text, off in notes:
         r = rows[i]
         ax.scatter([r["cpu_c"]], [r["gpu_c"]], s=150, facecolor="none", edgecolor=INK, linewidth=1.3, zorder=4)
-        ax.annotate(f"#{i + 1}  {text}\n{r['cpu_c']:.1f} / {r['gpu_c']:.1f} °C · dust {r['dust_in'] * 100:.0f}%", (r["cpu_c"], r["gpu_c"]),
+        ax.annotate(f"#{i + 1}  {text}\n{r['cpu_c']:.1f} / {r['gpu_c']:.1f} °C · dust ×{r['dust_rel']:.2f}", (r["cpu_c"], r["gpu_c"]),
                     xytext=off, textcoords="offset points", color=INK, fontsize=9, arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.8))
     ax.set_xlim(lo, hi)
     ax.set_ylim(ylo, yhi)
     ax.set_xlabel("CPU temperature (°C)")
     ax.set_ylabel("GPU temperature (°C)")
     ax.set_title("All 32 placements of your three fans (lower-left is better; dashed = equal CPU + GPU)")
-    ax.legend(loc="upper right", fontsize=9, labelcolor=INK)
+    ax.legend(loc="lower right", fontsize=9, labelcolor=INK)
     save(fig, "fig_ranking.png")
 
 
@@ -263,8 +268,12 @@ def fig_dust():
     y = np.arange(len(names))[::-1]
     h = 0.36
     fig, ax = plt.subplots(figsize=(7.6, 4))
-    ax.barh(y + h / 2 + 0.01, va, height=h, color=CY, label=f"your layout · {a['dust_entering_rel'] * 100:.0f}% of outside dust gets in")
-    ax.barh(y - h / 2 - 0.01, vb, height=h, color=AM, label=f"worst layout · {b['dust_entering_rel'] * 100:.0f}% gets in")
+    ra = json.loads((DATA / "current.json").read_text())
+    rb = json.loads((DATA / "worst.json").read_text())
+    rate = lambda r, d: r["flow_in_m3s"] * d["dust_entering_rel"] * d["deposited_frac"]  # noqa: E731
+    rel = rate(rb, b) / rate(ra, a)
+    ax.barh(y + h / 2 + 0.01, va, height=h, color=CY, label="your layout (dust settling ×1.00)")
+    ax.barh(y - h / 2 - 0.01, vb, height=h, color=AM, label=f"worst layout (dust settling ×{rel:.2f})")
     for yy, v in zip(y + h / 2, va):
         ax.text(v + 0.4, yy, f"{v:.0f}%", va="center", color=INK, fontsize=8.5)
     for yy, v in zip(y - h / 2, vb):

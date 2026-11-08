@@ -21,19 +21,23 @@ The reference build is a Lian Li LANCOOL 207 with an RTX 5080 Founders Edition, 
 - 4 stock fans: 2 × 140 mm front intake, 2 × 120 mm bottom intake.
 - 3 extra 120 mm fans: top-mid, top-rear and rear, all exhaust.
 
-| # | Your 3 fans | CPU | GPU | Dust let in |
+| # | Your 3 fans | CPU | GPU | Dust settling |
 |---|---|---|---|---|
-| **1** | **top-mid + top-rear + rear out (the current layout)** | **76.5 °C** | **64.0 °C** | **69 %** |
-| 2 | top-front + top-rear + rear out | 76.8 °C | 64.1 °C | 68 % |
-| 3 | top-front + top-rear in · rear out (lowest CPU) | 75.1 °C | 65.8 °C | 81 % |
-| 31 | all seven fans blowing in (no exhaust fan) | 78.0 °C | 67.6 °C | 88 % |
-| 32 | rear in · top-front + top-mid out (worst) | 79.4 °C | 66.6 °C | 76 % |
+| **1** | **all three on top, blowing out (rear mount empty)** | **75.6 °C** | **62.2 °C** | ×0.97 |
+| 2 | top-front + top-rear + rear out | 76.0 °C | 63.0 °C | ×0.93 |
+| 3 | top-mid + top-rear + rear out (the current layout) | 75.8 °C | 63.4 °C | ×1.00 |
+| 8 | all three on top, blowing in (lowest CPU) | 74.6 °C | 66.6 °C | ×0.88 |
+| 22 | rear in · top-front + top-mid out | 79.5 °C | 65.9 °C | ×0.94 |
+| 32 | all seven fans blowing in (worst) | 79.9 °C | 69.5 °C | ×0.90 |
 
-All results are at CPU 88 W, GPU 300 W and a room at 25 °C. The current layout ranks first of 32, so keep it.
+All results are at CPU 88 W, GPU 300 W and a room at 25 °C. Dust settling is relative to the current layout.
 
-- **Direction matters more than position.** The top two layouts are both all-exhaust; they differ only in which top holes are used, and are within 0.4 °C of each other.
-- **Avoid intakes on the top.** Turning any of the three fans into an intake warms the GPU by 1.4–3.6 °C and lets in 6–19 points more dust, because the top has no filter.
-- **Never use the rear fan as an intake.** It blows straight into the CPU cooler's exhaust. The bottom eight layouts all do this; with only the rear blowing in, the CPU runs 2.4–2.9 °C hotter.
+- **Keep all three spare fans as exhaust.** The top four layouts are all-exhaust.
+- **Optional improvement:** move the rear fan to the empty top-front mount (still exhaust). The GPU runs about 1.3 °C cooler (0.7–1.8 °C across the sensitivity runs) and the CPU about the same.
+- **Avoid intakes on the top.** Each extra intake warms the GPU; three of them cost about 3 °C.
+- **Never use the rear fan as an intake.** It blows straight into the CPU cooler's exhaust. The bottom twelve layouts all do this.
+- **Never make all fans intakes.** The heat has nowhere to go: this is the worst of the 32 layouts.
+- **Dust barely depends on the layout** (×0.88–1.09), because only the bottom has a filter. The optional front filter (LAN207-1X) cuts the unfiltered share from 69 % to 17 %.
 
 ## Run
 
@@ -72,7 +76,7 @@ The views (your layout, lowest CPU, worst) and the full 32-layout ranking are pr
 Python: see `requirements.txt` (PyTorch with CUDA for speed). `start.bat` uses `.venv` in this folder, or `../.venv`.
 
 ```bash
-python engine/optimize.py        # search all 32 layouts (≈19 min on an RTX 5080), resumable
+python engine/optimize.py        # search all 32 layouts (≈25 min on an RTX 5080), resumable
 python scripts/precompute.py     # write the web views from the search result
 python -m pytest tests           # fast engine checks (no GPU run)
 ```
@@ -82,16 +86,30 @@ python -m pytest tests           # fast engine checks (no GPU run)
 | Stage | Model |
 |---|---|
 | **Geometry** | Parts come from `data/parts/library.json`: dimensions, fan mounts, fan specs and source links. They are placed in the case on a 6 mm grid. <br>Solid: walls, PSU, motherboard, GPU PCB and CPU fin towers (as heat zones). <br>Empty mesh mounts and the vented slot covers are open to the room. |
-| **Air** | Our own D3Q19 lattice-Boltzmann solver (`engine/lbm.py`, PyTorch on the GPU) with BGK collision, Smagorinsky turbulence and bounce-back walls. <br>Fans are cells with a set air velocity. A layer of "room" cells around the case holds outside air at rest. |
+| **Air** | Our own D3Q19 lattice-Boltzmann solver (`engine/lbm.py`, PyTorch on the GPU) with BGK collision, Smagorinsky turbulence and bounce-back walls. <br>Fans are cells with a set air velocity. <br>The layer of "room" cells around the case is an open boundary: ambient pressure, with the velocity of the cell inside. So fans deliver their set flow (≈ 95 %) and the openings are not artificially resistive. |
 | **Fans** | Each case fan runs at its **operating point**. <br>Fan curve: Q = Q₀ (1 − Δp / p_max), from the rated flow and static pressure, scaled by the fan laws. <br>All fans see one case pressure p. The passive openings balance the flow as orifices: Q = C_d A √(2\|p\| / ρ). <br>p is found by bisection. Without this step, "all intake, no exhaust" ranked first. With it, those fans stall against +7.8 Pa and that layout drops to 14th. |
-| **Heat** | CPU and GPU power enters the air in their fin stacks and is carried by the solved flow (upwind advection–diffusion), iterated until the intake temperatures change by less than 0.005 K. <br>Part temperature = intake air rise + P / G, where G is the cooler's conductance. One measured temperature calibrates G. |
+| **Heat** | CPU and GPU power enters the air in their fin stacks and is carried by the solved flow. <br>The transport is conservative: upwind fluxes through cell faces, and mixing only inside the case. So all the heat leaves through the openings (energy balance 99.9 %). <br>It is iterated until the intake temperatures change by less than 0.005 K. <br>Part temperature = intake air rise + P / G, where G is the cooler's conductance. One measured temperature calibrates G. |
 | **Dust** | 40 000 particles of 20 µm are released where air comes in, weighted by inflow; the bottom filter stops 85 %. <br>They drift with the flow plus turbulent diffusion and settling, and stick where they touch a surface. |
-| **Search** | Stock fans stay where they are. The spare fans go on every free mount, each blowing in or out (C(4,3) × 2³ = 32 layouts), and every layout gets the full simulation. <br>Score = CPU + GPU °C + 2 °C × the fraction of outside dust let in. |
+| **Search** | Stock fans stay where they are. The spare fans go on every free mount, each blowing in or out (C(4,3) × 2³ = 32 layouts), and every layout gets the full simulation. <br>Score = CPU + GPU °C + 2 °C × dust settling rate (current layout = 1), where dust settling = unfiltered intake × share that settles. <br>Layouts within 0.5 °C of the top count as a tie: no change is recommended for less. |
+
+**Checks** (scripts in `scripts/`):
+
+| Check | Result |
+|---|---|
+| `check_convergence.py` | Heat iterated to 80 000 steps and airflow to 16 000 steps: temperatures change by less than 0.1 °C. |
+| `sanity_check.py` | Fans deliver about 95 % of their set flow. Shell out/in flow is 0.95–0.99. Heat carried out is 99.9 % of the 388 W, and exhaust air rise matches P / (ρ c_p Q). |
+| `sensitivity.py` | Varied one at a time: heat diffusivity ÷4 / ×2, fan derate 0.5 / 0.7, opening porosity ×0.5 / ×1.5, GPU slot 40 mm higher, front filter, 4 mm grid. <br>The layout ranking is unchanged in every run, except for one swap between the two near-tied layouts. Absolute temperatures move by 2–3 °C. |
+| Reviews | The RTX 5080 FE games at about 64–66 °C in reviews; the model gives 63 °C. |
+
+These checks found two real bugs, both fixed and the search re-run:
+- The heat solve was stopped after 5 000 iterations, before it converged.
+- A room boundary held at rest delivered only about 70 % of each fan's flow and lost heat. This made "all intake" look better than it is.
 
 **Limits.**
 - Mount positions, opening porosity and cooler conductance are estimates from specs and reviews (marked `est` in the library).
-- Fans are modelled as uniform jets, without swirl.
-- Trust the differences between layouts more than the absolute temperatures.
+- Fans are modelled as uniform jets, without swirl. The grid uses a higher viscosity than real air, for stability.
+- The room outside stays at 25 °C, so hot exhaust is never drawn back in.
+- Trust the differences between layouts more than the absolute temperatures. Calibrate with a GPU reading taken under load (150 W or more); idle readings are rejected.
 
 ## Layout
 

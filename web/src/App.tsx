@@ -99,6 +99,8 @@ export default function App() {
   const rankOf = (name?: string | null) => (name ? rows.findIndex((r) => r.name === name) + 1 : 0)
   const curRow = rows.find((r) => r.current)
   const bestIsCur = !!curRow && curRow.name === opt?.best
+  const topRow = rows.find((r) => r.name === opt?.top) ?? rows[0]
+  const curTied = !!curRow && (opt?.tied?.includes(curRow.name) ?? false) && (opt?.tied?.length ?? 0) > 1
   const cur = views.current ?? null
   const res = views[view] ?? cur
   const other = bestIsCur ? views.worst : views.best
@@ -110,7 +112,7 @@ export default function App() {
   const key = (r: RankRow) => r.combined ?? r.score
   const [lo, hi] = useMemo(() => (rows.length ? [Math.min(...rows.map(key)), Math.max(...rows.map(key))] : [0, 1]), [rows])
   const tagOf = (r: RankRow) => [
-    r.current && 'YOURS', r.name === opt?.best && !r.current && 'RECOMMENDED', r.name === opt?.cpu && 'LOWEST CPU', r.name === opt?.worst && 'WORST',
+    r.current && 'YOURS', (opt?.tied?.length ?? 0) > 1 && opt?.tied?.includes(r.name) && 'TIED #1', r.name === opt?.best && !r.current && 'RECOMMENDED', r.name === opt?.cpu && 'LOWEST CPU', r.name === opt?.worst && 'WORST',
   ].filter(Boolean) as string[]
   const shown = rows.map((r, i) => ({ r, i })).filter(({ r, i }) => allRows || i < 6 || tagOf(r).length > 0)
   const stock = useMemo(() => {
@@ -123,7 +125,7 @@ export default function App() {
     r.current ? 'current' : r.name === opt?.best ? 'best' : r.name === opt?.cpu ? 'cpu' : r.name === opt?.worst ? 'worst' : null
   const tabs = (['current', 'best', 'cpu', 'worst', 'custom'] as ViewKey[]).filter((k) => views[k] && !(k === 'best' && bestIsCur))
   const tabLabel: Record<ViewKey, [string, string]> = {
-    current: ['Your layout', `#${rankOf(curRow?.name)}/${n}`], best: ['Recommended', `#1/${n}`],
+    current: ['Your layout', curTied ? 'tied #1' : `#${rankOf(curRow?.name)}/${n}`], best: ['Recommended', `#1/${n}`],
     cpu: ['Lowest CPU', `#${rankOf(opt?.cpu)}/${n}`], worst: ['Worst', `#${n}/${n}`], custom: ['Custom', ''],
   }
   const compare = view !== 'current'
@@ -202,7 +204,7 @@ export default function App() {
     } else if (online) {
       simulate(b, desc + (row ? ` · #${rank}/${n} in the search` : ''))
     } else if (row) {
-      setMsg(`${desc} → layout #${rank}/${n}: CPU ${row.cpu_c.toFixed(1)} °C, GPU ${row.gpu_c.toFixed(1)} °C, dust ${Math.round(row.dust_in * 100)}%. Start the engine to see its airflow.`)
+      setMsg(`${desc} → layout #${rank}/${n}: CPU ${row.cpu_c.toFixed(1)} °C, GPU ${row.gpu_c.toFixed(1)} °C, dust ×${(row.dust_rel ?? 1).toFixed(2)}. Start the engine to see its airflow.`)
     } else {
       setMsg(`${desc}: not one of the ${n} searched layouts. Start the engine (start.bat) to simulate it.`)
     }
@@ -244,7 +246,8 @@ export default function App() {
       screens.push({ id: 'verdict', title: 'Verdict', pos: [3.35, -0.04, -0.12], yaw: -0.2, content: (
         <Holo tag="VERDICT" sub={bestIsCur ? 'yours vs worst' : 'yours vs best'} width={290} flashKey="verdict">
           <VerdictPanel cur={cur} other={other} bestIsCur={bestIsCur} n={n} rankCur={rankOf(curRow?.name)} rankOther={rankOf(bestIsCur ? opt?.worst : opt?.best)}
-            steps={steps} onOpen={(k) => setView(k === 'current' ? 'current' : otherKey)} />
+            steps={steps} onOpen={(k) => setView(k === 'current' ? 'current' : otherKey)}
+            tie={curTied && topRow && !topRow.current && curRow ? { name: topRow.name, delta: (curRow.combined ?? curRow.score) - (topRow.combined ?? topRow.score), margin: opt?.tie_margin ?? 0.5 } : null} />
         </Holo>) })
   }
 
@@ -360,21 +363,26 @@ export default function App() {
             <div className="cfg-row">
               <label><span className="lbl">GPU measured °C</span><input className="field" placeholder="—" value={cal.temp} onChange={(e) => setCal({ ...cal, temp: e.target.value })} /></label>
               <label><span className="lbl">at W</span><input className="field" placeholder="—" value={cal.watts} onChange={(e) => setCal({ ...cal, watts: e.target.value })} /></label>
-              <button className="textbtn" disabled={!g0?.temp_c} onClick={() => g0?.temp_c != null && g0.power_w != null && setCal({ temp: g0.temp_c.toFixed(0), watts: g0.power_w.toFixed(0) })}>use live</button>
+              <button className="textbtn" disabled={!g0?.temp_c} title="Use the GPU's current temperature and power - only meaningful under load (a game running)"
+                onClick={() => {
+                  if (g0?.temp_c == null || g0.power_w == null) return
+                  if (g0.power_w < 150) return setMsg(`GPU is at ${g0.power_w.toFixed(0)} W: calibrate while a game runs (150 W or more); at idle the GPU fans barely spin.`)
+                  setCal({ temp: g0.temp_c.toFixed(0), watts: g0.power_w.toFixed(0) })
+                }}>use live</button>
             </div>
             <button className="run" disabled={!online || !!job} onClick={() => simulate(build, 'edited layout')}>{online ? 'Run simulation' : 'Engine offline'}</button>
-            <p className="fine">About 40 s on the GPU: airflow, then heat, then dust. Calibrating with a measured GPU temperature under load fixes the cooler's conductance.</p>
+            <p className="fine">About 40 s on the GPU: airflow, then heat, then dust. Calibrate with a GPU temperature measured under load (a game running, 150 W or more); an idle reading is ignored.</p>
           </HudWindow>
         )}
 
         {infoOpen && (
           <HudWindow id="method" code="06" title="Method" side="right" x={20} y={72} w={380} layoutKey={layoutKey} onClose={() => setInfoOpen(false)}>
             <div className="method">
-              <p><span className="lbl">Airflow</span>Our own D3Q19 lattice-Boltzmann solver (PyTorch, GPU, Smagorinsky turbulence) on a 6 mm grid of the case. Walls, PSU, board, GPU and cooler are solid; case fans and the GPU / CPU cooler fans are cells with a set air velocity; empty mesh mounts and slot covers are open to the room.</p>
+              <p><span className="lbl">Airflow</span>Our own D3Q19 lattice-Boltzmann solver (PyTorch, GPU, Smagorinsky turbulence) on a 6 mm grid of the case. Walls, PSU, board, GPU and cooler are solid; case fans and the GPU / CPU cooler fans are cells with a set air velocity; empty mesh mounts and slot covers are open to the room, an open boundary at room pressure, so fans deliver their set flow.</p>
               <p><span className="lbl">Fans</span>Each case fan runs at its operating point: a linear fan curve (rated flow and static pressure, scaled by fan laws) against one case pressure, which the passive openings balance as orifices. This is why "all intake, no exhaust" does not win: its fans stall against +7.8 Pa.</p>
-              <p><span className="lbl">Heat</span>CPU and GPU power enters the air in their fin stacks and is carried by the solved flow (advection–diffusion, iterated to convergence). Part temperature = intake air rise + power / cooler conductance.</p>
-              <p><span className="lbl">Dust</span>40 000 particles of 20 µm enter where air comes in (the bottom filter stops 85%), drift with the flow plus turbulent diffusion and settling, and stick where they touch.</p>
-              <p><span className="lbl">Search</span>Every placement and direction of your three fans (4 mounts × in / out = {n || 32} layouts) is simulated in full, about 35 s each.</p>
+              <p><span className="lbl">Heat</span>CPU and GPU power enters the air in their fin stacks and is carried by the solved flow (conservative advection–diffusion, iterated to convergence; all 388 W leave through the openings). Part temperature = intake air rise + power / cooler conductance.</p>
+              <p><span className="lbl">Dust</span>40 000 particles of 20 µm enter where air comes in (the bottom filter stops 85%), drift with the flow plus turbulent diffusion and settling, and stick where they touch. Dust × is the rate at which outside dust settles inside (unfiltered intake × share that settles), relative to your layout.</p>
+              <p><span className="lbl">Search</span>Every placement and direction of your three fans (4 mounts × in / out = {n || 32} layouts) is simulated in full, about 45 s each.</p>
               <p><span className="lbl">Limits</span>Mount positions, opening porosity and cooler conductance are estimates; trust the differences between layouts more than the absolute °C. A measured GPU temperature calibrates the cooler.</p>
             </div>
           </HudWindow>

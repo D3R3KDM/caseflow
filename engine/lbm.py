@@ -64,12 +64,16 @@ class LBMResult:
 class LBMSolver:
     def __init__(self, solid: torch.Tensor, cfg: LBMConfig | None = None, device: str | torch.device = "cuda",
                  inlet_profile=None, top_lid: bool = False, forced_mask=None, forced_u=None,
-                 reservoir_mask=None, open_inlet: bool = True):
+                 reservoir_mask=None, open_inlet: bool = True, open_shell: bool = False):
         """Optional extras (all off by default, the free-stream tunnel is unchanged):
         inlet_profile  [Z] streamwise inlet velocity per height (atmospheric boundary layer)
         top_lid        top layer held at the inlet's top velocity (instead of wrapping to the ground)
         forced_mask/u  cells whose velocity is imposed every step (fans), u: [3, X, Y, Z] or [B, 3, X, Y, Z]
         reservoir_mask cells held at rest at rho = 1 (ambient air around a closed box)
+        open_shell     the reservoir is the outer layer of the box: hold it at rho = 1 but give it the velocity of
+                       the cell inside (pressure outlet / inlet). Without this, air entering or leaving through an
+                       opening meets populations at rest, which halves the flux a fan can push and makes passive
+                       openings far more resistive than real grilles.
         open_inlet     False disables the inlet / outlet planes (closed domains)"""
         cfg = cfg or LBMConfig()
         self.cfg = cfg
@@ -148,6 +152,7 @@ class LBMSolver:
             self.reservoir_mask = (rm if rm.dim() == 4 else rm.unsqueeze(0)).unsqueeze(1)
             self.f_rest = self.equilibrium(torch.ones((1, 1, 1, 1), dtype=dt, device=dev),
                                            torch.zeros((1, 3, 1, 1, 1), dtype=dt, device=dev))
+        self.open_shell = open_shell
         self.step_count = 0
         self.mass0 = (self.f.sum(1) * self.fluid_f).sum(dim=(1, 2, 3))
         self._graph = None
@@ -207,12 +212,29 @@ class LBMSolver:
             rho_l = fs.sum(1)
             feq_f = self.equilibrium(rho_l, self.forced_u.expand(fs.shape[0], -1, -1, -1, -1))
             fs = torch.where(self.forced_mask, feq_f, fs)
-        if self.reservoir_mask is not None:  # ambient air at rest
-            fs = torch.where(self.reservoir_mask, self.f_rest, fs)
+        if self.reservoir_mask is not None:
+            if self.open_shell:              # ambient pressure, velocity of the cell inside
+                fs = self._open_shell(fs)
+            else:                            # ambient air at rest
+                fs = torch.where(self.reservoir_mask, self.f_rest, fs)
         # keep solid interior at rest (never read by fluid cells, keeps values finite)
         fs = torch.where(self.solid5, self.w5, fs)
         self.f.copy_(fs)
         return fpost
+
+    def _open_shell(self, fs: torch.Tensor) -> torch.Tensor:
+        """Outer layer of the box = equilibrium at rho = 1 with the velocity of the adjacent inner cell."""
+        a = slice(None)
+        for dim, n in ((2, fs.shape[2]), (3, fs.shape[3]), (4, fs.shape[4])):
+            for res_i, in_i in ((0, 1), (n - 1, n - 2)):
+                sr = [a] * 5
+                si = [a] * 5
+                sr[dim], si[dim] = res_i, in_i
+                f_in = fs[tuple(si)]                                          # [B, 19, face...]
+                rho = f_in.sum(1)
+                u = torch.einsum("id,bi...->bd...", self.c, f_in) / rho.unsqueeze(1)
+                fs[tuple(sr)] = self.equilibrium(torch.ones_like(rho), u)
+        return fs
 
     def momentum_exchange(self, fpost: torch.Tensor) -> torch.Tensor:
         """Force on the body [B, 3] from post-collision populations crossing wall links."""

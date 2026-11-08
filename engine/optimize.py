@@ -30,7 +30,8 @@ STOCK = [{"slot": "front_low", "fan": "lianli-207-front-140", "mode": "in", "pct
 LOAD = {"cpu_w": 88.0, "gpu_w": 300.0, "ambient_c": 25.0}
 FREE = ["top_1", "top_2", "top_3", "rear"]
 LABEL = {"top_1": "top-front", "top_2": "top-mid", "top_3": "top-rear", "rear": "rear"}
-DUST_WEIGHT = 2.0   # deg C of CPU+GPU temperature traded for letting in 100 % more of the outside dust (judgement call)
+DUST_WEIGHT = 2.0   # deg C of CPU+GPU temperature traded for dust settling 100 % faster than in your layout (judgement call)
+TIE = 0.5           # deg C: layouts closer than this to the top score are tied within the model's accuracy
 
 
 def fans120(spec: list[tuple[str, str]]) -> list[dict]:
@@ -77,21 +78,31 @@ def summarize(name, b, r) -> dict:
     if r.get("dust"):
         d = r["dust"]
         out.update({"dust_in": d["dust_entering_rel"], "dust_settles": d["deposited_frac"],
-                    "dust_top": [(x["name"], x["share"]) for x in d["by_part"][:4]]})
+                    "dust_top": [(x["name"], x["share"]) for x in d["by_part"][:4]],
+                    # absolute: unfiltered intake (CFM of outside air whose dust gets in) and the part of it that settles
+                    "dust_cfm": out["cfm_in"] * d["dust_entering_rel"],
+                    "dust_rate": out["cfm_in"] * d["dust_entering_rel"] * d["deposited_frac"]})
     return out
 
 
 def pick(rows: list[dict]) -> dict:
+    cur = next((x for x in rows if x.get("current")), None)
+    ref = cur["dust_rate"] if cur and cur.get("dust_rate") else max(x["dust_rate"] for x in rows)
     for x in rows:
-        x["combined"] = x["score"] + DUST_WEIGHT * x["dust_in"]
+        # dust: rate at which outside dust settles inside (unfiltered intake x settling share), relative to your layout
+        x["dust_rel"] = x["dust_rate"] / ref
+        x["combined"] = x["score"] + DUST_WEIGHT * x["dust_rel"]
     coolest = min(rows, key=lambda x: x["score"])
-    rec = min(rows, key=lambda x: x["combined"])
-    clean = min(rows, key=lambda x: (round(x["dust_in"], 2), x["score"]))
+    top = min(rows, key=lambda x: x["combined"])
+    tied = [x["name"] for x in rows if x["combined"] - top["combined"] < TIE]
+    # a layout within TIE of the top is as good as the top: never recommend a change for less than that
+    rec = cur if cur is not None and cur["name"] in tied else top
+    clean = min(rows, key=lambda x: (round(x["dust_rel"], 2), x["score"]))
     cpu = min(rows, key=lambda x: (x["cpu_c"], x["combined"]))
     worst = max(rows, key=lambda x: x["combined"])
-    return {"coolest": coolest["name"], "best": rec["name"],
+    return {"coolest": coolest["name"], "best": rec["name"], "top": top["name"], "tied": tied, "tie_margin": TIE,
             # alternatives are only worth a view when they differ by more than the noise between runs
-            "cleanest": clean["name"] if clean["dust_in"] <= rec["dust_in"] - 0.05 else None,
+            "cleanest": clean["name"] if clean["dust_rel"] <= rec["dust_rel"] - 0.1 else None,
             "cpu": cpu["name"] if cpu["cpu_c"] <= rec["cpu_c"] - 0.5 else None,
             "worst": worst["name"], "dust_weight": DUST_WEIGHT}
 
@@ -102,7 +113,7 @@ def main():
     done = {}
     if P.exists():
         old = json.loads(P.read_text())
-        if old.get("version") == 5:
+        if old.get("version") == 6:
             done = {x["name"]: x for x in old["ranking"]}
     t0 = time.time()
     rows = []
@@ -116,12 +127,13 @@ def main():
         x = rows[-1]
         print(f"[opt {i + 1:2d}/{len(cands)}] {name:44s} GPU {x['gpu_c']:.1f}  CPU {x['cpu_c']:.1f}  sum {x['score']:.1f}"
               f"  dust {x['dust_in'] * 100:.0f}%  {x['pressure']}{'  <- yours' if x['current'] else ''}", flush=True)
-        P.write_text(json.dumps({"version": 5, "partial": True, "ranking": rows}, indent=1))
-    rows.sort(key=lambda x: x["score"] + DUST_WEIGHT * x["dust_in"])
-    res = {"version": 5, "ranking": rows, **pick(rows),
+        P.write_text(json.dumps({"version": 6, "partial": True, "ranking": rows}, indent=1))
+    picked = pick(rows)                                   # also sets each row's dust_rel and combined score
+    rows.sort(key=lambda x: x["combined"])
+    res = {"version": 6, "ranking": rows, **picked,
            "space": "4 stock fans fixed (2x140 front in, 2x120 bottom in); the user's 3x120 fans over "
                     "{top-front, top-mid, top-rear, rear} x {in, out}: 32 layouts, all simulated",
-           "objective": "recommended = lowest (CPU + GPU temperature) + 2 x (fraction of outside dust that gets in)",
+           "objective": "score = CPU + GPU temperature + 2 x dust settling rate relative to your layout; within 0.5 of the top counts as a tie",
            "minutes": (time.time() - t0) / 60}
     P.write_text(json.dumps(res, indent=1))
     print("OPT DONE best:", res["best"], "| coolest:", res["coolest"], "| cleanest:", res["cleanest"],

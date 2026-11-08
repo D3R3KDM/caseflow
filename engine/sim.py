@@ -385,19 +385,26 @@ def dust_by_part(dep: np.ndarray, model: dict) -> list[dict]:
 
 
 # ----------------------------------------------------------------------------- run
+def run_airflow(model: dict, steps: int = 8000, callback=None) -> tuple[torch.Tensor, torch.Tensor]:
+    """Time-averaged velocity [3, X, Y, Z] and gauge pressure [X, Y, Z], both in lattice units.
+    The room layer around the case is an open pressure boundary (see LBMSolver open_shell)."""
+    cfg = LBMConfig(u_in=0.0, tau=0.52, smagorinsky=0.16, sponge=0)
+    solver = LBMSolver(torch.from_numpy(model["solid"])[None], cfg, open_inlet=False,
+                       forced_mask=torch.from_numpy(model["forced"]), forced_u=torch.from_numpy(model["fu"]),
+                       reservoir_mask=torch.from_numpy(model["reservoir"]), open_shell=True)
+    res = solver.run(steps=steps, avg_from=int(steps * 0.5), report_every=200,
+                     callback=(lambda s, n, cd: callback(s / n)) if callback else None, check_nan_every=1000)
+    u, p = res.u[0], res.p[0]
+    del solver
+    return u, p
+
+
 def simulate_build(build: dict, steps: int = 8000, callback=None, with_dust: bool = True) -> dict:
     lib = load_library()
     t0 = time.time()
     model = build_model(build, lib)
     load = {"cpu_w": 88.0, "gpu_w": 300.0, "ambient_c": 25.0, **build.get("load", {})}
-    cfg = LBMConfig(u_in=0.0, tau=0.52, smagorinsky=0.16, sponge=0)
-    solver = LBMSolver(torch.from_numpy(model["solid"])[None], cfg, open_inlet=False,
-                       forced_mask=torch.from_numpy(model["forced"]), forced_u=torch.from_numpy(model["fu"]),
-                       reservoir_mask=torch.from_numpy(model["reservoir"]))
-    res = solver.run(steps=steps, avg_from=int(steps * 0.5), report_every=200,
-                     callback=(lambda s, n, cd: callback(0.6 * s / n)) if callback else None, check_nan_every=1000)
-    u_lat = res.u[0]
-    del solver
+    u_lat, _ = run_airflow(model, steps, callback=(lambda f: callback(0.6 * f)) if callback else None)
     if callback:
         callback(0.62)
     parts_thermal = {"cpu_w": load["cpu_w"], "gpu_w": load["gpu_w"]}

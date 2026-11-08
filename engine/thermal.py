@@ -9,40 +9,49 @@ from __future__ import annotations
 import torch
 
 RHO_CP = 1200.0           # J / (m^3 K), air
+KAPPA = 0.04              # thermal (eddy) diffusivity in lattice units: cells^2 per step
 
 
-def solve_temperature(u_lat: torch.Tensor, model: dict, parts: dict, iters: int = 5000, kappa: float = 0.04,
+def solve_temperature(u_lat: torch.Tensor, model: dict, parts: dict, iters: int = 5000, kappa: float | None = None,
                       dx_mm: float = 6.0, u_lat_per_ms: float = 0.05 / 1.5, T0: torch.Tensor | None = None) -> torch.Tensor:
     """Steady air temperature rise (K above ambient). model: shape, solid, reservoir, heat{cpu,gpu} masks;
-    parts: cpu_w, gpu_w (W). T0 continues from an earlier field (for convergence checks)."""
+    parts: cpu_w, gpu_w (W). T0 continues from an earlier field (for convergence checks).
+
+    Flux form: heat moves between cells only through shared faces (upwind value times face velocity), so the
+    heat the parts release can leave the case only by being carried out through an opening. Diffusion (turbulent
+    mixing) acts only between air cells inside the case: walls are adiabatic and there is no diffusive leak into
+    the room air at the openings."""
+    kappa = KAPPA if kappa is None else kappa
     dev = u_lat.device
     solid = torch.from_numpy(model["solid"]).to(dev)
     ambient = torch.from_numpy(model["reservoir"]).to(dev)
-    fluid = (~solid).float()
-    dt_phys = (dx_mm / 1000.0) * u_lat_per_ms              # s per lattice step (u_phys = u_lat / u_lat_per_ms)
+    fluid = (~solid).float()                                  # air, including the room layer around the case
+    inner = (~solid & ~ambient).float()                       # air inside the case
+    dt_phys = (dx_mm / 1000.0) * u_lat_per_ms                 # s per lattice step (u_phys = u_lat / u_lat_per_ms)
     v_cell = (dx_mm / 1000.0) ** 3
     q = torch.zeros(model["shape"], device=dev)
     for key, watts in (("cpu", parts["cpu_w"]), ("gpu", parts["gpu_w"])):
-        m = torch.from_numpy(model["heat"][key]).to(dev) & ~solid
+        m = torch.from_numpy(model["heat"][key]).to(dev) & ~solid & ~ambient
         n = int(m.sum())
         if n:
             q[m] = watts / n / (RHO_CP * v_cell) * dt_phys     # K per lattice step per cell
     T = T0.clone() if T0 is not None else torch.zeros(model["shape"], device=dev)
-    ux, uy, uz = u_lat[0], u_lat[1], u_lat[2]
+    # face velocity between cell i and i+1 along each axis; zero across walls
+    faces = []
+    for d in range(3):
+        uc = u_lat[d]
+        faces.append((d, 0.5 * (uc + torch.roll(uc, -1, d)) * fluid * torch.roll(fluid, -1, d)))
+    neighbours = [(d, sh, torch.roll(inner, sh, d) * inner) for d in range(3) for sh in (1, -1)]
     for _ in range(iters):
-        adv = torch.zeros_like(T)
-        for d, uc in ((0, ux), (1, uy), (2, uz)):
-            fwd = torch.roll(T, -1, d) - T
-            bwd = T - torch.roll(T, 1, d)
-            adv = adv + torch.where(uc > 0, uc * bwd, uc * fwd)
-        lap = torch.zeros_like(T)                          # diffusion only between fluid cells
-        for d in range(3):
-            for sh in (1, -1):
-                nb = torch.roll(T, sh, d)
-                nbf = torch.roll(fluid, sh, d)
-                lap = lap + (nb - T) * nbf
-        T = (T - adv + kappa * lap + q) * fluid
-        T = torch.where(ambient, torch.zeros_like(T), T)
+        div = torch.zeros_like(T)
+        for d, uf in faces:
+            F = torch.where(uf > 0, uf * T, uf * torch.roll(T, -1, d))   # flux through each cell's + face
+            div = div + F - torch.roll(F, 1, d)
+        lap = torch.zeros_like(T)
+        for d, sh, m in neighbours:
+            lap = lap + (torch.roll(T, sh, d) - T) * m
+        T = (T - div + kappa * lap + q) * fluid
+        T = torch.where(ambient, torch.zeros_like(T), T)     # room air stays at ambient
     return T
 
 
@@ -63,7 +72,11 @@ def solve_temperature_converged(u_lat: torch.Tensor, model: dict, parts: dict, p
     return T, done
 
 
-def calibrate_g(measured_c: float, watts: float, ambient_c: float, intake_rise_c: float) -> float | None:
-    """Cooler conductance from one measured temperature at a known power."""
+MIN_CAL_WATTS = 150.0     # below this the GPU fans idle or stop, and the conductance is far lower than under load
+
+
+def calibrate_g(measured_c: float, watts: float, ambient_c: float, intake_rise_c: float, min_watts: float = MIN_CAL_WATTS) -> float | None:
+    """Cooler conductance from one measured temperature at a known power. Needs a reading under load: at idle a
+    GPU's fans run slowly or stop, so a 50 W reading would make the cooler look several times weaker than it is."""
     d = measured_c - ambient_c - intake_rise_c
-    return watts / d if d > 1.0 and watts > 20 else None
+    return watts / d if d > 1.0 and watts >= min_watts else None

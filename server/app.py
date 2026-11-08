@@ -21,7 +21,7 @@ from pydantic import BaseModel  # noqa: E402
 
 from engine import sim  # noqa: E402
 from engine.hardware import detect, gpu_sensors  # noqa: E402
-from engine.thermal import calibrate_g  # noqa: E402
+from engine.thermal import MIN_CAL_WATTS, calibrate_g  # noqa: E402
 
 app = FastAPI(title="CaseFlow service")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -78,6 +78,8 @@ def _run(jid: str, q: SimQuery) -> None:
                     p.update(g_w_per_k=g, calibrated=True,
                              temp_c=r["load"]["ambient_c"] + p["intake_rise_c"] + p["watts"] / g)
                     notes.append(f"{key.upper()} cooler calibrated: {g:.2f} W/K")
+                elif float(cal["watts"]) < MIN_CAL_WATTS:
+                    notes.append(f"{key.upper()} calibration skipped: needs a reading under load (>= {MIN_CAL_WATTS:.0f} W)")
         job.update(result=sim.package(r, notes), status="done", progress=1.0)
     except Exception as exc:  # pragma: no cover - reported to the client
         job.update(status="error", error=f"{exc!r} {traceback.format_exc()[-400:]}")

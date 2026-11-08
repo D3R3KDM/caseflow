@@ -12,9 +12,8 @@ import torch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from engine.lbm import LBMConfig, LBMSolver  # noqa: E402
 from engine.optimize import build_for, candidates  # noqa: E402
-from engine.sim import DX, G_DEFAULT, U_LAT_PER_MS, build_model, default_build, load_library  # noqa: E402
+from engine.sim import DX, G_DEFAULT, U_LAT_PER_MS, build_model, default_build, load_library, run_airflow  # noqa: E402
 from engine.thermal import solve_temperature  # noqa: E402
 
 LAYOUTS = {
@@ -42,11 +41,7 @@ for steps in STEPS:
         t0 = time.time()
         model = build_model(b, lib)
         load = {"cpu_w": 88.0, "gpu_w": 300.0, "ambient_c": 25.0, **b.get("load", {})}
-        solver = LBMSolver(torch.from_numpy(model["solid"])[None], LBMConfig(u_in=0.0, tau=0.52, smagorinsky=0.16, sponge=0),
-                           open_inlet=False, forced_mask=torch.from_numpy(model["forced"]), forced_u=torch.from_numpy(model["fu"]),
-                           reservoir_mask=torch.from_numpy(model["reservoir"]))
-        u = solver.run(steps=steps, avg_from=steps // 2, report_every=10 ** 9, check_nan_every=1000).u[0]
-        del solver
+        u, _ = run_airflow(model, steps)
         q_in = sum(f["q_m3s"] for f in model["fans"] if f["mode"] == "in") * 2119
         print(f"\n{name}  LBM {steps} steps  in {q_in:.0f} CFM  ({time.time() - t0:.0f} s)", flush=True)
         T, done = None, 0

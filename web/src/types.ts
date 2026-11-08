@@ -36,10 +36,11 @@ export interface SimRes {
 
 export interface RankRow {
   name: string; build: Build; current?: boolean; gpu_c: number; cpu_c: number; score: number; pressure: string
-  dust_in: number; combined?: number; cfm_in: number; cfm_out: number
+  dust_in: number; dust_rel?: number; combined?: number; cfm_in: number; cfm_out: number
 }
 export interface Opt {
   ranking: RankRow[]; best: string; coolest?: string; cleanest?: string | null; cpu?: string | null; worst?: string
+  top?: string; tied?: string[]; tie_margin?: number
   objective: string; dust_weight?: number; space?: string; minutes?: number
 }
 
