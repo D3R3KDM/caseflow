@@ -1,5 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import * as THREE from 'three'
+import { CSS3DObject, CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js'
 import { b64ToBuffer, f16ToF32 } from './api'
 import { makeFan, makeFinStack, meshTexture } from './models'
 import { C, thermal } from './palette'
@@ -8,7 +10,21 @@ import type { SimRes } from './types'
 import { createViewer, disposeObject, type Viewer } from './viewer'
 
 export const T_MAX = 12                      // °C above room at the top of the colour scale
-export interface Layers { flow: boolean; lines: boolean; dust: boolean; heat: boolean }
+export interface Layers { flow: boolean; lines: boolean; dust: boolean; heat: boolean; panels: boolean }
+export type Anchor = 'cpu' | 'gpu' | 'intake' | 'glass' | 'exhaust'
+/** A floating screen around the case. pos is in the "ring frame": x right, y up, z towards the viewer for the
+ * default view; the ring turns with the camera so the screens stay arranged around the case and readable. */
+export interface HoloSpec { id: string; pos: [number, number, number]; yaw: number; anchor?: Anchor; content: ReactNode }
+
+const PX = 0.0044                            // world units per CSS pixel of a screen
+const FLOOR = -0.95
+const AZ0 = 0.42, EL0 = 0.14                 // default view: a little from the front, slightly above
+const FIT_W = 9.1, FIT_H = 4.7               // world extent the default view must show (screens included)
+
+interface HoloObj {
+  obj: CSS3DObject; w: number; h: number; ro: ResizeObserver
+  line: THREE.Line; marker: THREE.Group; packet: THREE.Mesh; stand: THREE.Line; base: THREE.Mesh; phase: number
+}
 
 let dotTex: THREE.Texture | null = null
 /** Soft round sprite for particles. */
@@ -68,18 +84,57 @@ interface Anim {
   }
 }
 
-export default function CaseScene({ res, layers }: { res: SimRes | null; layers: Layers }) {
+export default function CaseScene({ res, layers, panels, resetKey }: { res: SimRes | null; layers: Layers; panels: HoloSpec[]; resetKey: number }) {
   const host = useRef<HTMLDivElement>(null)
   const viewer = useRef<Viewer | null>(null)
   const group = useRef<THREE.Group | null>(null)
   const anim = useRef<Anim>({ fans: [], ring: null, parts: null })
+  // floating screens
+  const els = useRef(new Map<string, HTMLDivElement>())
+  const holos = useRef(new Map<string, HoloObj>())
+  const specs = useRef<HoloSpec[]>(panels)
+  specs.current = panels
+  const anchors = useRef<Partial<Record<Anchor, THREE.Vector3>>>({})
+  const css = useRef<{ ring: THREE.Group; gl: THREE.Group; fit: () => void } | null>(null)
+  const elFor = (id: string) => {
+    let d = els.current.get(id)
+    if (!d) {
+      d = document.createElement('div')
+      d.className = 'holo-wrap'
+      els.current.set(id, d)
+    }
+    return d
+  }
 
   // ---------- viewer + environment ----------
   useEffect(() => {
     const v = createViewer(host.current!, C.bg)
-    v.camera.position.set(2.75, 0.85, 4.3)
-    v.controls.target.set(0, -0.12, 0)
-    const floorY = -0.95
+    const floorY = FLOOR
+    // CSS3D layer for the screens, on top of the WebGL canvas; it shares the camera
+    const cssR = new CSS3DRenderer()
+    cssR.domElement.className = 'holo-layer'
+    host.current!.appendChild(cssR.domElement)
+    const cssScene = new THREE.Scene()
+    const ringFrame = new THREE.Group()
+    cssScene.add(ringFrame)
+    const holoGL = new THREE.Group()
+    v.scene.add(holoGL)
+    const sizeCss = () => cssR.setSize(host.current!.clientWidth || 1, host.current!.clientHeight || 1)
+    const ro = new ResizeObserver(sizeCss)
+    ro.observe(host.current!)
+    sizeCss()
+    const fit = () => {
+      const w = host.current!.clientWidth || 1, h = host.current!.clientHeight || 1
+      const vf = (v.camera.fov * Math.PI) / 180
+      const hf = 2 * Math.atan(Math.tan(vf / 2) * (w / h))
+      const d = Math.max(FIT_W / 2 / Math.tan(hf / 2), FIT_H / 2 / Math.tan(vf / 2))
+      v.controls.target.set(0, -0.06, 0)
+      v.camera.position.set(Math.sin(AZ0) * Math.cos(EL0) * d, -0.06 + Math.sin(EL0) * d, Math.cos(AZ0) * Math.cos(EL0) * d)
+      v.controls.maxDistance = d * 1.6
+      v.controls.update()
+    }
+    fit()
+    css.current = { ring: ringFrame, gl: holoGL, fit }
     const grid = new THREE.PolarGridHelper(3.2, 24, 12, 128, 0x2c5f86, 0x16324a)
     for (const m of [grid.material].flat()) Object.assign(m, { transparent: true, opacity: 0.35 })
     grid.position.y = floorY
@@ -97,6 +152,55 @@ export default function CaseScene({ res, layers }: { res: SimRes | null; layers:
     group.current = g
     const tmp = new THREE.Vector3()
     const c = new THREE.Color()
+    const qa = new THREE.Vector3(), qb = new THREE.Vector3(), qe = new THREE.Vector3(), qk = new THREE.Vector3()
+    let clock = 0
+    const updateScreens = (dt: number) => {
+      clock += dt
+      const cam = v.camera, tgt = v.controls.target
+      ringFrame.position.copy(tgt)
+      ringFrame.rotation.y = Math.atan2(cam.position.x - tgt.x, cam.position.z - tgt.z)   // ring faces the camera
+      ringFrame.updateMatrixWorld(true)
+      const byId = new Map(specs.current.map((s) => [s.id, s]))
+      for (const [id, hobj] of holos.current) {
+        const s = byId.get(id)
+        if (!s) continue
+        const { obj } = hobj
+        obj.position.set(s.pos[0], s.pos[1], s.pos[2])
+        obj.lookAt(cam.position)
+        obj.rotateY(s.yaw)
+        obj.updateMatrixWorld(true)
+        // projector beam from the floor to the bottom of the screen
+        obj.localToWorld(qa.set(0, -hobj.h / 2, 0))
+        const sp = hobj.stand.geometry.attributes.position as THREE.BufferAttribute
+        sp.setXYZ(0, qa.x, floorY + 0.005, qa.z)
+        sp.setXYZ(1, qa.x, qa.y, qa.z)
+        sp.needsUpdate = true
+        hobj.stand.computeLineDistances()
+        hobj.base.position.set(qa.x, floorY + 0.006, qa.z)
+        // leader line: screen edge -> elbow -> part
+        const anc = s.anchor ? anchors.current[s.anchor] : undefined
+        hobj.line.visible = hobj.marker.visible = hobj.packet.visible = !!anc
+        if (!anc) continue
+        obj.worldToLocal(qk.copy(anc))
+        const side = qk.x >= 0 ? 1 : -1
+        obj.localToWorld(qe.set(side * hobj.w / 2, hobj.h / 2 - 24, 0))
+        obj.localToWorld(qb.set(side * (hobj.w / 2 + 44), hobj.h / 2 - 24, 0))
+        const lp = hobj.line.geometry.attributes.position as THREE.BufferAttribute
+        lp.setXYZ(0, qe.x, qe.y, qe.z); lp.setXYZ(1, qb.x, qb.y, qb.z); lp.setXYZ(2, anc.x, anc.y, anc.z)
+        lp.needsUpdate = true
+        hobj.line.geometry.computeBoundingSphere()
+        hobj.marker.position.copy(anc)
+        hobj.marker.quaternion.copy(cam.quaternion)
+        hobj.marker.children[0].scale.setScalar(1 + 0.45 * (0.5 + 0.5 * Math.sin(clock * 3 + hobj.phase)))
+        // a light packet runs from the part to the screen
+        const l1 = anc.distanceTo(qb), l2 = qb.distanceTo(qe)
+        const u = ((clock * 0.45 + hobj.phase) % 1) * (l1 + l2)
+        if (u < l1) hobj.packet.position.lerpVectors(anc, qb, u / l1)
+        else hobj.packet.position.lerpVectors(qb, qe, (u - l1) / Math.max(l2, 1e-6))
+        hobj.packet.quaternion.copy(cam.quaternion)
+      }
+      cssR.render(cssScene, cam)
+    }
     const off = v.onFrame((dt) => {
       const a = anim.current
       if (a.ring) a.ring.rotation.y += dt * 0.05
@@ -104,6 +208,7 @@ export default function CaseScene({ res, layers }: { res: SimRes | null; layers:
         const rotor = f.userData.rotor as THREE.Object3D | undefined
         if (rotor) rotor.rotation.y += dt * (f.userData.spin as number)
       }
+      updateScreens(dt)
       const ps = a.parts
       if (!ps || !ps.pts.visible) return
       const pos = ps.pts.geometry.attributes.position as THREE.BufferAttribute
@@ -122,8 +227,57 @@ export default function CaseScene({ res, layers }: { res: SimRes | null; layers:
       pos.needsUpdate = true
       col.needsUpdate = true
     })
-    return () => { off(); v.dispose() }
+    return () => {
+      off()
+      ro.disconnect()
+      for (const h of holos.current.values()) h.ro.disconnect()
+      holos.current.clear()
+      cssR.domElement.remove()
+      css.current = null
+      v.dispose()
+    }
   }, [])
+
+  // ---------- screens: create / remove CSS3D objects and their leader lines ----------
+  const idKey = panels.map((p) => p.id).join('|')
+  useEffect(() => {
+    const k = css.current
+    if (!k) return
+    const want = new Set(panels.map((p) => p.id))
+    for (const [id, h] of holos.current) {
+      if (want.has(id)) continue
+      k.ring.remove(h.obj)
+      for (const o of [h.line, h.marker, h.packet, h.stand, h.base]) { k.gl.remove(o); disposeObject(o) }
+      h.ro.disconnect()
+      holos.current.delete(id)
+    }
+    panels.forEach((p, i) => {
+      if (holos.current.has(p.id)) return
+      const el = elFor(p.id)
+      const obj = new CSS3DObject(el)
+      obj.scale.setScalar(PX)
+      k.ring.add(obj)
+      const lineMat = new THREE.LineBasicMaterial({ color: C.intake, transparent: true, opacity: 0.7, depthTest: false })
+      const line = new THREE.Line(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(9), 3)), lineMat)
+      const flat = (geo: THREE.BufferGeometry, opacity: number) =>
+        new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: C.intake, transparent: true, opacity, depthTest: false, side: THREE.DoubleSide }))
+      const marker = new THREE.Group()
+      marker.add(flat(new THREE.RingGeometry(0.03, 0.038, 40), 0.85))
+      marker.add(flat(new THREE.CircleGeometry(0.011, 20), 1))
+      const packet = flat(new THREE.CircleGeometry(0.013, 16), 1)
+      const stand = new THREE.Line(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(6), 3)),
+        new THREE.LineDashedMaterial({ color: C.intake, transparent: true, opacity: 0.28, dashSize: 0.04, gapSize: 0.035 }))
+      const base = flat(new THREE.RingGeometry(0.05, 0.062, 40), 0.35)
+      base.rotation.x = -Math.PI / 2
+      for (const o of [line, marker, packet]) o.renderOrder = 20
+      for (const o of [line, marker, packet, stand, base]) { o.frustumCulled = false; k.gl.add(o) }
+      const h: HoloObj = { obj, w: 260, h: 200, ro: new ResizeObserver(() => { h.w = el.offsetWidth || h.w; h.h = el.offsetHeight || h.h }), line, marker, packet, stand, base, phase: i * 0.37 }
+      h.ro.observe(el)
+      holos.current.set(p.id, h)
+    })
+  }, [idKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { css.current?.fit() }, [resetKey])
 
   // ---------- case, parts and fields ----------
   useEffect(() => {
@@ -250,6 +404,30 @@ export default function CaseScene({ res, layers }: { res: SimRes | null; layers:
       add(arrow)
     }
 
+    // anchor points the screens point at
+    {
+      const cen = (kinds: string[]) => {
+        const bs = res.boxes.filter((b) => kinds.includes(b.kind)).map((b) => b.b)
+        if (!bs.length) return undefined
+        const m = [0, 1, 2, 3, 4, 5].map((i) => (i % 2 ? Math.max : Math.min)(...bs.map((b) => b[i])))
+        return P((m[0] + m[1]) / 2, m[2] + 4, (m[4] + m[5]) / 2)       // on the glass-facing side of the part
+      }
+      const fanC = (pred: (f: SimRes['fans'][number]) => boolean) => {
+        const fs = res.fans.filter(pred)
+        if (!fs.length) return undefined
+        const v = new THREE.Vector3()
+        fs.forEach((f) => v.add(mountPos(f)))
+        return v.multiplyScalar(1 / fs.length)
+      }
+      anchors.current = {
+        cpu: cen(['cpu_hs', 'cpu_fan']),
+        gpu: cen(['gpu', 'gpu_hs']),
+        intake: fanC((f) => f.mode === 'in' && f.wall === 'front') ?? fanC((f) => f.mode === 'in'),
+        exhaust: fanC((f) => f.mode === 'out'),
+        glass: P(D * 0.14, 0, H * 0.2),                             // lower front of the glass, where dust lands
+      }
+    }
+
     // airflow field -> streamlines and moving particles
     const [X, Y, Z] = res.shape
     const N = X * Y * Z
@@ -350,7 +528,13 @@ export default function CaseScene({ res, layers }: { res: SimRes | null; layers:
       const o = g.getObjectByName(name)
       if (o) o.visible = on
     }
-  }, [layers, res])
+    if (css.current) css.current.gl.visible = layers.panels
+    for (const h of holos.current.values()) h.obj.visible = layers.panels
+  }, [layers, res, idKey])
 
-  return <div className="scene" ref={host} />
+  return (
+    <div className="scene" ref={host}>
+      {panels.map((p) => createPortal(p.content, elFor(p.id), p.id))}
+    </div>
+  )
 }

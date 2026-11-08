@@ -46,9 +46,7 @@ await dock('Heat'); await dock('Flow'); await wait(2600)
 await tab('Worst'); await wait(3000)          // the worst layout: rear fan blowing in
 await tab('Your layout'); await wait(2200)
 await dock('Heat'); await dock('Flow'); await wait(900)
-await drag(1210, 87, 1050, 150, 1100)         // windows float and can be moved
-await wait(700)
-await page.locator('.dock button[title="Put the windows back"]').click(); await wait(1000)
+await dock('Screens'); await wait(1600); await dock('Screens'); await wait(1300)   // hide / show the floating screens
 await dock('Configure'); await wait(2600); await dock('Configure'); await wait(600)
 await drag(672, 426, 790, 436, 3200)          // orbit to the other side
 await page.mouse.move(720, 430)

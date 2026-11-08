@@ -105,20 +105,20 @@ engine/
 server/app.py     FastAPI: /api/health, /hardware, /library, /default_build, /simulate, /job/{id}
 scripts/          precompute.py (web views), serve.sh (engine with auto-restart)
 data/             parts library, search result (optimize.json)
-web/              Vite + React + three.js app (floating HUD windows over the 3D case)
+web/              Vite + React + three.js app (3D case with floating holographic screens)
 tests/            engine checks
 docs/screens/     screenshots
 ```
 
 ## Interface
 
-The 3D case fills the screen. Information sits in floating glass windows that you can drag, collapse and reset (⟲):
+The 3D case sits in the middle of six floating holographic screens. Each screen is wired to the part it describes by a glowing leader line:
 
-- **01 System**: the parts.
-- **02 Layout search**: all 32 layouts, ranked; click one to view it.
-- **03 Telemetry**: temperatures, airflow, case pressure, dust.
-- **04 Compare**: your layout against the alternative, as side views through the glass.
-- **05 Configure**: edit the build and run a simulation.
-- **06 Method**: how the numbers are made.
+- **CPU** and **GPU**: temperature gauge, intake air rise, load; lines to the CPU cooler and the graphics card.
+- **Airflow**: in / out CFM, case pressure, and every fan at its operating point; line to the front intake fans.
+- **Dust**: share of outside dust that gets in, and where it settles; line to the glass.
+- **Layout search** and **Verdict**: angled side screens with the 32-layout ranking and your layout against the alternative.
 
-The bottom dock switches the layers: moving flow particles, streamlines, dust deposits, and a heat slice through the GPU. The 3D view is seen through the glass, front on the right, as the PC stands on a desk.
+The screens are CSS3D objects in the same scene as the case. They turn with the camera, so they stay readable from any angle, while the lines and anchors stay fixed on the parts.
+
+The bottom dock switches the layers: the screens, moving flow particles, streamlines, dust deposits, and a heat slice through the GPU. **Configure** (edit the build, run a simulation) and **Method** open as glass windows. The view is through the glass, front on the right, as the PC stands on a desk.

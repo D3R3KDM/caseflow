@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getJSON, pingServer, postJSON } from './api'
+import { AirPanel, DustPanel, Holo, PartPanel, SearchPanel, VerdictPanel } from './Holo'
 import HudWindow, { resetWindows } from './HudWindow'
 import { THERMAL_CSS } from './palette'
-import CaseScene, { T_MAX, type Layers } from './Scene'
-import Schematic from './Schematic'
+import CaseScene, { T_MAX, type HoloSpec, type Layers } from './Scene'
 import { WHERE, type Build, type FanSlot, type HW, type Lib, type Mode, type Opt, type RankRow, type SimRes, type ViewKey } from './types'
 
 const amazon = (q: string) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}`
@@ -27,10 +27,16 @@ function changes(from: FanSlot[], to: FanSlot[]): string[] {
   return out
 }
 
-function Delta({ v, unit = '°' }: { v: number | null; unit?: string }) {
-  if (v == null) return null
-  const cls = v < -0.05 ? 'good' : v > 0.05 ? 'bad' : 'flat'
-  return <span className={'d ' + cls}>{v > 0 ? '+' : v < 0 ? '−' : '±'}{Math.abs(v).toFixed(1)}{unit}</span>
+function useNarrow(px = 900) {
+  const q = `(max-width: ${px}px)`
+  const [m, setM] = useState(() => window.matchMedia(q).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(q)
+    const on = () => setM(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [q])
+  return m
 }
 
 export default function App() {
@@ -40,7 +46,7 @@ export default function App() {
   const [opt, setOpt] = useState<Opt | null>(null)
   const [views, setViews] = useState<Partial<Record<ViewKey, SimRes>>>({})
   const [view, setView] = useState<ViewKey>('current')
-  const [layers, setLayers] = useState<Layers>({ flow: true, lines: false, dust: true, heat: false })
+  const [layers, setLayers] = useState<Layers>({ flow: true, lines: false, dust: true, heat: false, panels: true })
   const [build, setBuild] = useState<Build | null>(null)
   const [cfgOpen, setCfgOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
@@ -49,16 +55,7 @@ export default function App() {
   const [job, setJob] = useState<{ p: number; label: string } | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const [layoutKey, setLayoutKey] = useState(0)
-  const [hs, setHs] = useState<Record<string, number>>({})
-  const onH = useMemo(() => {
-    const m: Record<string, (h: number) => void> = {}
-    for (const k of ['system', 'telemetry']) m[k] = (h) => setHs((s) => (s[k] === h ? s : { ...s, [k]: h }))
-    return m
-  }, [])
-  const searchY = 72 + (hs.system ?? 230) + 12
-  const listRef = useRef<HTMLDivElement>(null)
-  useEffect(() => { listRef.current?.querySelector('.rk.on')?.scrollIntoView({ block: 'nearest' }) }, [view, allRows, opt])
-  const compareY = 72 + (hs.telemetry ?? 370) + 12
+  const narrow = useNarrow()
 
   // ---------- data ----------
   useEffect(() => {
@@ -121,7 +118,7 @@ export default function App() {
     current: ['Your layout', `#${rankOf(curRow?.name)}/${n}`], best: ['Recommended', `#1/${n}`],
     cpu: ['Lowest CPU', `#${rankOf(opt?.cpu)}/${n}`], worst: ['Worst', `#${n}/${n}`], custom: ['Custom', ''],
   }
-  const dd = (a?: number, b?: number) => (a == null || b == null || view === 'current' ? null : a - b)
+  const compare = view !== 'current'
 
   // ---------- actions ----------
   const simulate = async (b: Build, label: string) => {
@@ -164,13 +161,49 @@ export default function App() {
     if (next.mode !== 'off') fans.push(next)
     setBuild({ ...build, fans })
   }
-
   const steps = cur?.build && views.best?.build && !bestIsCur ? changes(cur.build.fans, views.best.build.fans) : []
-  const worstD = views.worst && cur ? { cpu: views.worst.parts.cpu.temp_c - cur.parts.cpu.temp_c, gpu: views.worst.parts.gpu.temp_c - cur.parts.gpu.temp_c } : null
+
+  // ---------- floating screens ----------
+  const flash = `${view}:${res?.label ?? ''}`
+  const screens: (HoloSpec & { title: string })[] = []
+  if (res) {
+    const cpuName = hw ? hw.cpu.name.replace(/ \d+-Core Processor/, '').replace('AMD ', '') : 'CPU'
+    screens.push(
+      { id: 'search', title: 'Layout search', pos: [-3.35, -0.04, -0.12], yaw: 0.42, content: (
+        <Holo tag="LAYOUT SEARCH" sub={`${n}/${n} simulated`} width={300} flashKey="search">
+          <SearchPanel opt={opt} rows={rows} shown={shown} tagOf={tagOf} onOpen={openRow} allRows={allRows} setAllRows={setAllRows} lo={lo} hi={hi}
+            isOn={(r) => { const v = viewOf(r); return (!!v && v === view) || (view === 'custom' && views.custom?.label === `Custom: ${r.name}`) }} />
+        </Holo>) },
+      { id: 'cpu', title: 'CPU', pos: [-1.6, 1.08, 0.5], yaw: 0.14, anchor: 'cpu', content: (
+        <Holo tag="CPU" sub={cpuName} width={250} flashKey={'cpu' + flash}>
+          <PartPanel part="cpu" res={res} cur={cur} compare={compare} name={cooler?.name.replace('Thermalright ', '').replace(' ARGB', '') ?? 'cooler'}
+            extra={[['cooler', `${(res.parts.cpu as { g_w_per_k?: number }).g_w_per_k?.toFixed(1) ?? '2.0'} W/K`]]} />
+        </Holo>) },
+      { id: 'gpu', title: 'GPU', pos: [-1.6, -0.78, 0.6], yaw: 0.14, anchor: 'gpu', content: (
+        <Holo tag="GPU" sub={gpu?.name.replace('NVIDIA GeForce ', '') ?? 'GPU'} live={!!g0} width={250} flashKey={'gpu' + flash}>
+          <PartPanel part="gpu" res={res} cur={cur} compare={compare} name={g0 ? `live ${g0.temp_c?.toFixed(0)} °C · ${g0.power_w?.toFixed(0)} W now` : (gpu?.cooler.replace(/_/g, '-') ?? '')}
+            extra={[['cooler', `${(res.parts.gpu as { g_w_per_k?: number }).g_w_per_k?.toFixed(1) ?? '8.5'} W/K`]]} />
+        </Holo>) },
+      { id: 'air', title: 'Airflow', pos: [1.6, 1.08, 0.5], yaw: -0.14, anchor: 'intake', content: (
+        <Holo tag="AIRFLOW" sub={layoutName(res)} width={262} flashKey={'air' + flash}>
+          <AirPanel res={res} cur={cur} compare={compare} />
+        </Holo>) },
+      { id: 'dust', title: 'Dust', pos: [1.6, -0.78, 0.6], yaw: -0.14, anchor: 'glass', content: (
+        <Holo tag="DUST" sub="20 µm particles" width={250} flashKey={'dust' + flash}>
+          <DustPanel res={res} cur={cur} compare={compare} />
+        </Holo>) },
+    )
+    if (cur && other)
+      screens.push({ id: 'verdict', title: 'Verdict', pos: [3.35, -0.04, -0.12], yaw: -0.42, content: (
+        <Holo tag="VERDICT" sub={bestIsCur ? 'yours vs worst' : 'yours vs best'} width={290} flashKey="verdict">
+          <VerdictPanel cur={cur} other={other} bestIsCur={bestIsCur} n={n} rankCur={rankOf(curRow?.name)} rankOther={rankOf(bestIsCur ? opt?.worst : opt?.best)}
+            steps={steps} onOpen={(k) => setView(k === 'current' ? 'current' : otherKey)} />
+        </Holo>) })
+  }
 
   return (
     <div className="cf">
-      <CaseScene res={res} layers={layers} />
+      <CaseScene res={res} layers={layers} panels={narrow ? [] : screens} resetKey={layoutKey} />
       <div className="vignette" />
 
       <header className="top">
@@ -180,8 +213,11 @@ export default function App() {
             <path d="M4.5 14 C8.5 14 9 6.5 15.5 6.5" fill="none" stroke="#63e0ff" strokeWidth="1.4" />
             <circle cx="15.5" cy="6.5" r="1.5" fill="#63e0ff" />
           </svg>
-          <span className="brand-name">CASEFLOW</span>
-          <span className="brand-sub">airflow · heat · dust</span>
+          <div className="brand-txt">
+            <span className="brand-name">CASEFLOW</span>
+            <span className="brand-sub">{cs ? `${cs.name.replace('Lian Li ', '')} · ${stock.stock} stock + ${stock.own} own fans` : 'airflow · heat · dust'}
+              {gpu && <> · <a href={amazon(gpu.amazon_query ?? gpu.name)} target="_blank" rel="noreferrer">parts ↗</a></>}</span>
+          </div>
         </div>
         <nav className="views">
           {tabs.map((k) => (
@@ -202,104 +238,17 @@ export default function App() {
         </div>
       )}
 
+      {narrow && layers.panels && (
+        <div className="holo-column">{screens.map((s) => <div key={s.id}>{s.content as ReactNode}</div>)}</div>
+      )}
+
       <div className="hud">
-        <HudWindow id="system" code="01" title="System" side="left" x={20} y={72} w={300} layoutKey={layoutKey} onHeight={onH.system}
-          meta={cs ? `${cs.dims_mm.D}×${cs.dims_mm.W}×${cs.dims_mm.H}` : undefined}>
-          <div className="sys-name">{cs?.name ?? '—'}</div>
-          <dl className="kv">
-            <dt>GPU</dt>
-            <dd>{gpu?.name.replace('NVIDIA GeForce ', '') ?? '—'}<small>{gpu ? `${gpu.tdp_w} W · ${gpu.cooler.replace(/_/g, '-')}` : ''}{gpu && <span className="links"><a href={gpu.sources[0]} target="_blank" rel="noreferrer">spec ↗</a><a href={amazon(gpu.amazon_query ?? gpu.name)} target="_blank" rel="noreferrer">buy ↗</a></span>}</small></dd>
-            <dt>Cooler</dt>
-            <dd>{cooler?.name.replace(' ARGB', '').replace('Thermalright ', '') ?? '—'}<small>{cooler ? `${cooler.type.replace('_', ' ')} · ${cooler.height_mm} mm` : ''}{cooler && <span className="links"><a href={cooler.sources[0]} target="_blank" rel="noreferrer">spec ↗</a><a href={amazon(cooler.amazon_query ?? cooler.name)} target="_blank" rel="noreferrer">buy ↗</a></span>}</small></dd>
-            <dt>CPU</dt>
-            <dd>{hw ? hw.cpu.name.replace(/ \d+-Core Processor/, '') : 'detected when the engine runs'}<small>{hw ? `${hw.ram_gb} GB RAM` : ''}</small></dd>
-            <dt>Fans</dt>
-            <dd>{stock.stock} stock + {stock.own} own<small>{build ? `${build.fans.length} case fans · cooler 2 × 120` : ''}</small></dd>
-          </dl>
-        </HudWindow>
-
-        <HudWindow id="search" code="02" title="Layout search" side="left" x={20} y={searchY} w={300} layoutKey={layoutKey} meta={n ? `${n}/${n} RUN` : undefined}>
-          <p className="lede">Your three 120 mm fans on every free mount, each blowing in or out. The four stock fans stay put.</p>
-          <div className="rk-h"><span>#</span><span>Layout</span><span>CPU</span><span>GPU</span><span>Dust</span></div>
-          <div className="rk-list" ref={listRef} style={{ maxHeight: `max(170px, calc(100vh - ${searchY + 225}px))` }}>
-            {shown.map(({ r, i }, k) => {
-              const gap = k > 0 && shown[k - 1].i !== i - 1
-              const v = viewOf(r)
-              const on = (v && v === view) || (view === 'custom' && views.custom?.label === `Custom: ${r.name}`)
-              const tags = tagOf(r)
-              return (
-                <div key={r.name}>
-                  {gap && <div className="rk-gap">· · ·</div>}
-                  <button className={'rk' + (on ? ' on' : '')} style={{ '--w': 1 - (key(r) - lo) / Math.max(hi - lo, 1e-6) } as CSSProperties} onClick={() => openRow(r)}>
-                    <span className="n">{String(i + 1).padStart(2, '0')}</span>
-                    <span className="nm">{r.name}{tags.map((t) => <em key={t} className={t === 'WORST' ? 'warn' : ''}>{t}</em>)}</span>
-                    <span className="v">{r.cpu_c.toFixed(1)}</span>
-                    <span className="v">{r.gpu_c.toFixed(1)}</span>
-                    <span className="v">{Math.round(r.dust_in * 100)}%</span>
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-          {n > 0 && <button className="textbtn" onClick={() => setAllRows(!allRows)}>{allRows ? 'Show fewer' : `Show all ${n}`}</button>}
-          <p className="fine">°C at CPU 88 W / GPU 300 W, room 25 °C. Ranked by CPU + GPU + {opt?.dust_weight ?? 2} °C × dust let in.</p>
-        </HudWindow>
-
-        {res && (
-          <HudWindow id="telemetry" code="03" title="Telemetry" side="right" x={20} y={72} w={310} layoutKey={layoutKey} onHeight={onH.telemetry} meta={tabLabel[view][0].toUpperCase()}>
-            <div className="tm-name">{layoutName(res)}</div>
-            <div className="big">
-              {(['cpu', 'gpu'] as const).map((p) => (
-                <div key={p}>
-                  <span className="lbl">{p}</span>
-                  <b>{res.parts[p].temp_c.toFixed(1)}<u>°C</u></b>
-                  <span className="sub">air in +{res.parts[p].intake_rise_c.toFixed(1)}° <Delta v={dd(res.parts[p].temp_c, cur?.parts[p].temp_c)} /></span>
-                </div>
-              ))}
-            </div>
-            <div className="rows">
-              <div><span className="lbl">Airflow</span><span>{(res.flow_in_m3s * 2119).toFixed(0)} in · {(res.flow_out_m3s * 2119).toFixed(0)} out <u>CFM</u></span></div>
-              {res.case_pa != null && <div><span className="lbl">Case</span><span>{res.case_pa >= 0 ? '+' : '−'}{Math.abs(res.case_pa).toFixed(1)} <u>Pa</u> · {res.pressure}</span></div>}
-              {res.dust && <div><span className="lbl">Dust in</span><span>{(res.dust.dust_entering_rel * 100).toFixed(0)}<u>%</u> of outside dust <Delta v={dd(res.dust.dust_entering_rel * 100, cur?.dust ? cur.dust.dust_entering_rel * 100 : undefined)} unit=" pt" /></span></div>}
-            </div>
-            {res.dust && (
-              <div className="dep">
-                <span className="lbl">Where it settles</span>
-                {res.dust.by_part.slice(0, 5).map((p) => (
-                  <div key={p.name} className="dep-r"><span>{p.name}</span><i><b style={{ width: `${Math.min(100, p.share * 250)}%` }} /></i><span className="mono">{(p.share * 100).toFixed(0)}%</span></div>
-                ))}
-              </div>
-            )}
-            {res.notes?.length > 0 && <p className="fine">{res.notes.join(' · ')}</p>}
-          </HudWindow>
-        )}
-
-        {cur && other && (
-          <HudWindow id="compare" code="04" title="Compare" side="right" x={20} y={compareY} w={310} layoutKey={layoutKey} meta={bestIsCur ? 'YOURS / WORST' : 'YOURS / RECOMMENDED'}>
-            {bestIsCur
-              ? <p className="verdict"><b>Keep your layout.</b> It ranks #1 of {n}.{worstD && <> The worst one runs the CPU {worstD.cpu.toFixed(1)}° and the GPU {worstD.gpu.toFixed(1)}° hotter.</>}</p>
-              : <p className="verdict"><b>One change helps.</b> The recommended layout ranks #1 of {n}.</p>}
-            <div className="cmp">
-              {([['current', cur, 'Yours'], [otherKey, other, bestIsCur ? 'Worst' : 'Recommended']] as const).map(([k, r, t]) => (
-                <button key={k} className={'cmp-c' + (view === k ? ' on' : '')} onClick={() => setView(k)}>
-                  <span className="lbl">{t} · #{k === 'current' ? rankOf(curRow?.name) : rankOf(k === 'worst' ? opt?.worst : opt?.best)}</span>
-                  <Schematic dims={r.case} boxes={r.boxes} mounts={r.mounts} fans={r.fans} width={112} />
-                  <span className="cmp-n"><span>CPU</span><b>{r.parts.cpu.temp_c.toFixed(1)}°</b></span>
-                  <span className="cmp-n"><span>GPU</span><b>{r.parts.gpu.temp_c.toFixed(1)}°</b></span>
-                  {r.dust && <span className="cmp-n"><span>Dust</span><b>{(r.dust.dust_entering_rel * 100).toFixed(0)}%</b></span>}
-                </button>
-              ))}
-            </div>
-            {steps.length > 0 && <ol className="steps">{steps.map((s) => <li key={s}>{s}</li>)}</ol>}
-          </HudWindow>
-        )}
-
         {cfgOpen && build && cs && (
-          <HudWindow id="configure" code="05" title="Configure" side="left" x={340} y={72} w={330} layoutKey={layoutKey} onClose={() => setCfgOpen(false)} meta={online ? 'LIVE' : 'ENGINE OFF'}>
+          <HudWindow id="configure" code="05" title="Configure" side="left" x={20} y={72} w={330} layoutKey={layoutKey} onClose={() => setCfgOpen(false)} meta={online ? 'LIVE' : 'ENGINE OFF'}>
             <div className="cfg-parts">
               {([['Case', 'case', lib?.cases], ['GPU', 'gpu', lib?.gpus], ['Cooler', 'cooler', lib?.coolers]] as const).map(([l, k, list]) => (
                 <label key={k}><span className="lbl">{l}</span>
-                  <select className="in" value={build[k]} onChange={(e) => setBuild({ ...build, [k]: e.target.value })}>
+                  <select className="field" value={build[k]} onChange={(e) => setBuild({ ...build, [k]: e.target.value })}>
                     {(list ?? []).map((p: { id: string; name: string }) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </label>
@@ -318,7 +267,7 @@ export default function App() {
                     </div>
                     {f && (
                       <div className="mt-2">
-                        <select className="in sm" value={f.fan} onChange={(e) => setFan(m.slot, { fan: e.target.value })}>
+                        <select className="field sm" value={f.fan} onChange={(e) => setFan(m.slot, { fan: e.target.value })}>
                           {lib?.fans.filter((x) => m.sizes.includes(x.size_mm)).map((x) => <option key={x.id} value={x.id}>{x.name.replace(/^Lian Li LANCOOL 207 /, 'Stock ')} · {x.cfm} CFM</option>)}
                         </select>
                         <input type="range" min={30} max={100} step={10} value={f.pct} onChange={(e) => setFan(m.slot, { pct: +e.target.value })} />
@@ -330,13 +279,13 @@ export default function App() {
               })}
             </div>
             <div className="cfg-row">
-              <label><span className="lbl">CPU W</span><input className="in" value={build.load.cpu_w} onChange={(e) => setBuild({ ...build, load: { ...build.load, cpu_w: +e.target.value || 0 } })} /></label>
-              <label><span className="lbl">GPU W</span><input className="in" value={build.load.gpu_w} onChange={(e) => setBuild({ ...build, load: { ...build.load, gpu_w: +e.target.value || 0 } })} /></label>
-              <label><span className="lbl">Room °C</span><input className="in" value={build.load.ambient_c} onChange={(e) => setBuild({ ...build, load: { ...build.load, ambient_c: +e.target.value || 0 } })} /></label>
+              <label><span className="lbl">CPU W</span><input className="field" value={build.load.cpu_w} onChange={(e) => setBuild({ ...build, load: { ...build.load, cpu_w: +e.target.value || 0 } })} /></label>
+              <label><span className="lbl">GPU W</span><input className="field" value={build.load.gpu_w} onChange={(e) => setBuild({ ...build, load: { ...build.load, gpu_w: +e.target.value || 0 } })} /></label>
+              <label><span className="lbl">Room °C</span><input className="field" value={build.load.ambient_c} onChange={(e) => setBuild({ ...build, load: { ...build.load, ambient_c: +e.target.value || 0 } })} /></label>
             </div>
             <div className="cfg-row">
-              <label><span className="lbl">GPU measured °C</span><input className="in" placeholder="—" value={cal.temp} onChange={(e) => setCal({ ...cal, temp: e.target.value })} /></label>
-              <label><span className="lbl">at W</span><input className="in" placeholder="—" value={cal.watts} onChange={(e) => setCal({ ...cal, watts: e.target.value })} /></label>
+              <label><span className="lbl">GPU measured °C</span><input className="field" placeholder="—" value={cal.temp} onChange={(e) => setCal({ ...cal, temp: e.target.value })} /></label>
+              <label><span className="lbl">at W</span><input className="field" placeholder="—" value={cal.watts} onChange={(e) => setCal({ ...cal, watts: e.target.value })} /></label>
               <button className="textbtn" disabled={!g0?.temp_c} onClick={() => g0?.temp_c != null && g0.power_w != null && setCal({ temp: g0.temp_c.toFixed(0), watts: g0.power_w.toFixed(0) })}>use live</button>
             </div>
             <button className="run" disabled={!online || !!job} onClick={() => simulate(build, 'edited layout')}>{online ? 'Run simulation' : 'Engine offline'}</button>
@@ -345,7 +294,7 @@ export default function App() {
         )}
 
         {infoOpen && (
-          <HudWindow id="method" code="06" title="Method" side="right" x={340} y={72} w={380} layoutKey={layoutKey} onClose={() => setInfoOpen(false)}>
+          <HudWindow id="method" code="06" title="Method" side="right" x={20} y={72} w={380} layoutKey={layoutKey} onClose={() => setInfoOpen(false)}>
             <div className="method">
               <p><span className="lbl">Airflow</span>Our own D3Q19 lattice-Boltzmann solver (PyTorch, GPU, Smagorinsky turbulence) on a 6 mm grid of the case. Walls, PSU, board, GPU and cooler are solid; case fans and the GPU / CPU cooler fans are cells with a set air velocity; empty mesh mounts and slot covers are open to the room.</p>
               <p><span className="lbl">Fans</span>Each case fan runs at its operating point: a linear fan curve (rated flow and static pressure, scaled by fan laws) against one case pressure, which the passive openings balance as orifices. This is why "all intake, no exhaust" does not win: its fans stall against +7.8 Pa.</p>
@@ -359,7 +308,7 @@ export default function App() {
       </div>
 
       <nav className="dock">
-        {([['flow', 'Flow'], ['lines', 'Lines'], ['dust', 'Dust'], ['heat', 'Heat']] as const).map(([k, l]) => (
+        {([['panels', 'Screens'], ['flow', 'Flow'], ['lines', 'Lines'], ['dust', 'Dust'], ['heat', 'Heat']] as const).map(([k, l]) => (
           <button key={k} className={layers[k] ? 'on' : ''} onClick={() => setLayers({ ...layers, [k]: !layers[k] })}>{l}</button>
         ))}
         <span className="sep" />
@@ -367,7 +316,7 @@ export default function App() {
         <span className="sep" />
         <button className={cfgOpen ? 'on' : ''} onClick={() => setCfgOpen(!cfgOpen)}>Configure</button>
         <button className={infoOpen ? 'on' : ''} onClick={() => setInfoOpen(!infoOpen)}>Method</button>
-        <button title="Put the windows back" onClick={() => { resetWindows(); setLayoutKey((k) => k + 1) }}>⟲</button>
+        <button title="Reset the view and the windows" onClick={() => { resetWindows(); setLayoutKey((k) => k + 1) }}>⟲</button>
       </nav>
     </div>
   )
