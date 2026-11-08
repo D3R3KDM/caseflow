@@ -17,7 +17,7 @@ export function createViewer(container: HTMLElement, bg: number): Viewer {
   scene.fog = new THREE.Fog(bg, 6.5, 11)
   const camera = new THREE.PerspectiveCamera(34, 1, 0.01, 100)
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.05
@@ -51,9 +51,15 @@ export function createViewer(container: HTMLElement, bg: number): Viewer {
   const ro = new ResizeObserver(resize)
   ro.observe(container)
   resize()
+  // render at full rate while the user interacts, at ~30 fps otherwise: the app should not heat the GPU it measures
+  let lastInput = performance.now()
+  const poke = () => { lastInput = performance.now() }
+  const inputs = ['pointermove', 'pointerdown', 'wheel', 'keydown']
+  for (const ev of inputs) container.addEventListener(ev, poke, { passive: true })
   const loop = () => {
     raf = requestAnimationFrame(loop)
     const now = performance.now()
+    if (now - lastInput > 5000 && now - last < 31) return
     const dt = Math.min(0.1, (now - last) / 1000)
     last = now
     controls.update()
@@ -71,6 +77,7 @@ export function createViewer(container: HTMLElement, bg: number): Viewer {
     dispose() {
       cancelAnimationFrame(raf)
       ro.disconnect()
+      for (const ev of inputs) container.removeEventListener(ev, poke)
       controls.dispose()
       renderer.dispose()
       renderer.domElement.remove()

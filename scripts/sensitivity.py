@@ -5,6 +5,8 @@ temperature and the score CPU + GPU + 2 x dust. The ranking between the layouts 
 
     python scripts/sensitivity.py            # all variants (about 25 min)
     python scripts/sensitivity.py kappa      # only the named variants
+    python scripts/sensitivity.py fans       # case-fan speed: the board sets it, and we cannot read it
+    python scripts/sensitivity.py airflow    # the GPU's and CPU cooler's own fans
 """
 import copy
 import sys
@@ -16,7 +18,7 @@ sys.path.insert(0, str(ROOT))
 
 import engine.sim as sim  # noqa: E402
 from engine import thermal  # noqa: E402
-from engine.optimize import build_for, candidates  # noqa: E402
+from engine.optimize import STOCK, build_for, candidates  # noqa: E402
 
 BOTTOM_REAR_OUT = copy.deepcopy(sim.default_build())
 for f in BOTTOM_REAR_OUT["fans"]:
@@ -51,6 +53,8 @@ def front_filter(lib):
     case(lib).setdefault("filters", {})["front"] = True
 
 
+STOCK_SLOTS = {f["slot"] for f in STOCK}
+KEY = ["yours", "all three on top out", "#2 all out, top-front", "all in", "rear in (worst)"]
 VARIANTS = {
     "baseline": {},
     "kappa 0.01": {"kappa": 0.01},
@@ -62,14 +66,26 @@ VARIANTS = {
     "GPU 40 mm higher": {"lib": gpu_up},
     "front filter": {"lib": front_filter},
     "grid 4 mm": {"DX": 4.0, "steps": 12000, "kappa": 0.06},   # finer grid; same physical time and diffusivity
+    # load scenarios (CPU W, GPU W): typical gaming (TechPowerUp: 9700X ~70 W in games), CPU-only stress, everything maxed
+    "load gaming 70+300": {"load": {"cpu_w": 70.0, "gpu_w": 300.0}},
+    "load CPU stress 88+60": {"load": {"cpu_w": 88.0, "gpu_w": 60.0}},
+    "load full 88+360": {"load": {"cpu_w": 88.0, "gpu_w": 360.0}},
+    # case-fan speed (% of max rpm; Q ~ rpm, p ~ rpm^2). Default: stock 70 %, spare 80 %. The real speed follows the
+    # board's fan curve, which Windows cannot read without a sensor driver, so test slow, fast and lopsided.
+    "fans all 50%": {"pct": {"stock": 50, "spare": 50}, "layouts": KEY},
+    "fans all 100%": {"pct": {"stock": 100, "spare": 100}, "layouts": KEY},
+    "fans stock 100% / spare 50%": {"pct": {"stock": 100, "spare": 50}, "layouts": KEY},
+    # the GPU's and the CPU cooler's own fans are fixed in the model (1.6 m/s, 70 % of rated flow); both scaled together
+    "GPU+cooler airflow x0.6": {"GPU_FAN_MS": 1.6 * 0.6, "COOLER_FAN_FRAC": 0.7 * 0.6, "layouts": KEY},
+    "GPU+cooler airflow x1.4": {"GPU_FAN_MS": 1.6 * 1.4, "COOLER_FAN_FRAC": 0.7 * 1.4, "layouts": KEY},
 }
 
 
 def run(variant: dict):
-    saved = {k: getattr(sim, k) for k in ("DERATE", "POROSITY", "load_library", "DX")}
+    saved = {k: getattr(sim, k) for k in ("DERATE", "POROSITY", "load_library", "DX", "GPU_FAN_MS", "COOLER_FAN_FRAC")}
     saved_kappa = thermal.KAPPA
     try:
-        for k in ("DERATE", "POROSITY", "DX"):
+        for k in ("DERATE", "POROSITY", "DX", "GPU_FAN_MS", "COOLER_FAN_FRAC"):
             if k in variant:
                 setattr(sim, k, variant[k])
         if "lib" in variant:
@@ -78,7 +94,15 @@ def run(variant: dict):
             thermal.KAPPA = variant["kappa"]
         rows = {}
         for name, b in LAYOUTS.items():
-            r = sim.simulate_build(copy.deepcopy(b), steps=variant.get("steps", 8000), with_dust=True)
+            if "layouts" in variant and name not in variant["layouts"]:
+                continue
+            bb = copy.deepcopy(b)
+            if "load" in variant:
+                bb["load"] = {**bb.get("load", {}), **variant["load"]}
+            if "pct" in variant:
+                for f in bb["fans"]:
+                    f["pct"] = variant["pct"]["stock" if f["slot"] in STOCK_SLOTS else "spare"]
+            r = sim.simulate_build(bb, steps=variant.get("steps", 8000), with_dust=True)
             p = r["parts"]
             score = p["cpu"]["temp_c"] + p["gpu"]["temp_c"] + 2 * r["dust"]["dust_entering_rel"]
             rows[name] = (p["cpu"]["temp_c"], p["gpu"]["temp_c"], r["dust"]["dust_entering_rel"], score)
@@ -100,6 +124,6 @@ if __name__ == "__main__":
         rows = run(VARIANTS[v])
         order = sorted(rows, key=lambda k: rows[k][3])
         print(f"\n== {v}  ({time.time() - t0:.0f} s)   order: " + " < ".join(order), flush=True)
-        for k in LAYOUTS:
+        for k in (k for k in LAYOUTS if k in rows):
             c, g, d, s = rows[k]
             print(f"  {k:24s} CPU {c:5.1f}  GPU {g:5.1f}  dust {d * 100:3.0f}%  score {s:6.2f}", flush=True)

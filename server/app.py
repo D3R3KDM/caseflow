@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
 from engine import sim  # noqa: E402
-from engine.hardware import detect, gpu_sensors  # noqa: E402
+from engine.hardware import SensorLog, detect, gpu_sensors  # noqa: E402
 from engine.thermal import MIN_CAL_WATTS, calibrate_g  # noqa: E402
 
 app = FastAPI(title="CaseFlow service")
@@ -29,6 +29,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 _jobs: dict[str, dict] = {}
 _lock = threading.Lock()          # one GPU simulation at a time
 _hw: dict = {}
+_log = SensorLog(busy=_lock.locked).start()       # GPU / CPU samples every 2 s, last 30 min
 
 
 @app.get("/api/health")
@@ -45,6 +46,13 @@ def hardware(refresh: bool = False) -> dict:
     else:
         _hw["gpus"] = gpu_sensors()
     return _hw
+
+
+@app.get("/api/hardware/session")
+def session(minutes: float = 10.0) -> dict:
+    """What the PC actually did in the last minutes (e.g. while you played): GPU power, temperature, fan speed,
+    utilisation, and CPU utilisation, averaged over the samples with the GPU under load (>= 150 W)."""
+    return _log.summary(minutes)
 
 
 @app.get("/api/library")

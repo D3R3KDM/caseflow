@@ -37,6 +37,8 @@ CD_ORIFICE = 0.6               # discharge coefficient of a passive opening (sha
 POROSITY = {"open": 0.6, "vent": 0.4}   # open-area fraction: empty fan grille on mesh / vented slot covers (est.)
 FILTER_OPEN = 0.7              # extra open-area factor of a dust filter
 ASSIST_CAP = 1.25              # a fan helped by the case pressure delivers at most 1.25x its free flow
+GPU_FAN_MS = 1.6               # air speed through the GPU's own fans (fixed; the real ones follow the GPU's curve)
+COOLER_FAN_FRAC = 0.7          # CPU cooler fans: share of their rated flow (fixed; the real ones follow CPU temp)
 MMH2O_TO_PA = 9.80665
 
 
@@ -226,7 +228,7 @@ def build_model(build: dict, lib: dict | None = None) -> dict:
     gy0, gy1 = py - Hh, py
     gz1 = bd["gpu_slot_top_z"]
     gz0 = gz1 - T
-    v_gpu = 1.6 * U_LAT_PER_MS
+    v_gpu = GPU_FAN_MS * U_LAT_PER_MS
     if gpu["cooler"] == "dual_flow_through":
         zl = 0.3 * L
         zones = [(gx0, gx0 + zl), (gx1 - zl, gx1)]
@@ -255,7 +257,7 @@ def build_model(build: dict, lib: dict | None = None) -> dict:
     cz0, cz1 = sz - cw / 2, sz + cw / 2
     cy0, cy1 = py - ch, py
     cfan = find(lib, "fans", cooler["fans"][0]["fan"])
-    v_cool = cfan["cfm"] * CFM_TO_M3S * 0.7 / (cfan["size_mm"] / 1000.0) ** 2 * U_LAT_PER_MS
+    v_cool = cfan["cfm"] * CFM_TO_M3S * COOLER_FAN_FRAC / (cfan["size_mm"] / 1000.0) ** 2 * U_LAT_PER_MS
     segs = [("fan", 0, 25), ("tower", 25, 67), ("fan", 67, 92), ("tower", 92, cd)] if cooler["type"] == "dual_tower" else [("fan", 0, 25), ("tower", 25, cd)]
     for kind, a, b in segs:
         if kind == "fan":

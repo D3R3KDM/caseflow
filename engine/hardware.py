@@ -88,3 +88,71 @@ def detect() -> dict:
             if cpu_t is None else "CPU temperature read from LibreHardwareMonitor.",
         ],
     }
+
+
+class SensorLog:
+    """Samples the GPU (nvidia-smi) and CPU utilisation every few seconds in a background thread and keeps the
+    last half hour, so a gaming session can be summarised afterwards: real GPU power, temperature, fan speed and
+    utilisation under load, instead of one instant reading.
+
+    busy: optional callable, True while CaseFlow itself runs a simulation on the GPU. Those samples are kept but
+    left out of the summary, so the simulation's own GPU load is not mistaken for a game."""
+
+    def __init__(self, period_s: float = 2.0, keep_min: float = 30.0, busy=None):
+        import collections
+        import threading
+
+        self.period = period_s
+        self.busy = busy
+        self.buf: collections.deque = collections.deque(maxlen=int(keep_min * 60 / period_s))
+        self.lock = threading.Lock()
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def start(self) -> "SensorLog":
+        self._thread.start()
+        return self
+
+    def stop(self) -> None:
+        self._stop.set()
+
+    def _run(self) -> None:
+        import time
+
+        try:
+            import psutil
+            psutil.cpu_percent(interval=None)                     # prime the counter
+        except Exception:                                         # pragma: no cover - psutil missing
+            psutil = None
+        while not self._stop.wait(self.period):
+            g = gpu_sensors()
+            row = {"t": time.time(), "cpu_util": psutil.cpu_percent(interval=None) if psutil else None,
+                   "sim": bool(self.busy and self.busy())}
+            if g:
+                row.update({f"gpu_{k}": v for k, v in g[0].items() if k != "name"})
+            with self.lock:
+                self.buf.append(row)
+
+    def summary(self, minutes: float = 10.0, min_gpu_w: float = 150.0) -> dict:
+        """Averages over the last `minutes`; 'load' = only the samples where the GPU drew at least min_gpu_w.
+        Samples taken while CaseFlow was simulating are left out (counted in sim_seconds)."""
+        import time
+
+        now = time.time()
+        with self.lock:
+            recent = [r for r in self.buf if now - r["t"] <= minutes * 60]
+        rows = [r for r in recent if not r.get("sim")]
+
+        def avg(rs, k):
+            v = [r[k] for r in rs if r.get(k) is not None]
+            return sum(v) / len(v) if v else None
+
+        loaded = [r for r in rows if (r.get("gpu_power_w") or 0) >= min_gpu_w]
+        keys = ("gpu_temp_c", "gpu_power_w", "gpu_fan_pct", "gpu_util_pct", "gpu_clock_mhz", "cpu_util")
+        return {
+            "minutes": minutes, "samples": len(rows), "period_s": self.period, "min_gpu_w": min_gpu_w,
+            "load_seconds": len(loaded) * self.period, "sim_seconds": (len(recent) - len(rows)) * self.period,
+            "all": {k: avg(rows, k) for k in keys},
+            "load": {k: avg(loaded, k) for k in keys} if loaded else None,
+            "gpu_temp_max": max((r.get("gpu_temp_c") or 0) for r in rows) if rows else None,
+        }

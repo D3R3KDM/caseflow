@@ -44,6 +44,9 @@ export interface Opt {
   objective: string; dust_weight?: number; space?: string; minutes?: number
 }
 
+export interface SessionAvg { gpu_temp_c: number | null; gpu_power_w: number | null; gpu_fan_pct: number | null; gpu_util_pct: number | null; gpu_clock_mhz: number | null; cpu_util: number | null }
+export interface Session { minutes: number; samples: number; period_s: number; min_gpu_w: number; load_seconds: number; sim_seconds?: number; all: SessionAvg; load: SessionAvg | null; gpu_temp_max: number | null }
+
 export type ViewKey = 'current' | 'best' | 'cpu' | 'worst' | 'custom'
 
 export const WHERE: Record<string, string> = {
