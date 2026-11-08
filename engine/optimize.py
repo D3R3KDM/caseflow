@@ -102,7 +102,7 @@ def main():
     done = {}
     if P.exists():
         old = json.loads(P.read_text())
-        if old.get("version") == 4:
+        if old.get("version") == 5:
             done = {x["name"]: x for x in old["ranking"]}
     t0 = time.time()
     rows = []
@@ -116,9 +116,9 @@ def main():
         x = rows[-1]
         print(f"[opt {i + 1:2d}/{len(cands)}] {name:44s} GPU {x['gpu_c']:.1f}  CPU {x['cpu_c']:.1f}  sum {x['score']:.1f}"
               f"  dust {x['dust_in'] * 100:.0f}%  {x['pressure']}{'  <- yours' if x['current'] else ''}", flush=True)
-        P.write_text(json.dumps({"version": 4, "partial": True, "ranking": rows}, indent=1))
+        P.write_text(json.dumps({"version": 5, "partial": True, "ranking": rows}, indent=1))
     rows.sort(key=lambda x: x["score"] + DUST_WEIGHT * x["dust_in"])
-    res = {"version": 4, "ranking": rows, **pick(rows),
+    res = {"version": 5, "ranking": rows, **pick(rows),
            "space": "4 stock fans fixed (2x140 front in, 2x120 bottom in); the user's 3x120 fans over "
                     "{top-front, top-mid, top-rear, rear} x {in, out}: 32 layouts, all simulated",
            "objective": "recommended = lowest (CPU + GPU temperature) + 2 x (fraction of outside dust that gets in)",

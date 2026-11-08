@@ -23,17 +23,17 @@ The reference build is a Lian Li LANCOOL 207 with an RTX 5080 Founders Edition, 
 
 | # | Your 3 fans | CPU | GPU | Dust let in |
 |---|---|---|---|---|
-| **1** | **top-mid + top-rear + rear out (the current layout)** | **75.6 °C** | **63.4 °C** | **69 %** |
-| 2 | top-front + top-rear + rear out | 75.8 °C | 63.4 °C | 68 % |
-| 5 | top-front + top-rear in · rear out (lowest CPU) | 74.4 °C | 65.1 °C | 81 % |
-| 14 | all three on top, blowing in (no exhaust fan) | 74.7 °C | 65.4 °C | 88 % |
-| 32 | rear in · top-front + top-mid out (worst) | 77.2 °C | 64.9 °C | 76 % |
+| **1** | **top-mid + top-rear + rear out (the current layout)** | **76.5 °C** | **64.0 °C** | **69 %** |
+| 2 | top-front + top-rear + rear out | 76.8 °C | 64.1 °C | 68 % |
+| 3 | top-front + top-rear in · rear out (lowest CPU) | 75.1 °C | 65.8 °C | 81 % |
+| 31 | all seven fans blowing in (no exhaust fan) | 78.0 °C | 67.6 °C | 88 % |
+| 32 | rear in · top-front + top-mid out (worst) | 79.4 °C | 66.6 °C | 76 % |
 
 All results are at CPU 88 W, GPU 300 W and a room at 25 °C. The current layout ranks first of 32, so keep it.
 
-- **Direction matters more than position.** The top-three layouts differ only in which top holes are used, and are within 0.4 °C of each other.
-- **Avoid intakes on the top.** Turning any of the three fans into an intake warms the GPU by 1–2 °C and lets in 6–19 points more dust, because the top has no filter.
-- **Never use the rear fan as an intake.** It blows straight into the CPU cooler's exhaust: CPU +1.6 °C.
+- **Direction matters more than position.** The top two layouts are both all-exhaust; they differ only in which top holes are used, and are within 0.4 °C of each other.
+- **Avoid intakes on the top.** Turning any of the three fans into an intake warms the GPU by 1.4–3.6 °C and lets in 6–19 points more dust, because the top has no filter.
+- **Never use the rear fan as an intake.** It blows straight into the CPU cooler's exhaust. The bottom eight layouts all do this; with only the rear blowing in, the CPU runs 2.4–2.9 °C hotter.
 
 ## Run
 
@@ -72,7 +72,7 @@ The views (your layout, lowest CPU, worst) and the full 32-layout ranking are pr
 Python: see `requirements.txt` (PyTorch with CUDA for speed). `start.bat` uses `.venv` in this folder, or `../.venv`.
 
 ```bash
-python engine/optimize.py        # search all 32 layouts (≈18 min on an RTX 5080), resumable
+python engine/optimize.py        # search all 32 layouts (≈19 min on an RTX 5080), resumable
 python scripts/precompute.py     # write the web views from the search result
 python -m pytest tests           # fast engine checks (no GPU run)
 ```
@@ -84,7 +84,7 @@ python -m pytest tests           # fast engine checks (no GPU run)
 | **Geometry** | Parts come from `data/parts/library.json`: dimensions, fan mounts, fan specs and source links. They are placed in the case on a 6 mm grid. <br>Solid: walls, PSU, motherboard, GPU PCB and CPU fin towers (as heat zones). <br>Empty mesh mounts and the vented slot covers are open to the room. |
 | **Air** | Our own D3Q19 lattice-Boltzmann solver (`engine/lbm.py`, PyTorch on the GPU) with BGK collision, Smagorinsky turbulence and bounce-back walls. <br>Fans are cells with a set air velocity. A layer of "room" cells around the case holds outside air at rest. |
 | **Fans** | Each case fan runs at its **operating point**. <br>Fan curve: Q = Q₀ (1 − Δp / p_max), from the rated flow and static pressure, scaled by the fan laws. <br>All fans see one case pressure p. The passive openings balance the flow as orifices: Q = C_d A √(2\|p\| / ρ). <br>p is found by bisection. Without this step, "all intake, no exhaust" ranked first. With it, those fans stall against +7.8 Pa and that layout drops to 14th. |
-| **Heat** | CPU and GPU power enters the air in their fin stacks and is carried by the solved flow (upwind advection–diffusion). <br>Part temperature = intake air rise + P / G, where G is the cooler's conductance. One measured temperature calibrates G. |
+| **Heat** | CPU and GPU power enters the air in their fin stacks and is carried by the solved flow (upwind advection–diffusion), iterated until the intake temperatures change by less than 0.005 K. <br>Part temperature = intake air rise + P / G, where G is the cooler's conductance. One measured temperature calibrates G. |
 | **Dust** | 40 000 particles of 20 µm are released where air comes in, weighted by inflow; the bottom filter stops 85 %. <br>They drift with the flow plus turbulent diffusion and settling, and stick where they touch a surface. |
 | **Search** | Stock fans stay where they are. The spare fans go on every free mount, each blowing in or out (C(4,3) × 2³ = 32 layouts), and every layout gets the full simulation. <br>Score = CPU + GPU °C + 2 °C × the fraction of outside dust let in. |
 

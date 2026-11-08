@@ -224,8 +224,9 @@ def fig_ranking():
         sel = [i for i, v in enumerate(n_in) if v == k]
         ax.scatter([rows[i]["cpu_c"] for i in sel], [rows[i]["gpu_c"] for i in sel], s=70, color=ORD[k], edgecolor=BG, linewidth=1.5,
                    label=f"{k} of your 3 fans blowing in", zorder=3)
-    lo, hi, ylo, yhi = 74.0, 77.6, 62.9, 66.3
-    for s in (138, 139, 140, 141, 142):
+    cs, gs = [r["cpu_c"] for r in rows], [r["gpu_c"] for r in rows]
+    lo, hi, ylo, yhi = min(cs) - 0.5, max(cs) + 0.6, min(gs) - 0.4, max(gs) + 0.45
+    for s in range(int(min(cs) + min(gs)), int(max(cs) + max(gs)) + 2):
         xs = np.linspace(lo, hi, 2)
         ax.plot(xs, s - xs, color=GRID, lw=0.9, ls=(0, (4, 3)), zorder=1)
         if s - lo < yhi - 0.1:                                       # label where the line leaves the left edge ...
@@ -233,14 +234,14 @@ def fig_ranking():
         else:                                                        # ... or the top edge
             ax.text(s - yhi + 0.06, yhi - 0.05, f"Σ {s}", color=MUTED, fontsize=8, ha="left", va="top")
     marks = {r["name"]: i for i, r in enumerate(rows)}
-    notes = [(next(i for i, r in enumerate(rows) if r.get("current")), "#1  your layout: all three out", (-12, -30)),
-             (marks[opt["cpu"]], "#5  lowest CPU: 2 top fans in", (-12, -100)),
-             (marks["top-front + top-mid + top-rear in"], "#14  all three in (fans stall)", (14, 22)),
-             (marks[opt["worst"]], "#32  worst: rear fan in", (-120, -46))]
+    notes = [(next(i for i, r in enumerate(rows) if r.get("current")), "your layout: all three out", (10, -30)),
+             (marks[opt["cpu"]], "lowest CPU: 2 top fans in", (-20, -62)),
+             (marks["top-mid + top-rear + rear in"], "all 7 fans in, none out", (-170, 6)),
+             (marks[opt["worst"]], "worst: rear fan in", (-110, -48))]
     for i, text, off in notes:
         r = rows[i]
         ax.scatter([r["cpu_c"]], [r["gpu_c"]], s=150, facecolor="none", edgecolor=INK, linewidth=1.3, zorder=4)
-        ax.annotate(f"{text}\n{r['cpu_c']:.1f} / {r['gpu_c']:.1f} °C · dust {r['dust_in'] * 100:.0f}%", (r["cpu_c"], r["gpu_c"]),
+        ax.annotate(f"#{i + 1}  {text}\n{r['cpu_c']:.1f} / {r['gpu_c']:.1f} °C · dust {r['dust_in'] * 100:.0f}%", (r["cpu_c"], r["gpu_c"]),
                     xytext=off, textcoords="offset points", color=INK, fontsize=9, arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.8))
     ax.set_xlim(lo, hi)
     ax.set_ylim(ylo, yhi)

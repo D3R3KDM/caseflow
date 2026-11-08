@@ -1,5 +1,5 @@
 {
- "version": 4,
+ "version": 5,
  "ranking": [
   {
    "name": "top-mid + top-rear + rear out",
@@ -58,37 +58,37 @@
     }
    },
    "current": true,
-   "gpu_c": 63.357185560114246,
-   "cpu_c": 75.62478065490723,
-   "gpu_air": 3.06306791305542,
-   "cpu_air": 6.624780654907227,
-   "score": 138.9819662150215,
+   "gpu_c": 64.01764197910533,
+   "cpu_c": 76.46822357177734,
+   "gpu_air": 3.723524332046509,
+   "cpu_air": 7.468223571777344,
+   "score": 140.4858655508827,
    "pressure": "positive",
    "cfm_in": 129.79552706328792,
    "cfm_out": 93.45643444135955,
-   "dead_air": 0.08267880137284979,
-   "seconds": 32.30076456069946,
-   "dust_in": 0.6868207089767128,
-   "dust_settles": 0.47215,
+   "dead_air": 0.08265315021829132,
+   "seconds": 32.29579043388367,
+   "dust_in": 0.6868248561221313,
+   "dust_settles": 0.471075,
    "dust_top": [
     [
      "glass side",
-     0.25246214866638184
+     0.24762511253356934
     ],
     [
      "tray side",
-     0.18135125935077667
+     0.18017300963401794
     ],
     [
      "PSU",
-     0.11479403078556061
+     0.11691344529390335
     ],
     [
      "front panel",
-     0.10102721303701401
+     0.10104548186063766
     ]
    ],
-   "combined": 140.3556076329749
+   "combined": 141.85951526312695
   },
   {
    "name": "top-front + top-rear + rear out",
@@ -147,215 +147,37 @@
     }
    },
    "current": false,
-   "gpu_c": 63.39373131359325,
-   "cpu_c": 75.80201053619385,
-   "gpu_air": 3.099613666534424,
-   "cpu_air": 6.802010536193848,
-   "score": 139.1957418497871,
+   "gpu_c": 64.09856887424694,
+   "cpu_c": 76.75725650787354,
+   "gpu_air": 3.8044512271881104,
+   "cpu_air": 7.757256507873535,
+   "score": 140.85582538212049,
    "pressure": "positive",
    "cfm_in": 132.3639682997558,
    "cfm_out": 91.77333947651523,
-   "dead_air": 0.07987284333581152,
-   "seconds": 32.38994574546814,
-   "dust_in": 0.6843653947570055,
-   "dust_settles": 0.4433,
+   "dead_air": 0.0790063321967852,
+   "seconds": 32.81909918785095,
+   "dust_in": 0.6843784959568967,
+   "dust_settles": 0.441725,
    "dust_top": [
     [
      "glass side",
-     0.24684186279773712
+     0.2537212073802948
     ],
     [
      "tray side",
-     0.18661177158355713
+     0.18405115604400635
     ],
     [
      "PSU",
-     0.11780960857868195
+     0.11607901006937027
     ],
     [
      "front panel",
-     0.10963230580091476
+     0.10832531750202179
     ]
    ],
-   "combined": 140.56447263930113
-  },
-  {
-   "name": "top-front + top-mid + rear out",
-   "build": {
-    "case": "lianli-lancool-207",
-    "gpu": "nvidia-rtx-5080-fe",
-    "cooler": "thermalright-pa120-se-argb",
-    "fans": [
-     {
-      "slot": "front_low",
-      "fan": "lianli-207-front-140",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "front_high",
-      "fan": "lianli-207-front-140",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "bottom_front",
-      "fan": "lianli-207-bottom-120-rev",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "bottom_rear",
-      "fan": "lianli-207-bottom-120-rev",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "top_1",
-      "fan": "generic-120",
-      "mode": "out",
-      "pct": 80
-     },
-     {
-      "slot": "top_2",
-      "fan": "generic-120",
-      "mode": "out",
-      "pct": 80
-     },
-     {
-      "slot": "rear",
-      "fan": "generic-120",
-      "mode": "out",
-      "pct": 80
-     }
-    ],
-    "load": {
-     "cpu_w": 88.0,
-     "gpu_w": 300.0,
-     "ambient_c": 25.0
-    }
-   },
-   "current": false,
-   "gpu_c": 63.440909820444446,
-   "cpu_c": 75.91735076904297,
-   "gpu_air": 3.14679217338562,
-   "cpu_air": 6.917350769042969,
-   "score": 139.35826058948743,
-   "pressure": "positive",
-   "cfm_in": 129.79552706328792,
-   "cfm_out": 93.45643444135955,
-   "dead_air": 0.07673286374619721,
-   "seconds": 29.627877950668335,
-   "dust_in": 0.6870820012086947,
-   "dust_settles": 0.4501,
-   "dust_top": [
-    [
-     "glass side",
-     0.24427904188632965
-    ],
-    [
-     "tray side",
-     0.18340368568897247
-    ],
-    [
-     "PSU",
-     0.11153077334165573
-    ],
-    [
-     "front panel",
-     0.10625416785478592
-    ]
-   ],
-   "combined": 140.73242459190482
-  },
-  {
-   "name": "top-front in \u00b7 top-rear + rear out",
-   "build": {
-    "case": "lianli-lancool-207",
-    "gpu": "nvidia-rtx-5080-fe",
-    "cooler": "thermalright-pa120-se-argb",
-    "fans": [
-     {
-      "slot": "front_low",
-      "fan": "lianli-207-front-140",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "front_high",
-      "fan": "lianli-207-front-140",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "bottom_front",
-      "fan": "lianli-207-bottom-120-rev",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "bottom_rear",
-      "fan": "lianli-207-bottom-120-rev",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "top_1",
-      "fan": "generic-120",
-      "mode": "in",
-      "pct": 80
-     },
-     {
-      "slot": "top_3",
-      "fan": "generic-120",
-      "mode": "out",
-      "pct": 80
-     },
-     {
-      "slot": "rear",
-      "fan": "generic-120",
-      "mode": "out",
-      "pct": 80
-     }
-    ],
-    "load": {
-     "cpu_w": 88.0,
-     "gpu_w": 300.0,
-     "ambient_c": 25.0
-    }
-   },
-   "current": false,
-   "gpu_c": 64.46868486965404,
-   "cpu_c": 74.99330711364746,
-   "gpu_air": 4.174567222595215,
-   "cpu_air": 5.993307113647461,
-   "score": 139.46199198330152,
-   "pressure": "positive",
-   "cfm_in": 126.32827220342678,
-   "cfm_out": 66.003675738,
-   "dead_air": 0.07936524213602687,
-   "seconds": 38.00466728210449,
-   "dust_in": 0.7502632586600184,
-   "dust_settles": 0.5069,
-   "dust_top": [
-    [
-     "glass side",
-     0.27539947628974915
-    ],
-    [
-     "tray side",
-     0.15629315376281738
-    ],
-    [
-     "PSU",
-     0.11323732137680054
-    ],
-    [
-     "rear wall",
-     0.11101794987916946
-    ]
-   ],
-   "combined": 140.96251850062154
+   "combined": 142.22458237403427
   },
   {
    "name": "top-front + top-rear in \u00b7 rear out",
@@ -414,40 +236,40 @@
     }
    },
    "current": false,
-   "gpu_c": 65.06533451641307,
-   "cpu_c": 74.39227962493896,
-   "gpu_air": 4.771216869354248,
-   "cpu_air": 5.392279624938965,
-   "score": 139.45761414135205,
+   "gpu_c": 65.83478661144481,
+   "cpu_c": 75.09009122848511,
+   "gpu_air": 5.540668964385986,
+   "cpu_air": 6.090091228485107,
+   "score": 140.92487783992993,
    "pressure": "positive",
    "cfm_in": 108.64247601642347,
    "cfm_out": 33.001837869,
-   "dead_air": 0.07399184761709436,
-   "seconds": 34.29529309272766,
-   "dust_in": 0.8070811688211577,
-   "dust_settles": 0.560475,
+   "dead_air": 0.07260235342374445,
+   "seconds": 32.32165503501892,
+   "dust_in": 0.8070829376348231,
+   "dust_settles": 0.5639,
    "dust_top": [
     [
      "glass side",
-     0.2684776186943054
+     0.2767334580421448
     ],
     [
      "tray side",
-     0.14099647104740143
+     0.14248980581760406
     ],
     [
      "PSU",
-     0.12864089012145996
+     0.12896789610385895
     ],
     [
-     "rear wall",
-     0.09590079635381699
+     "front panel",
+     0.09203759580850601
     ]
    ],
-   "combined": 141.07177647899437
+   "combined": 142.53904371519957
   },
   {
-   "name": "top-rear in \u00b7 top-front + rear out",
+   "name": "top-front + top-mid + rear out",
    "build": {
     "case": "lianli-lancool-207",
     "gpu": "nvidia-rtx-5080-fe",
@@ -484,9 +306,9 @@
       "pct": 80
      },
      {
-      "slot": "top_3",
+      "slot": "top_2",
       "fan": "generic-120",
-      "mode": "in",
+      "mode": "out",
       "pct": 80
      },
      {
@@ -503,37 +325,126 @@
     }
    },
    "current": false,
-   "gpu_c": 64.48341055477367,
-   "cpu_c": 75.24374914169312,
-   "gpu_air": 4.189292907714844,
-   "cpu_air": 6.243749141693115,
-   "score": 139.7271596964668,
+   "gpu_c": 64.20443006122814,
+   "cpu_c": 76.982093334198,
+   "gpu_air": 3.9103124141693115,
+   "cpu_air": 7.982093334197998,
+   "score": 141.18652339542615,
    "pressure": "positive",
-   "cfm_in": 126.32827220342678,
-   "cfm_out": 66.003675738,
-   "dead_air": 0.07666316302202168,
-   "seconds": 38.768654346466064,
-   "dust_in": 0.7502713235823315,
-   "dust_settles": 0.48005,
+   "cfm_in": 129.79552706328792,
+   "cfm_out": 93.45643444135955,
+   "dead_air": 0.075665775716565,
+   "seconds": 30.165469646453857,
+   "dust_in": 0.6870957205260698,
+   "dust_settles": 0.445175,
    "dust_top": [
     [
      "glass side",
-     0.27934589982032776
+     0.2394002377986908
     ],
     [
      "tray side",
-     0.1599312573671341
+     0.18273712694644928
     ],
     [
      "PSU",
-     0.12248723953962326
+     0.11242769658565521
     ],
     [
      "front panel",
-     0.09873971343040466
+     0.10450946539640427
     ]
    ],
-   "combined": 141.22770234363145
+   "combined": 142.5607148364783
+  },
+  {
+   "name": "top-front in \u00b7 top-rear + rear out",
+   "build": {
+    "case": "lianli-lancool-207",
+    "gpu": "nvidia-rtx-5080-fe",
+    "cooler": "thermalright-pa120-se-argb",
+    "fans": [
+     {
+      "slot": "front_low",
+      "fan": "lianli-207-front-140",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "front_high",
+      "fan": "lianli-207-front-140",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "bottom_front",
+      "fan": "lianli-207-bottom-120-rev",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "bottom_rear",
+      "fan": "lianli-207-bottom-120-rev",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "top_1",
+      "fan": "generic-120",
+      "mode": "in",
+      "pct": 80
+     },
+     {
+      "slot": "top_3",
+      "fan": "generic-120",
+      "mode": "out",
+      "pct": 80
+     },
+     {
+      "slot": "rear",
+      "fan": "generic-120",
+      "mode": "out",
+      "pct": 80
+     }
+    ],
+    "load": {
+     "cpu_w": 88.0,
+     "gpu_w": 300.0,
+     "ambient_c": 25.0
+    }
+   },
+   "current": false,
+   "gpu_c": 65.41323967540966,
+   "cpu_c": 75.75179052352905,
+   "gpu_air": 5.11912202835083,
+   "cpu_air": 6.751790523529053,
+   "score": 141.16503019893872,
+   "pressure": "positive",
+   "cfm_in": 126.32827220342678,
+   "cfm_out": 66.003675738,
+   "dead_air": 0.07923193273002281,
+   "seconds": 32.180893898010254,
+   "dust_in": 0.7502788944587166,
+   "dust_settles": 0.5073,
+   "dust_top": [
+    [
+     "glass side",
+     0.2790755033493042
+    ],
+    [
+     "tray side",
+     0.15789473056793213
+    ],
+    [
+     "rear wall",
+     0.11373940110206604
+    ],
+    [
+     "PSU",
+     0.1124088317155838
+    ]
+   ],
+   "combined": 142.66558798785616
   },
   {
    "name": "top-front + top-mid in \u00b7 rear out",
@@ -592,37 +503,37 @@
     }
    },
    "current": false,
-   "gpu_c": 65.18087978924022,
-   "cpu_c": 74.41687631607056,
-   "gpu_air": 4.8867621421813965,
-   "cpu_air": 5.416876316070557,
-   "score": 139.5977561053108,
+   "gpu_c": 66.09063644970165,
+   "cpu_c": 75.11327838897705,
+   "gpu_air": 5.796518802642822,
+   "cpu_air": 6.113278388977051,
+   "score": 141.2039148386787,
    "pressure": "positive",
    "cfm_in": 99.54841802218698,
    "cfm_out": 33.001837869,
-   "dead_air": 0.08336112208410501,
-   "seconds": 29.977132081985474,
-   "dust_in": 0.8150897077388563,
-   "dust_settles": 0.588875,
+   "dead_air": 0.08389979632983281,
+   "seconds": 34.22255182266235,
+   "dust_in": 0.815096701230681,
+   "dust_settles": 0.5915,
    "dust_top": [
     [
      "glass side",
-     0.26605814695358276
+     0.26513102650642395
     ],
     [
      "tray side",
-     0.13058798015117645
+     0.13284023106098175
     ],
     [
      "PSU",
-     0.1273614913225174
+     0.13038884103298187
     ],
     [
-     "front panel",
-     0.09267671406269073
+     "rear wall",
+     0.09454776346683502
     ]
    ],
-   "combined": 141.2279355207885
+   "combined": 142.8341082411401
   },
   {
    "name": "top-front in \u00b7 top-mid + rear out",
@@ -681,37 +592,37 @@
     }
    },
    "current": false,
-   "gpu_c": 64.60077257717357,
-   "cpu_c": 75.12652492523193,
-   "gpu_air": 4.306654930114746,
-   "cpu_air": 6.126524925231934,
-   "score": 139.72729750240552,
+   "gpu_c": 65.64866276348339,
+   "cpu_c": 76.00974321365356,
+   "gpu_air": 5.3545451164245605,
+   "cpu_air": 7.0097432136535645,
+   "score": 141.65840597713697,
    "pressure": "positive",
    "cfm_in": 119.82214955361121,
    "cfm_out": 66.003675738,
-   "dead_air": 0.0822170805907974,
-   "seconds": 27.885751008987427,
-   "dust_in": 0.7546009440102635,
-   "dust_settles": 0.5187,
+   "dead_air": 0.08188361558153733,
+   "seconds": 31.806530237197876,
+   "dust_in": 0.7546177121399463,
+   "dust_settles": 0.5203,
    "dust_top": [
     [
      "glass side",
-     0.2749180495738983
+     0.27272728085517883
     ],
     [
      "tray side",
-     0.15249662101268768
+     0.15207572281360626
     ],
     [
      "PSU",
-     0.11422787606716156
+     0.1147414967417717
     ],
     [
      "rear wall",
-     0.10439560562372208
+     0.10205650329589844
     ]
    ],
-   "combined": 141.23649939042605
+   "combined": 143.16764140141686
   },
   {
    "name": "top-mid in \u00b7 top-rear + rear out",
@@ -770,37 +681,37 @@
     }
    },
    "current": false,
-   "gpu_c": 64.60654659832225,
-   "cpu_c": 75.14487075805664,
-   "gpu_air": 4.312428951263428,
-   "cpu_air": 6.144870758056641,
-   "score": 139.7514173563789,
+   "gpu_c": 65.6558043536018,
+   "cpu_c": 76.04629707336426,
+   "gpu_air": 5.361686706542969,
+   "cpu_air": 7.046297073364258,
+   "score": 141.70210142696607,
    "pressure": "positive",
    "cfm_in": 119.82214955361121,
    "cfm_out": 66.003675738,
-   "dead_air": 0.08953278987087208,
-   "seconds": 33.309760093688965,
-   "dust_in": 0.7545750348380591,
+   "dead_air": 0.08983547349466199,
+   "seconds": 31.49880313873291,
+   "dust_in": 0.7545907726877952,
    "dust_settles": 0.526525,
    "dust_top": [
     [
      "glass side",
-     0.2707373797893524
+     0.27140212059020996
     ],
     [
      "tray side",
-     0.14871089160442352
+     0.14847348630428314
     ],
     [
      "PSU",
-     0.11385974287986755
+     0.11504676938056946
     ],
     [
      "rear wall",
-     0.10939651727676392
+     0.10849437117576599
     ]
    ],
-   "combined": 141.26056742605502
+   "combined": 143.21128297234165
   },
   {
    "name": "top-front + top-mid + top-rear out",
@@ -859,37 +770,126 @@
     }
    },
    "current": false,
-   "gpu_c": 63.45867868030773,
-   "cpu_c": 76.44018840789795,
-   "gpu_air": 3.1645610332489014,
-   "cpu_air": 7.440188407897949,
-   "score": 139.8988670882057,
+   "gpu_c": 64.21846361721263,
+   "cpu_c": 77.68665218353271,
+   "gpu_air": 3.9243459701538086,
+   "cpu_air": 8.686652183532715,
+   "score": 141.90511580074536,
    "pressure": "positive",
    "cfm_in": 129.79552706328792,
    "cfm_out": 93.45643444135955,
-   "dead_air": 0.07165393514362081,
-   "seconds": 42.17349100112915,
-   "dust_in": 0.6874914905460583,
-   "dust_settles": 0.41185,
+   "dead_air": 0.06925811730786002,
+   "seconds": 37.62946367263794,
+   "dust_in": 0.6874881084634044,
+   "dust_settles": 0.412675,
    "dust_top": [
     [
      "glass side",
-     0.21603739261627197
+     0.2060943841934204
     ],
     [
      "tray side",
-     0.2009226679801941
+     0.20530684292316437
     ],
     [
      "front panel",
-     0.11660798639059067
+     0.11473920196294785
     ],
     [
      "PSU",
-     0.1142406240105629
+     0.11358817666769028
     ]
    ],
-   "combined": 141.2738500692978
+   "combined": 143.28009201767216
+  },
+  {
+   "name": "top-rear in \u00b7 top-front + rear out",
+   "build": {
+    "case": "lianli-lancool-207",
+    "gpu": "nvidia-rtx-5080-fe",
+    "cooler": "thermalright-pa120-se-argb",
+    "fans": [
+     {
+      "slot": "front_low",
+      "fan": "lianli-207-front-140",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "front_high",
+      "fan": "lianli-207-front-140",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "bottom_front",
+      "fan": "lianli-207-bottom-120-rev",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "bottom_rear",
+      "fan": "lianli-207-bottom-120-rev",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "top_1",
+      "fan": "generic-120",
+      "mode": "out",
+      "pct": 80
+     },
+     {
+      "slot": "top_3",
+      "fan": "generic-120",
+      "mode": "in",
+      "pct": 80
+     },
+     {
+      "slot": "rear",
+      "fan": "generic-120",
+      "mode": "out",
+      "pct": 80
+     }
+    ],
+    "load": {
+     "cpu_w": 88.0,
+     "gpu_w": 300.0,
+     "ambient_c": 25.0
+    }
+   },
+   "current": false,
+   "gpu_c": 65.51870651806102,
+   "cpu_c": 76.34980916976929,
+   "gpu_air": 5.224588871002197,
+   "cpu_air": 7.349809169769287,
+   "score": 141.86851568783032,
+   "pressure": "positive",
+   "cfm_in": 126.32827220342678,
+   "cfm_out": 66.003675738,
+   "dead_air": 0.07775014740943934,
+   "seconds": 33.78601360321045,
+   "dust_in": 0.7503194997876064,
+   "dust_settles": 0.484575,
+   "dust_top": [
+    [
+     "glass side",
+     0.2918021082878113
+    ],
+    [
+     "tray side",
+     0.15570345520973206
+    ],
+    [
+     "PSU",
+     0.1167517900466919
+    ],
+    [
+     "rear wall",
+     0.09565082937479019
+    ]
+   ],
+   "combined": 143.36915468740554
   },
   {
    "name": "top-rear in \u00b7 top-mid + rear out",
@@ -948,37 +948,37 @@
     }
    },
    "current": false,
-   "gpu_c": 64.60723753536449,
-   "cpu_c": 75.19253969192505,
-   "gpu_air": 4.313119888305664,
-   "cpu_air": 6.192539691925049,
-   "score": 139.79977722728955,
+   "gpu_c": 65.68279905880199,
+   "cpu_c": 76.21845197677612,
+   "gpu_air": 5.388681411743164,
+   "cpu_air": 7.218451976776123,
+   "score": 141.90125103557813,
    "pressure": "positive",
    "cfm_in": 119.82214955361121,
    "cfm_out": 66.003675738,
-   "dead_air": 0.08654699548026656,
-   "seconds": 37.14784479141235,
-   "dust_in": 0.7545640047669143,
-   "dust_settles": 0.516,
+   "dead_air": 0.08777312066816127,
+   "seconds": 31.505772590637207,
+   "dust_in": 0.7545857689998807,
+   "dust_settles": 0.509175,
    "dust_top": [
     [
      "glass side",
-     0.2757751941680908
+     0.27117395401000977
     ],
     [
      "tray side",
-     0.14922480285167694
+     0.14606961607933044
     ],
     [
      "PSU",
-     0.11312984675168991
+     0.11656110733747482
     ],
     [
      "rear wall",
-     0.09888565540313721
+     0.10394265502691269
     ]
    ],
-   "combined": 141.3089052368234
+   "combined": 143.41042257357788
   },
   {
    "name": "top-mid in \u00b7 top-front + rear out",
@@ -1037,37 +1037,37 @@
     }
    },
    "current": false,
-   "gpu_c": 64.62823362911449,
-   "cpu_c": 75.33441734313965,
-   "gpu_air": 4.334115982055664,
-   "cpu_air": 6.334417343139648,
-   "score": 139.96265097225415,
+   "gpu_c": 65.74931164348827,
+   "cpu_c": 76.50204229354858,
+   "gpu_air": 5.455193996429443,
+   "cpu_air": 7.502042293548584,
+   "score": 142.25135393703687,
    "pressure": "positive",
    "cfm_in": 119.82214955361121,
    "cfm_out": 66.003675738,
-   "dead_air": 0.07886703980546164,
-   "seconds": 30.733564853668213,
-   "dust_in": 0.7545921635927392,
-   "dust_settles": 0.486675,
+   "dead_air": 0.07831810509791046,
+   "seconds": 36.5794460773468,
+   "dust_in": 0.7545984593774044,
+   "dust_settles": 0.49135,
    "dust_top": [
     [
      "glass side",
-     0.26727283000946045
+     0.2642210125923157
     ],
     [
      "tray side",
-     0.15287409722805023
+     0.1518774777650833
     ],
     [
      "PSU",
-     0.11881645768880844
+     0.12338455021381378
     ],
     [
      "front panel",
-     0.09600862860679626
+     0.1007937341928482
     ]
    ],
-   "combined": 141.47183529943962
+   "combined": 143.76055085579168
   },
   {
    "name": "top-mid + top-rear in \u00b7 rear out",
@@ -1126,126 +1126,37 @@
     }
    },
    "current": false,
-   "gpu_c": 65.23719807232128,
-   "cpu_c": 74.73921871185303,
-   "gpu_air": 4.943080425262451,
-   "cpu_air": 5.739218711853027,
-   "score": 139.97641678417432,
+   "gpu_c": 66.40576286876903,
+   "cpu_c": 75.90891933441162,
+   "gpu_air": 6.111645221710205,
+   "cpu_air": 6.908919334411621,
+   "score": 142.31468220318067,
    "pressure": "positive",
    "cfm_in": 99.54841802218698,
    "cfm_out": 33.001837869,
-   "dead_air": 0.07992899760418216,
-   "seconds": 36.10269522666931,
-   "dust_in": 0.8150838903643157,
-   "dust_settles": 0.56105,
+   "dead_air": 0.07943136520574791,
+   "seconds": 35.05793809890747,
+   "dust_in": 0.8150825601065383,
+   "dust_settles": 0.557875,
    "dust_top": [
     [
      "glass side",
-     0.24512074887752533
+     0.24006274342536926
     ],
     [
      "tray side",
-     0.13808929920196533
+     0.13753080368041992
     ],
     [
      "PSU",
-     0.13706442713737488
+     0.13497647643089294
     ],
     [
      "front panel",
-     0.09807503968477249
+     0.09979834407567978
     ]
    ],
-   "combined": 141.60658456490296
-  },
-  {
-   "name": "top-front + top-mid + top-rear in",
-   "build": {
-    "case": "lianli-lancool-207",
-    "gpu": "nvidia-rtx-5080-fe",
-    "cooler": "thermalright-pa120-se-argb",
-    "fans": [
-     {
-      "slot": "front_low",
-      "fan": "lianli-207-front-140",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "front_high",
-      "fan": "lianli-207-front-140",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "bottom_front",
-      "fan": "lianli-207-bottom-120-rev",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "bottom_rear",
-      "fan": "lianli-207-bottom-120-rev",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "top_1",
-      "fan": "generic-120",
-      "mode": "in",
-      "pct": 80
-     },
-     {
-      "slot": "top_2",
-      "fan": "generic-120",
-      "mode": "in",
-      "pct": 80
-     },
-     {
-      "slot": "top_3",
-      "fan": "generic-120",
-      "mode": "in",
-      "pct": 80
-     }
-    ],
-    "load": {
-     "cpu_w": 88.0,
-     "gpu_w": 300.0,
-     "ambient_c": 25.0
-    }
-   },
-   "current": false,
-   "gpu_c": 65.43517799938427,
-   "cpu_c": 74.67620849609375,
-   "gpu_air": 5.1410603523254395,
-   "cpu_air": 5.67620849609375,
-   "score": 140.11138649547803,
-   "pressure": "positive",
-   "cfm_in": 75.46985829102708,
-   "cfm_out": 0,
-   "dead_air": 0.08447951242285415,
-   "seconds": 32.13555860519409,
-   "dust_in": 0.8768428630777286,
-   "dust_settles": 0.612,
-   "dust_top": [
-    [
-     "glass side",
-     0.21846404671669006
-    ],
-    [
-     "PSU",
-     0.16915850341320038
-    ],
-    [
-     "tray side",
-     0.14178921282291412
-    ],
-    [
-     "front panel",
-     0.10457516461610794
-    ]
-   ],
-   "combined": 141.86507222163348
+   "combined": 143.94484732339373
   },
   {
    "name": "top-front + top-mid in \u00b7 top-rear out",
@@ -1304,37 +1215,37 @@
     }
    },
    "current": false,
-   "gpu_c": 65.30514927471386,
-   "cpu_c": 74.97471570968628,
-   "gpu_air": 5.011031627655029,
-   "cpu_air": 5.974715709686279,
-   "score": 140.27986498440015,
+   "gpu_c": 66.55442829693065,
+   "cpu_c": 75.88957214355469,
+   "gpu_air": 6.260310649871826,
+   "cpu_air": 6.8895721435546875,
+   "score": 142.44400044048535,
    "pressure": "positive",
    "cfm_in": 99.54841802218698,
    "cfm_out": 33.001837869,
-   "dead_air": 0.08206317366344659,
-   "seconds": 28.996565341949463,
-   "dust_in": 0.8150664676227487,
-   "dust_settles": 0.58015,
+   "dead_air": 0.08272497345105503,
+   "seconds": 32.045082330703735,
+   "dust_in": 0.8151043012515437,
+   "dust_settles": 0.583775,
    "dust_top": [
     [
      "glass side",
-     0.28078946471214294
+     0.2854267358779907
     ],
     [
      "tray side",
-     0.13384468853473663
+     0.13631108403205872
     ],
     [
      "PSU",
-     0.12746703624725342
+     0.12466275691986084
     ],
     [
      "front panel",
-     0.09609583765268326
+     0.0926726907491684
     ]
    ],
-   "combined": 141.90999791964563
+   "combined": 144.07420904298843
   },
   {
    "name": "top-front + top-rear in \u00b7 top-mid out",
@@ -1393,37 +1304,37 @@
     }
    },
    "current": false,
-   "gpu_c": 65.31223650539623,
-   "cpu_c": 75.04289817810059,
-   "gpu_air": 5.018118858337402,
-   "cpu_air": 6.042898178100586,
-   "score": 140.35513468349683,
+   "gpu_c": 66.5749241885017,
+   "cpu_c": 76.13466501235962,
+   "gpu_air": 6.280806541442871,
+   "cpu_air": 7.134665012359619,
+   "score": 142.70958920086133,
    "pressure": "positive",
    "cfm_in": 99.54841802218698,
    "cfm_out": 33.001837869,
-   "dead_air": 0.07498345500530978,
-   "seconds": 33.27397322654724,
-   "dust_in": 0.8150648413765126,
-   "dust_settles": 0.57865,
+   "dead_air": 0.07610697557497063,
+   "seconds": 32.408565044403076,
+   "dust_in": 0.8150963520111733,
+   "dust_settles": 0.579475,
    "dust_top": [
     [
      "glass side",
-     0.28480082750320435
+     0.28819188475608826
     ],
     [
      "tray side",
-     0.13704311847686768
+     0.13494974374771118
     ],
     [
      "PSU",
-     0.12861832976341248
+     0.13270632922649384
     ],
     [
      "front panel",
-     0.09133327752351761
+     0.09413693100214005
     ]
    ],
-   "combined": 141.98526436624985
+   "combined": 144.33978190488367
   },
   {
    "name": "top-front in \u00b7 top-mid + top-rear out",
@@ -1482,37 +1393,126 @@
     }
    },
    "current": false,
-   "gpu_c": 64.71837540233837,
-   "cpu_c": 75.83495807647705,
-   "gpu_air": 4.424257755279541,
-   "cpu_air": 6.834958076477051,
-   "score": 140.55333347881543,
+   "gpu_c": 65.97469921673046,
+   "cpu_c": 77.10139656066895,
+   "gpu_air": 5.680581569671631,
+   "cpu_air": 8.101396560668945,
+   "score": 143.07609577739942,
    "pressure": "positive",
    "cfm_in": 119.82214955361121,
    "cfm_out": 66.003675738,
-   "dead_air": 0.08465907050476341,
-   "seconds": 30.3060564994812,
-   "dust_in": 0.7547247058063707,
-   "dust_settles": 0.4853,
+   "dead_air": 0.0845975077338231,
+   "seconds": 37.55720400810242,
+   "dust_in": 0.7547156187932307,
+   "dust_settles": 0.483825,
    "dust_top": [
     [
      "glass side",
-     0.27776631712913513
+     0.28140339255332947
     ],
     [
      "tray side",
-     0.15959200263023376
+     0.15764997899532318
     ],
     [
      "PSU",
-     0.11286833137273788
+     0.11729447543621063
     ],
     [
      "top panel",
-     0.10168967396020889
+     0.10298144817352295
     ]
    ],
-   "combined": 142.06278289042817
+   "combined": 144.58552701498587
+  },
+  {
+   "name": "top-front + top-mid + top-rear in",
+   "build": {
+    "case": "lianli-lancool-207",
+    "gpu": "nvidia-rtx-5080-fe",
+    "cooler": "thermalright-pa120-se-argb",
+    "fans": [
+     {
+      "slot": "front_low",
+      "fan": "lianli-207-front-140",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "front_high",
+      "fan": "lianli-207-front-140",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "bottom_front",
+      "fan": "lianli-207-bottom-120-rev",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "bottom_rear",
+      "fan": "lianli-207-bottom-120-rev",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "top_1",
+      "fan": "generic-120",
+      "mode": "in",
+      "pct": 80
+     },
+     {
+      "slot": "top_2",
+      "fan": "generic-120",
+      "mode": "in",
+      "pct": 80
+     },
+     {
+      "slot": "top_3",
+      "fan": "generic-120",
+      "mode": "in",
+      "pct": 80
+     }
+    ],
+    "load": {
+     "cpu_w": 88.0,
+     "gpu_w": 300.0,
+     "ambient_c": 25.0
+    }
+   },
+   "current": false,
+   "gpu_c": 66.81393595302806,
+   "cpu_c": 76.05862474441528,
+   "gpu_air": 6.519818305969238,
+   "cpu_air": 7.058624744415283,
+   "score": 142.87256069744336,
+   "pressure": "positive",
+   "cfm_in": 75.46985829102708,
+   "cfm_out": 0,
+   "dead_air": 0.08679324656402784,
+   "seconds": 33.392993450164795,
+   "dust_in": 0.8768487961777687,
+   "dust_settles": 0.6077,
+   "dust_top": [
+    [
+     "glass side",
+     0.21622511744499207
+    ],
+    [
+     "PSU",
+     0.16936810314655304
+    ],
+    [
+     "tray side",
+     0.14493170380592346
+    ],
+    [
+     "front panel",
+     0.10979924350976944
+    ]
+   ],
+   "combined": 144.6262582897989
   },
   {
    "name": "top-mid in \u00b7 top-front + top-rear out",
@@ -1571,37 +1571,37 @@
     }
    },
    "current": false,
-   "gpu_c": 64.7497813280891,
-   "cpu_c": 76.03460931777954,
-   "gpu_air": 4.455663681030273,
-   "cpu_air": 7.034609317779541,
-   "score": 140.78439064586865,
+   "gpu_c": 66.09042425716625,
+   "cpu_c": 77.54786109924316,
+   "gpu_air": 5.796306610107422,
+   "cpu_air": 8.547861099243164,
+   "score": 143.63828535640943,
    "pressure": "positive",
    "cfm_in": 119.82214955361121,
    "cfm_out": 66.003675738,
-   "dead_air": 0.08215038758894538,
-   "seconds": 31.37336778640747,
-   "dust_in": 0.7547442730832183,
-   "dust_settles": 0.4645,
+   "dead_air": 0.08219142943623893,
+   "seconds": 38.970227003097534,
+   "dust_in": 0.7547345754969015,
+   "dust_settles": 0.469025,
    "dust_top": [
     [
      "glass side",
-     0.2716899812221527
+     0.27045467495918274
     ],
     [
      "tray side",
-     0.15737351775169373
+     0.15745429694652557
     ],
     [
      "PSU",
-     0.11517760902643204
+     0.11662491410970688
     ],
     [
      "front panel",
-     0.10177610069513321
+     0.10095410794019699
     ]
    ],
-   "combined": 142.2938791920351
+   "combined": 145.14775450740322
   },
   {
    "name": "top-rear in \u00b7 top-front + top-mid out",
@@ -1660,126 +1660,37 @@
     }
    },
    "current": false,
-   "gpu_c": 64.77160616482006,
-   "cpu_c": 76.15897178649902,
-   "gpu_air": 4.4774885177612305,
-   "cpu_air": 7.158971786499023,
-   "score": 140.9305779513191,
+   "gpu_c": 66.19062443340526,
+   "cpu_c": 77.81891345977783,
+   "gpu_air": 5.8965067863464355,
+   "cpu_air": 8.818913459777832,
+   "score": 144.0095378931831,
    "pressure": "positive",
    "cfm_in": 119.82214955361121,
    "cfm_out": 66.003675738,
-   "dead_air": 0.081822052810597,
-   "seconds": 37.862998723983765,
-   "dust_in": 0.7547490376561294,
-   "dust_settles": 0.46895,
+   "dead_air": 0.08209395504891676,
+   "seconds": 37.36459159851074,
+   "dust_in": 0.7547394478052091,
+   "dust_settles": 0.466325,
    "dust_top": [
     [
      "glass side",
-     0.27924084663391113
+     0.27507638931274414
     ],
     [
      "tray side",
-     0.15875892341136932
+     0.1560070812702179
     ],
     [
      "PSU",
-     0.11509755998849869
-    ],
-    [
-     "top panel",
-     0.10129011422395706
-    ]
-   ],
-   "combined": 142.44007602663135
-  },
-  {
-   "name": "top-mid + top-rear in \u00b7 top-front out",
-   "build": {
-    "case": "lianli-lancool-207",
-    "gpu": "nvidia-rtx-5080-fe",
-    "cooler": "thermalright-pa120-se-argb",
-    "fans": [
-     {
-      "slot": "front_low",
-      "fan": "lianli-207-front-140",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "front_high",
-      "fan": "lianli-207-front-140",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "bottom_front",
-      "fan": "lianli-207-bottom-120-rev",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "bottom_rear",
-      "fan": "lianli-207-bottom-120-rev",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "top_1",
-      "fan": "generic-120",
-      "mode": "out",
-      "pct": 80
-     },
-     {
-      "slot": "top_2",
-      "fan": "generic-120",
-      "mode": "in",
-      "pct": 80
-     },
-     {
-      "slot": "top_3",
-      "fan": "generic-120",
-      "mode": "in",
-      "pct": 80
-     }
-    ],
-    "load": {
-     "cpu_w": 88.0,
-     "gpu_w": 300.0,
-     "ambient_c": 25.0
-    }
-   },
-   "current": false,
-   "gpu_c": 65.32253332699047,
-   "cpu_c": 75.49093627929688,
-   "gpu_air": 5.028415679931641,
-   "cpu_air": 6.490936279296875,
-   "score": 140.81346960628736,
-   "pressure": "positive",
-   "cfm_in": 99.54841802218698,
-   "cfm_out": 33.001837869,
-   "dead_air": 0.06597989975528798,
-   "seconds": 27.551271200180054,
-   "dust_in": 0.8150489851778742,
-   "dust_settles": 0.531225,
-   "dust_top": [
-    [
-     "glass side",
-     0.23605816066265106
-    ],
-    [
-     "tray side",
-     0.14946585893630981
-    ],
-    [
-     "PSU",
-     0.14381852746009827
+     0.11279687285423279
     ],
     [
      "front panel",
-     0.10504023730754852
+     0.1055058166384697
     ]
    ],
-   "combined": 142.4435675766431
+   "combined": 145.51901678879352
   },
   {
    "name": "top-front + top-rear + rear in",
@@ -1838,126 +1749,37 @@
     }
    },
    "current": false,
-   "gpu_c": 65.47729178035961,
-   "cpu_c": 75.40562582015991,
-   "gpu_air": 5.183174133300781,
-   "cpu_air": 6.405625820159912,
-   "score": 140.88291760051953,
+   "gpu_c": 66.98163433635936,
+   "cpu_c": 76.97831964492798,
+   "gpu_air": 6.687516689300537,
+   "cpu_air": 7.9783196449279785,
+   "score": 143.95995398128736,
    "pressure": "positive",
    "cfm_in": 86.51503159909042,
    "cfm_out": 0,
-   "dead_air": 0.06356807752454688,
-   "seconds": 35.710641622543335,
-   "dust_in": 0.8598621555359047,
-   "dust_settles": 0.592675,
+   "dead_air": 0.06081985284692491,
+   "seconds": 36.608835220336914,
+   "dust_in": 0.8598579155907534,
+   "dust_settles": 0.595325,
    "dust_top": [
     [
      "glass side",
-     0.23474079370498657
+     0.2326880246400833
     ],
     [
      "tray side",
-     0.15910913050174713
+     0.16209633648395538
     ],
     [
      "PSU",
-     0.1519804298877716
+     0.1523117572069168
     ],
     [
      "front panel",
-     0.10153119266033173
+     0.1058245524764061
     ]
    ],
-   "combined": 142.60264191159135
-  },
-  {
-   "name": "top-front + top-mid + rear in",
-   "build": {
-    "case": "lianli-lancool-207",
-    "gpu": "nvidia-rtx-5080-fe",
-    "cooler": "thermalright-pa120-se-argb",
-    "fans": [
-     {
-      "slot": "front_low",
-      "fan": "lianli-207-front-140",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "front_high",
-      "fan": "lianli-207-front-140",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "bottom_front",
-      "fan": "lianli-207-bottom-120-rev",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "bottom_rear",
-      "fan": "lianli-207-bottom-120-rev",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "top_1",
-      "fan": "generic-120",
-      "mode": "in",
-      "pct": 80
-     },
-     {
-      "slot": "top_2",
-      "fan": "generic-120",
-      "mode": "in",
-      "pct": 80
-     },
-     {
-      "slot": "rear",
-      "fan": "generic-120",
-      "mode": "in",
-      "pct": 80
-     }
-    ],
-    "load": {
-     "cpu_w": 88.0,
-     "gpu_w": 300.0,
-     "ambient_c": 25.0
-    }
-   },
-   "current": false,
-   "gpu_c": 65.50337668026195,
-   "cpu_c": 75.47318887710571,
-   "gpu_air": 5.209259033203125,
-   "cpu_air": 6.473188877105713,
-   "score": 140.97656555736768,
-   "pressure": "positive",
-   "cfm_in": 75.46985829102708,
-   "cfm_out": 0,
-   "dead_air": 0.08346372670233887,
-   "seconds": 32.6374249458313,
-   "dust_in": 0.8767973022201571,
-   "dust_settles": 0.6195,
-   "dust_top": [
-    [
-     "glass side",
-     0.23337368667125702
-    ],
-    [
-     "PSU",
-     0.16158191859722137
-    ],
-    [
-     "tray side",
-     0.14031477272510529
-    ],
-    [
-     "front panel",
-     0.10895884037017822
-    ]
-   ],
-   "combined": 142.730160161808
+   "combined": 145.67966981246886
   },
   {
    "name": "top-front + rear in \u00b7 top-rear out",
@@ -2016,37 +1838,126 @@
     }
    },
    "current": false,
-   "gpu_c": 65.19225283230053,
-   "cpu_c": 76.03530502319336,
-   "gpu_air": 4.898135185241699,
-   "cpu_air": 7.035305023193359,
-   "score": 141.2275578554939,
+   "gpu_c": 66.62341518963085,
+   "cpu_c": 77.44510841369629,
+   "gpu_air": 6.3292975425720215,
+   "cpu_air": 8.445108413696289,
+   "score": 144.06852360332715,
    "pressure": "positive",
    "cfm_in": 108.64247601642347,
    "cfm_out": 33.001837869,
-   "dead_air": 0.08384136180685518,
-   "seconds": 30.543501615524292,
-   "dust_in": 0.8058765548676838,
-   "dust_settles": 0.541975,
+   "dead_air": 0.08200066654703002,
+   "seconds": 34.49329352378845,
+   "dust_in": 0.8058577733290084,
+   "dust_settles": 0.54535,
    "dust_top": [
     [
      "glass side",
-     0.2910650968551636
+     0.29338955879211426
     ],
     [
      "tray side",
-     0.14115041494369507
+     0.14137709140777588
     ],
     [
      "PSU",
-     0.11776373535394669
+     0.11951040476560593
     ],
     [
      "rear wall",
-     0.11471931636333466
+     0.11185476928949356
     ]
    ],
-   "combined": 142.83931096522926
+   "combined": 145.68023914998517
+  },
+  {
+   "name": "top-mid + top-rear in \u00b7 top-front out",
+   "build": {
+    "case": "lianli-lancool-207",
+    "gpu": "nvidia-rtx-5080-fe",
+    "cooler": "thermalright-pa120-se-argb",
+    "fans": [
+     {
+      "slot": "front_low",
+      "fan": "lianli-207-front-140",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "front_high",
+      "fan": "lianli-207-front-140",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "bottom_front",
+      "fan": "lianli-207-bottom-120-rev",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "bottom_rear",
+      "fan": "lianli-207-bottom-120-rev",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "top_1",
+      "fan": "generic-120",
+      "mode": "out",
+      "pct": 80
+     },
+     {
+      "slot": "top_2",
+      "fan": "generic-120",
+      "mode": "in",
+      "pct": 80
+     },
+     {
+      "slot": "top_3",
+      "fan": "generic-120",
+      "mode": "in",
+      "pct": 80
+     }
+    ],
+    "load": {
+     "cpu_w": 88.0,
+     "gpu_w": 300.0,
+     "ambient_c": 25.0
+    }
+   },
+   "current": false,
+   "gpu_c": 66.85802622402416,
+   "cpu_c": 77.24839782714844,
+   "gpu_air": 6.563908576965332,
+   "cpu_air": 8.248397827148438,
+   "score": 144.1064240511726,
+   "pressure": "positive",
+   "cfm_in": 99.54841802218698,
+   "cfm_out": 33.001837869,
+   "dead_air": 0.06299410536468246,
+   "seconds": 44.895233154296875,
+   "dust_in": 0.815091863012417,
+   "dust_settles": 0.538625,
+   "dust_top": [
+    [
+     "glass side",
+     0.25170573592185974
+    ],
+    [
+     "tray side",
+     0.1519145965576172
+    ],
+    [
+     "PSU",
+     0.13650499284267426
+    ],
+    [
+     "front panel",
+     0.10336504876613617
+    ]
+   ],
+   "combined": 145.73660777719743
   },
   {
    "name": "top-front + rear in \u00b7 top-mid out",
@@ -2105,40 +2016,40 @@
     }
    },
    "current": false,
-   "gpu_c": 65.23779030407177,
-   "cpu_c": 76.05840539932251,
-   "gpu_air": 4.9436726570129395,
-   "cpu_air": 7.05840539932251,
-   "score": 141.2961957033943,
+   "gpu_c": 66.76681013668285,
+   "cpu_c": 77.61815452575684,
+   "gpu_air": 6.472692489624023,
+   "cpu_air": 8.618154525756836,
+   "score": 144.3849646624397,
    "pressure": "positive",
    "cfm_in": 99.54841802218698,
    "cfm_out": 33.001837869,
-   "dead_air": 0.08387927540618603,
-   "seconds": 32.661994218826294,
-   "dust_in": 0.8151160458976746,
-   "dust_settles": 0.565775,
+   "dead_air": 0.08229403405447279,
+   "seconds": 36.954296350479126,
+   "dust_in": 0.8150958128930575,
+   "dust_settles": 0.56845,
    "dust_top": [
     [
      "glass side",
-     0.28536078333854675
+     0.2858210802078247
     ],
     [
      "tray side",
-     0.1377314329147339
+     0.13840267062187195
     ],
     [
      "PSU",
-     0.12235429137945175
+     0.1213827058672905
     ],
     [
      "rear wall",
-     0.10498873144388199
+     0.10216377675533295
     ]
    ],
-   "combined": 142.92642779518962
+   "combined": 146.01515628822582
   },
   {
-   "name": "top-mid + top-rear + rear in",
+   "name": "top-front + top-mid + rear in",
    "build": {
     "case": "lianli-lancool-207",
     "gpu": "nvidia-rtx-5080-fe",
@@ -2169,13 +2080,13 @@
       "pct": 70
      },
      {
-      "slot": "top_2",
+      "slot": "top_1",
       "fan": "generic-120",
       "mode": "in",
       "pct": 80
      },
      {
-      "slot": "top_3",
+      "slot": "top_2",
       "fan": "generic-120",
       "mode": "in",
       "pct": 80
@@ -2194,37 +2105,37 @@
     }
    },
    "current": false,
-   "gpu_c": 65.4710080202888,
-   "cpu_c": 75.75257635116577,
-   "gpu_air": 5.1768903732299805,
-   "cpu_air": 6.7525763511657715,
-   "score": 141.2235843714546,
+   "gpu_c": 67.11497850979076,
+   "cpu_c": 77.15530395507812,
+   "gpu_air": 6.820860862731934,
+   "cpu_air": 8.155303955078125,
+   "score": 144.2702824648689,
    "pressure": "positive",
    "cfm_in": 75.46985829102708,
    "cfm_out": 0,
-   "dead_air": 0.06170641740584744,
-   "seconds": 43.20834136009216,
-   "dust_in": 0.8767656611119803,
-   "dust_settles": 0.589025,
+   "dead_air": 0.08040610907896964,
+   "seconds": 38.782331466674805,
+   "dust_in": 0.8767903697607496,
+   "dust_settles": 0.617475,
    "dust_top": [
     [
      "glass side",
-     0.20101013779640198
-    ],
-    [
-     "tray side",
-     0.16667373478412628
+     0.22146645188331604
     ],
     [
      "PSU",
-     0.16531556844711304
+     0.15830600261688232
+    ],
+    [
+     "tray side",
+     0.14692902565002441
     ],
     [
      "front panel",
-     0.11361996829509735
+     0.11190736293792725
     ]
    ],
-   "combined": 142.97711569367854
+   "combined": 146.0238632043904
   },
   {
    "name": "top-mid + rear in \u00b7 top-rear out",
@@ -2283,37 +2194,37 @@
     }
    },
    "current": false,
-   "gpu_c": 65.24976893032299,
-   "cpu_c": 76.13565731048584,
-   "gpu_air": 4.95565128326416,
-   "cpu_air": 7.13565731048584,
-   "score": 141.38542624080884,
+   "gpu_c": 66.8218781527351,
+   "cpu_c": 77.95394229888916,
+   "gpu_air": 6.5277605056762695,
+   "cpu_air": 8.95394229888916,
+   "score": 144.77582045162427,
    "pressure": "positive",
    "cfm_in": 99.54841802218698,
    "cfm_out": 33.001837869,
-   "dead_air": 0.08539269352513557,
-   "seconds": 39.25180006027222,
-   "dust_in": 0.8149345250448379,
-   "dust_settles": 0.557375,
+   "dead_air": 0.08011881614791481,
+   "seconds": 35.73317098617554,
+   "dust_in": 0.8149186309047917,
+   "dust_settles": 0.560725,
    "dust_top": [
     [
      "glass side",
-     0.2773716151714325
+     0.26675286889076233
     ],
     [
      "tray side",
-     0.14052477478981018
+     0.13839225471019745
     ],
     [
      "PSU",
-     0.12325633317232132
+     0.12439252436161041
     ],
     [
      "rear wall",
-     0.11253644526004791
+     0.11164117604494095
     ]
    ],
-   "combined": 143.0152952908985
+   "combined": 146.40565771343384
   },
   {
    "name": "top-rear + rear in \u00b7 top-mid out",
@@ -2372,37 +2283,37 @@
     }
    },
    "current": false,
-   "gpu_c": 65.25856752956615,
-   "cpu_c": 76.17203140258789,
-   "gpu_air": 4.964449882507324,
-   "cpu_air": 7.172031402587891,
-   "score": 141.43059893215406,
+   "gpu_c": 66.84425278270946,
+   "cpu_c": 77.96945571899414,
+   "gpu_air": 6.550135135650635,
+   "cpu_air": 8.96945571899414,
+   "score": 144.81370850170362,
    "pressure": "positive",
    "cfm_in": 99.54841802218698,
    "cfm_out": 33.001837869,
-   "dead_air": 0.07850792364164311,
-   "seconds": 39.04442095756531,
-   "dust_in": 0.8149361248796866,
-   "dust_settles": 0.5769,
+   "dead_air": 0.08226325266900263,
+   "seconds": 34.3564190864563,
+   "dust_in": 0.8149235459031995,
+   "dust_settles": 0.5688,
    "dust_top": [
     [
      "glass side",
-     0.29450511932373047
+     0.2915787696838379
     ],
     [
      "tray side",
-     0.13542208075523376
+     0.12948311865329742
     ],
     [
      "PSU",
-     0.12320159375667572
+     0.12596695125102997
     ],
     [
      "rear wall",
-     0.10504420101642609
+     0.1028480976819992
     ]
    ],
-   "combined": 143.06047118191344
+   "combined": 146.44355559351
   },
   {
    "name": "top-rear + rear in \u00b7 top-front out",
@@ -2461,126 +2372,37 @@
     }
    },
    "current": false,
-   "gpu_c": 65.22813006008373,
-   "cpu_c": 76.34678602218628,
-   "gpu_air": 4.934012413024902,
-   "cpu_air": 7.346786022186279,
-   "score": 141.57491608227002,
+   "gpu_c": 66.84046955669628,
+   "cpu_c": 78.28502082824707,
+   "gpu_air": 6.546351909637451,
+   "cpu_air": 9.28502082824707,
+   "score": 145.12549038494336,
    "pressure": "positive",
    "cfm_in": 108.64247601642347,
    "cfm_out": 33.001837869,
-   "dead_air": 0.07727843720357884,
-   "seconds": 32.50434947013855,
-   "dust_in": 0.8059083227652405,
-   "dust_settles": 0.539775,
+   "dead_air": 0.08024200784474582,
+   "seconds": 35.00920295715332,
+   "dust_in": 0.8058930351683222,
+   "dust_settles": 0.530525,
    "dust_top": [
     [
      "glass side",
-     0.293224036693573
+     0.2939069867134094
     ],
     [
      "tray side",
-     0.14265203475952148
+     0.13693982362747192
     ],
     [
      "PSU",
-     0.12324579805135727
+     0.12200178951025009
     ],
     [
      "rear wall",
-     0.11180584132671356
+     0.1137552410364151
     ]
    ],
-   "combined": 143.1867327278005
-  },
-  {
-   "name": "top-mid + rear in \u00b7 top-front out",
-   "build": {
-    "case": "lianli-lancool-207",
-    "gpu": "nvidia-rtx-5080-fe",
-    "cooler": "thermalright-pa120-se-argb",
-    "fans": [
-     {
-      "slot": "front_low",
-      "fan": "lianli-207-front-140",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "front_high",
-      "fan": "lianli-207-front-140",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "bottom_front",
-      "fan": "lianli-207-bottom-120-rev",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "bottom_rear",
-      "fan": "lianli-207-bottom-120-rev",
-      "mode": "in",
-      "pct": 70
-     },
-     {
-      "slot": "top_1",
-      "fan": "generic-120",
-      "mode": "out",
-      "pct": 80
-     },
-     {
-      "slot": "top_2",
-      "fan": "generic-120",
-      "mode": "in",
-      "pct": 80
-     },
-     {
-      "slot": "rear",
-      "fan": "generic-120",
-      "mode": "in",
-      "pct": 80
-     }
-    ],
-    "load": {
-     "cpu_w": 88.0,
-     "gpu_w": 300.0,
-     "ambient_c": 25.0
-    }
-   },
-   "current": false,
-   "gpu_c": 65.24596996868358,
-   "cpu_c": 76.36217737197876,
-   "gpu_air": 4.951852321624756,
-   "cpu_air": 7.36217737197876,
-   "score": 141.60814734066236,
-   "pressure": "positive",
-   "cfm_in": 99.54841802218698,
-   "cfm_out": 33.001837869,
-   "dead_air": 0.07215669777296677,
-   "seconds": 19.154176712036133,
-   "dust_in": 0.8150019249486007,
-   "dust_settles": 0.5399,
-   "dust_top": [
-    [
-     "glass side",
-     0.260881632566452
-    ],
-    [
-     "tray side",
-     0.14683274924755096
-    ],
-    [
-     "PSU",
-     0.13243193924427032
-    ],
-    [
-     "rear wall",
-     0.10344508290290833
-    ]
-   ],
-   "combined": 143.23815119055956
+   "combined": 146.73727645528
   },
   {
    "name": "rear in \u00b7 top-mid + top-rear out",
@@ -2639,37 +2461,37 @@
     }
    },
    "current": false,
-   "gpu_c": 64.84613771999584,
-   "cpu_c": 76.97220277786255,
-   "gpu_air": 4.552020072937012,
-   "cpu_air": 7.972202777862549,
-   "score": 141.8183404978584,
+   "gpu_c": 66.43187494838939,
+   "cpu_c": 78.90635299682617,
+   "gpu_air": 6.137757301330566,
+   "cpu_air": 9.906352996826172,
+   "score": 145.33822794521558,
    "pressure": "positive",
    "cfm_in": 119.82214955361121,
    "cfm_out": 66.003675738,
-   "dead_air": 0.08814249729380319,
-   "seconds": 40.23308086395264,
-   "dust_in": 0.7547603695162667,
-   "dust_settles": 0.482025,
+   "dead_air": 0.0866701210221472,
+   "seconds": 35.53080940246582,
+   "dust_in": 0.7547101438611318,
+   "dust_settles": 0.482325,
    "dust_top": [
     [
      "glass side",
-     0.2459934651851654
+     0.24630695581436157
     ],
     [
      "tray side",
-     0.156423419713974
+     0.15679262578487396
     ],
     [
      "rear wall",
-     0.12380063533782959
+     0.12812937796115875
     ],
     [
      "front panel",
-     0.10015040636062622
+     0.10205774009227753
     ]
    ],
-   "combined": 143.32786123689093
+   "combined": 146.84764823293784
   },
   {
    "name": "rear in \u00b7 top-front + top-rear out",
@@ -2728,37 +2550,215 @@
     }
    },
    "current": false,
-   "gpu_c": 64.7806012209724,
-   "cpu_c": 77.08830165863037,
-   "gpu_air": 4.486483573913574,
-   "cpu_air": 8.088301658630371,
-   "score": 141.86890287960279,
+   "gpu_c": 66.35163755977855,
+   "cpu_c": 79.08838844299316,
+   "gpu_air": 6.057519912719727,
+   "cpu_air": 10.088388442993164,
+   "score": 145.44002600277173,
    "pressure": "positive",
    "cfm_in": 126.32827220342678,
    "cfm_out": 66.003675738,
-   "dead_air": 0.0796472428025739,
-   "seconds": 24.323877096176147,
-   "dust_in": 0.7487522952910578,
-   "dust_settles": 0.442225,
+   "dead_air": 0.07851411285153946,
+   "seconds": 35.16752004623413,
+   "dust_in": 0.7487008338046297,
+   "dust_settles": 0.448375,
    "dust_top": [
     [
      "glass side",
-     0.24772457778453827
+     0.2519654333591461
     ],
     [
      "tray side",
-     0.1629261076450348
+     0.16147197782993317
     ],
     [
      "rear wall",
-     0.13686472177505493
+     0.13861165940761566
     ],
     [
      "front panel",
-     0.10611113905906677
+     0.1027599647641182
     ]
    ],
-   "combined": 143.3664074701849
+   "combined": 146.937427670381
+  },
+  {
+   "name": "top-mid + rear in \u00b7 top-front out",
+   "build": {
+    "case": "lianli-lancool-207",
+    "gpu": "nvidia-rtx-5080-fe",
+    "cooler": "thermalright-pa120-se-argb",
+    "fans": [
+     {
+      "slot": "front_low",
+      "fan": "lianli-207-front-140",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "front_high",
+      "fan": "lianli-207-front-140",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "bottom_front",
+      "fan": "lianli-207-bottom-120-rev",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "bottom_rear",
+      "fan": "lianli-207-bottom-120-rev",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "top_1",
+      "fan": "generic-120",
+      "mode": "out",
+      "pct": 80
+     },
+     {
+      "slot": "top_2",
+      "fan": "generic-120",
+      "mode": "in",
+      "pct": 80
+     },
+     {
+      "slot": "rear",
+      "fan": "generic-120",
+      "mode": "in",
+      "pct": 80
+     }
+    ],
+    "load": {
+     "cpu_w": 88.0,
+     "gpu_w": 300.0,
+     "ambient_c": 25.0
+    }
+   },
+   "current": false,
+   "gpu_c": 66.93180342281566,
+   "cpu_c": 78.45829677581787,
+   "gpu_air": 6.637685775756836,
+   "cpu_air": 9.458296775817871,
+   "score": 145.39010019863355,
+   "pressure": "positive",
+   "cfm_in": 99.54841802218698,
+   "cfm_out": 33.001837869,
+   "dead_air": 0.07438834821955337,
+   "seconds": 39.403955936431885,
+   "dust_in": 0.8149876039914089,
+   "dust_settles": 0.5614,
+   "dust_top": [
+    [
+     "glass side",
+     0.2834877073764801
+    ],
+    [
+     "tray side",
+     0.14143213629722595
+    ],
+    [
+     "PSU",
+     0.1259351670742035
+    ],
+    [
+     "rear wall",
+     0.10211079567670822
+    ]
+   ],
+   "combined": 147.02007540661637
+  },
+  {
+   "name": "top-mid + top-rear + rear in",
+   "build": {
+    "case": "lianli-lancool-207",
+    "gpu": "nvidia-rtx-5080-fe",
+    "cooler": "thermalright-pa120-se-argb",
+    "fans": [
+     {
+      "slot": "front_low",
+      "fan": "lianli-207-front-140",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "front_high",
+      "fan": "lianli-207-front-140",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "bottom_front",
+      "fan": "lianli-207-bottom-120-rev",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "bottom_rear",
+      "fan": "lianli-207-bottom-120-rev",
+      "mode": "in",
+      "pct": 70
+     },
+     {
+      "slot": "top_2",
+      "fan": "generic-120",
+      "mode": "in",
+      "pct": 80
+     },
+     {
+      "slot": "top_3",
+      "fan": "generic-120",
+      "mode": "in",
+      "pct": 80
+     },
+     {
+      "slot": "rear",
+      "fan": "generic-120",
+      "mode": "in",
+      "pct": 80
+     }
+    ],
+    "load": {
+     "cpu_w": 88.0,
+     "gpu_w": 300.0,
+     "ambient_c": 25.0
+    }
+   },
+   "current": false,
+   "gpu_c": 67.63612909878002,
+   "cpu_c": 77.98279666900635,
+   "gpu_air": 7.342011451721191,
+   "cpu_air": 8.982796669006348,
+   "score": 145.61892576778638,
+   "pressure": "positive",
+   "cfm_in": 75.46985829102708,
+   "cfm_out": 0,
+   "dead_air": 0.05722259558902746,
+   "seconds": 39.3659291267395,
+   "dust_in": 0.8767682971450057,
+   "dust_settles": 0.5847,
+   "dust_top": [
+    [
+     "glass side",
+     0.19266290962696075
+    ],
+    [
+     "tray side",
+     0.18577903509140015
+    ],
+    [
+     "PSU",
+     0.14789636433124542
+    ],
+    [
+     "front panel",
+     0.11830853670835495
+    ]
+   ],
+   "combined": 147.3724623620764
   },
   {
    "name": "rear in \u00b7 top-front + top-mid out",
@@ -2817,37 +2817,37 @@
     }
    },
    "current": false,
-   "gpu_c": 64.85734291637645,
-   "cpu_c": 77.17424964904785,
-   "gpu_air": 4.563225269317627,
-   "cpu_air": 8.174249649047852,
-   "score": 142.03159256542432,
+   "gpu_c": 66.55430765712963,
+   "cpu_c": 79.36290454864502,
+   "gpu_air": 6.260190010070801,
+   "cpu_air": 10.36290454864502,
+   "score": 145.91721220577466,
    "pressure": "positive",
    "cfm_in": 119.82214955361121,
    "cfm_out": 66.003675738,
-   "dead_air": 0.08073444385731801,
-   "seconds": 33.6715943813324,
-   "dust_in": 0.7551541116164294,
-   "dust_settles": 0.45485,
+   "dead_air": 0.0792825885093088,
+   "seconds": 36.96125769615173,
+   "dust_in": 0.7551119132212641,
+   "dust_settles": 0.462825,
    "dust_top": [
     [
      "glass side",
-     0.2505771219730377
+     0.25128287076950073
     ],
     [
      "tray side",
-     0.1613718867301941
+     0.1622643619775772
     ],
     [
      "rear wall",
-     0.12355721741914749
+     0.12023983150720596
     ],
     [
      "front panel",
-     0.10503462702035904
+     0.10187435895204544
     ]
    ],
-   "combined": 143.5419007886572
+   "combined": 147.4274360322172
   }
  ],
  "coolest": "top-mid + top-rear + rear out",
@@ -2858,5 +2858,5 @@
  "dust_weight": 2.0,
  "space": "4 stock fans fixed (2x140 front in, 2x120 bottom in); the user's 3x120 fans over {top-front, top-mid, top-rear, rear} x {in, out}: 32 layouts, all simulated",
  "objective": "recommended = lowest (CPU + GPU temperature) + 2 x (fraction of outside dust that gets in)",
- "minutes": 0.0
+ "minutes": 18.7839274764061
 }

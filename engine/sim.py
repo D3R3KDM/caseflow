@@ -21,7 +21,7 @@ import numpy as np
 import torch
 
 from engine.lbm import LBMConfig, LBMSolver
-from engine.thermal import solve_temperature
+from engine.thermal import solve_temperature_converged
 
 ROOT = Path(__file__).resolve().parents[1]
 LIB_PATH = ROOT / "data" / "parts" / "library.json"
@@ -385,7 +385,7 @@ def dust_by_part(dep: np.ndarray, model: dict) -> list[dict]:
 
 
 # ----------------------------------------------------------------------------- run
-def simulate_build(build: dict, steps: int = 4000, callback=None, with_dust: bool = True) -> dict:
+def simulate_build(build: dict, steps: int = 8000, callback=None, with_dust: bool = True) -> dict:
     lib = load_library()
     t0 = time.time()
     model = build_model(build, lib)
@@ -401,9 +401,10 @@ def simulate_build(build: dict, steps: int = 4000, callback=None, with_dust: boo
     if callback:
         callback(0.62)
     parts_thermal = {"cpu_w": load["cpu_w"], "gpu_w": load["gpu_w"]}
-    T = solve_temperature(u_lat, {"shape": model["shape"], "solid": model["solid"], "reservoir": model["reservoir"],
-                                  "heat": model["heat"]}, parts_thermal, iters=5000,
-                          dx_mm=DX, u_lat_per_ms=U_LAT_PER_MS)
+    inside = ~(model["solid"] | model["reservoir"])
+    T, thermal_iters = solve_temperature_converged(
+        u_lat, {"shape": model["shape"], "solid": model["solid"], "reservoir": model["reservoir"], "heat": model["heat"]},
+        parts_thermal, probes=[model["intake"]["cpu"], model["intake"]["gpu"], inside], dx_mm=DX, u_lat_per_ms=U_LAT_PER_MS)
     if callback:
         callback(0.8)
     u_ms = u_lat / U_LAT_PER_MS
@@ -422,14 +423,13 @@ def simulate_build(build: dict, steps: int = 4000, callback=None, with_dust: boo
     q_in = sum(f["q_m3s"] for f in model["fans"] if f["mode"] == "in")
     q_out = sum(f["q_m3s"] for f in model["fans"] if f["mode"] == "out")
     um = u_ms.float().cpu().numpy()
-    inside = ~(model["solid"] | model["reservoir"])
     speed = np.sqrt((um ** 2).sum(0))
     out = {
         "model": model, "u": um, "T": Tn, "parts": parts, "load": load,
         "flow_in_m3s": q_in, "flow_out_m3s": q_out, "case_pa": model["case_pa"],
         "pressure": "positive" if q_in > q_out * 1.05 else ("negative" if q_out > q_in * 1.05 else "balanced"),
         "dead_air_fraction": float((speed[inside] < 0.05).mean()), "air_max_rise_c": float(Tn[inside].max()),
-        "seconds": time.time() - t0, "dust": None,
+        "seconds": time.time() - t0, "dust": None, "thermal_iters": thermal_iters, "lbm_steps": steps,
     }
     if dust:
         dust["by_part"] = dust_by_part(dust["dep"], model)
