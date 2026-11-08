@@ -39,6 +39,8 @@ cdp.on('Page.screencastFrame', async ({ data, metadata, sessionId }) => {
   try { await cdp.send('Page.screencastFrameAck', { sessionId }) } catch { /* closing */ }
 })
 await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 90, maxWidth: W, maxHeight: H, everyNthFrame: 1 })
+await page.mouse.click(621, 517); await wait(2200)   // click a fan: flip / turn off menu
+await page.keyboard.press('Escape'); await wait(500)
 await drag(720, 430, 672, 426, 3000)          // orbit a little: look along the case
 await wait(700)
 await dock('Lines'); await wait(2200); await dock('Lines')

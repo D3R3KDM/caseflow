@@ -121,4 +121,6 @@ The 3D case sits in the middle of six floating holographic screens. Each screen 
 
 The screens are CSS3D objects in the same scene as the case. They turn with the camera, so they stay readable from any angle, while the lines and anchors stay fixed on the parts.
 
+**Click any case fan** in 3D to flip it or turn it off, or click an empty mount to add a fan. If the new layout is a stored one, the view switches to it; otherwise the engine simulates it (about 40 s) and the result appears as *Custom*.
+
 The bottom dock switches the layers: the screens, moving flow particles, streamlines, dust deposits, and a heat slice through the GPU. **Configure** (edit the build, run a simulation) and **Method** open as glass windows. The view is through the glass, front on the right, as the PC stands on a desk.

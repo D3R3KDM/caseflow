@@ -285,7 +285,7 @@ def fig_ui():
     im = Image.open(src).convert("RGB")
     dr = ImageDraw.Draw(im, "RGBA")
     font = ImageFont.truetype(matplotlib.font_manager.findfont("DejaVu Sans:bold"), 17)
-    pts = [(1, 88, 268), (2, 380, 180), (3, 392, 536), (4, 992, 140), (5, 992, 533), (6, 1275, 323), (7, 562, 28), (8, 340, 860), (9, 742, 382)]
+    pts = [(1, 92, 290), (2, 388, 188), (3, 398, 543), (4, 1000, 148), (5, 1000, 538), (6, 1278, 336), (7, 562, 28), (8, 340, 860), (9, 742, 385), (10, 985, 470)]
     for k, x, y in pts:
         dr.ellipse([x - 15, y - 15, x + 15, y + 15], fill=(31, 159, 208, 235), outline=(232, 246, 255, 255), width=2)
         dr.text((x, y), str(k), font=font, fill=(5, 8, 12, 255), anchor="mm")

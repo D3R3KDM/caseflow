@@ -3,7 +3,7 @@ import { getJSON, pingServer, postJSON } from './api'
 import { AirPanel, DustPanel, Holo, PartPanel, SearchPanel, VerdictPanel } from './Holo'
 import HudWindow, { resetWindows } from './HudWindow'
 import { THERMAL_CSS } from './palette'
-import CaseScene, { T_MAX, type HoloSpec, type Layers } from './Scene'
+import CaseScene, { T_MAX, type HoloSpec, type Layers, type Pick } from './Scene'
 import { WHERE, type Build, type FanSlot, type HW, type Lib, type Mode, type Opt, type RankRow, type SimRes, type ViewKey } from './types'
 
 const amazon = (q: string) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}`
@@ -26,6 +26,8 @@ function changes(from: FanSlot[], to: FanSlot[]): string[] {
   removed.slice(added.length).forEach((f) => out.push(`Remove the ${WHERE[f.slot] ?? f.slot} fan`))
   return out
 }
+
+const fanKey = (fs: FanSlot[]) => fs.map((f) => `${f.slot}:${f.fan}:${f.mode}`).sort().join('|')
 
 function useNarrow(px = 900) {
   const q = `(max-width: ${px}px)`
@@ -56,6 +58,12 @@ export default function App() {
   const [msg, setMsg] = useState<string | null>(null)
   const [layoutKey, setLayoutKey] = useState(0)
   const narrow = useNarrow()
+  const [menu, setMenu] = useState<Pick | null>(null)
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setMenu(null)
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [])
 
   // ---------- data ----------
   useEffect(() => {
@@ -163,38 +171,77 @@ export default function App() {
   }
   const steps = cur?.build && views.best?.build && !bestIsCur ? changes(cur.build.fans, views.best.build.fans) : []
 
+  /** Click on a fan or an empty mount in 3D: flip it, switch it off, or add one; then show the result. */
+  const editFan = (slot: string, action: 'flip' | 'off' | 'in' | 'out') => {
+    const base = res?.build ?? build
+    setMenu(null)
+    if (!base) return
+    if (job) return setMsg('A simulation is still running - wait for it to finish.')
+    const b: Build = { ...base, fans: base.fans.map((f) => ({ ...f })) }
+    const where = WHERE[slot] ?? slot
+    let desc = ''
+    const i = b.fans.findIndex((f) => f.slot === slot)
+    if (action === 'flip' && i >= 0) {
+      b.fans[i].mode = b.fans[i].mode === 'in' ? 'out' : 'in'
+      desc = `${where} fan flipped to ${b.fans[i].mode}`
+    } else if (action === 'off' && i >= 0) {
+      b.fans.splice(i, 1)
+      desc = `${where} fan off`
+    } else if (action === 'in' || action === 'out') {
+      const m = cs?.mounts.find((x) => x.slot === slot)
+      b.fans.push({ slot, fan: m && !m.sizes.includes(120) ? 'generic-140' : 'generic-120', mode: action, pct: 80 })
+      desc = `fan added at ${where}, blowing ${action}`
+    } else return
+    setBuild(b)
+    const row = rows.find((r) => fanKey(r.build.fans) === fanKey(b.fans))
+    const rank = row ? rankOf(row.name) : 0
+    const k = row ? viewOf(row) : null
+    if (k && views[k]) {
+      setView(k)
+      setMsg(`${desc} → layout #${rank}/${n}`)
+    } else if (online) {
+      simulate(b, desc + (row ? ` · #${rank}/${n} in the search` : ''))
+    } else if (row) {
+      setMsg(`${desc} → layout #${rank}/${n}: CPU ${row.cpu_c.toFixed(1)} °C, GPU ${row.gpu_c.toFixed(1)} °C, dust ${Math.round(row.dust_in * 100)}%. Start the engine to see its airflow.`)
+    } else {
+      setMsg(`${desc}: not one of the ${n} searched layouts. Start the engine (start.bat) to simulate it.`)
+    }
+  }
+  const menuFan = menu && res ? res.fans.find((f) => f.slot === menu.slot) : undefined
+  const menuMount = menu && res ? res.mounts.find((m) => m.slot === menu.slot) : undefined
+
   // ---------- floating screens ----------
   const flash = `${view}:${res?.label ?? ''}`
   const screens: (HoloSpec & { title: string })[] = []
   if (res) {
     const cpuName = hw ? hw.cpu.name.replace(/ \d+-Core Processor/, '').replace('AMD ', '') : 'CPU'
     screens.push(
-      { id: 'search', title: 'Layout search', pos: [-3.35, -0.04, -0.12], yaw: 0.42, content: (
+      { id: 'search', title: 'Layout search', pos: [-3.35, -0.04, -0.12], yaw: 0.2, content: (
         <Holo tag="LAYOUT SEARCH" sub={`${n}/${n} simulated`} width={300} flashKey="search">
           <SearchPanel opt={opt} rows={rows} shown={shown} tagOf={tagOf} onOpen={openRow} allRows={allRows} setAllRows={setAllRows} lo={lo} hi={hi}
             isOn={(r) => { const v = viewOf(r); return (!!v && v === view) || (view === 'custom' && views.custom?.label === `Custom: ${r.name}`) }} />
         </Holo>) },
-      { id: 'cpu', title: 'CPU', pos: [-1.6, 1.08, 0.5], yaw: 0.14, anchor: 'cpu', content: (
+      { id: 'cpu', title: 'CPU', pos: [-1.6, 1.08, 0.5], yaw: 0.06, anchor: 'cpu', content: (
         <Holo tag="CPU" sub={cpuName} width={250} flashKey={'cpu' + flash}>
           <PartPanel part="cpu" res={res} cur={cur} compare={compare} name={cooler?.name.replace('Thermalright ', '').replace(' ARGB', '') ?? 'cooler'}
             extra={[['cooler', `${(res.parts.cpu as { g_w_per_k?: number }).g_w_per_k?.toFixed(1) ?? '2.0'} W/K`]]} />
         </Holo>) },
-      { id: 'gpu', title: 'GPU', pos: [-1.6, -0.78, 0.6], yaw: 0.14, anchor: 'gpu', content: (
+      { id: 'gpu', title: 'GPU', pos: [-1.6, -0.78, 0.6], yaw: 0.06, anchor: 'gpu', content: (
         <Holo tag="GPU" sub={gpu?.name.replace('NVIDIA GeForce ', '') ?? 'GPU'} live={!!g0} width={250} flashKey={'gpu' + flash}>
           <PartPanel part="gpu" res={res} cur={cur} compare={compare} name={g0 ? `live ${g0.temp_c?.toFixed(0)} °C · ${g0.power_w?.toFixed(0)} W now` : (gpu?.cooler.replace(/_/g, '-') ?? '')}
             extra={[['cooler', `${(res.parts.gpu as { g_w_per_k?: number }).g_w_per_k?.toFixed(1) ?? '8.5'} W/K`]]} />
         </Holo>) },
-      { id: 'air', title: 'Airflow', pos: [1.6, 1.08, 0.5], yaw: -0.14, anchor: 'intake', content: (
+      { id: 'air', title: 'Airflow', pos: [1.6, 1.08, 0.5], yaw: -0.06, anchor: 'intake', content: (
         <Holo tag="AIRFLOW" sub={layoutName(res)} width={262} flashKey={'air' + flash}>
           <AirPanel res={res} cur={cur} compare={compare} />
         </Holo>) },
-      { id: 'dust', title: 'Dust', pos: [1.6, -0.78, 0.6], yaw: -0.14, anchor: 'glass', content: (
+      { id: 'dust', title: 'Dust', pos: [1.6, -0.78, 0.6], yaw: -0.06, anchor: 'glass', content: (
         <Holo tag="DUST" sub="20 µm particles" width={250} flashKey={'dust' + flash}>
           <DustPanel res={res} cur={cur} compare={compare} />
         </Holo>) },
     )
     if (cur && other)
-      screens.push({ id: 'verdict', title: 'Verdict', pos: [3.35, -0.04, -0.12], yaw: -0.42, content: (
+      screens.push({ id: 'verdict', title: 'Verdict', pos: [3.35, -0.04, -0.12], yaw: -0.2, content: (
         <Holo tag="VERDICT" sub={bestIsCur ? 'yours vs worst' : 'yours vs best'} width={290} flashKey="verdict">
           <VerdictPanel cur={cur} other={other} bestIsCur={bestIsCur} n={n} rankCur={rankOf(curRow?.name)} rankOther={rankOf(bestIsCur ? opt?.worst : opt?.best)}
             steps={steps} onOpen={(k) => setView(k === 'current' ? 'current' : otherKey)} />
@@ -203,7 +250,7 @@ export default function App() {
 
   return (
     <div className="cf">
-      <CaseScene res={res} layers={layers} panels={narrow ? [] : screens} resetKey={layoutKey} />
+      <CaseScene res={res} layers={layers} panels={narrow ? [] : screens} resetKey={layoutKey} onPick={setMenu} selected={menu?.slot ?? null} />
       <div className="vignette" />
 
       <header className="top">
@@ -231,6 +278,33 @@ export default function App() {
           <span className="mono"><i className={'led' + (online ? ' on' : '')} />{online ? 'ENGINE ONLINE' : 'OFFLINE · PRECOMPUTED'}</span>
         </div>
       </header>
+
+      {menu && res && (
+        <div className="fanmenu" style={{ left: Math.min(menu.x + 16, window.innerWidth - 250), top: Math.min(Math.max(menu.y - 24, 64), window.innerHeight - 220) }}>
+          <i className="hc tl" /><i className="hc br" />
+          <div className="fm-h">
+            <span className="h-tag">{menu.empty ? 'MOUNT' : 'FAN'}</span>
+            <span className="fm-where">{WHERE[menu.slot] ?? menu.slot}</span>
+            {menuFan && <span className={'fm-mode m-' + menuFan.mode}>{menuFan.mode === 'in' ? '▸ in' : '◂ out'}</span>}
+            <button className="win-btn" title="Close" onClick={() => setMenu(null)}>×</button>
+          </div>
+          <div className="fm-sub">{menuFan
+            ? `${menuFan.name.replace(/^Lian Li LANCOOL 207 /, 'Stock ').replace(/, model unknown.*$/, '')} · ${(menuFan.q_m3s * 2119).toFixed(0)} CFM now`
+            : `empty ${menuMount?.sizes.join('/') ?? ''} mm mount`}</div>
+          {menuFan ? (
+            <div className="fm-acts">
+              <button onClick={() => editFan(menu.slot, 'flip')}>Flip → blow {menuFan.mode === 'in' ? 'out' : 'in'}</button>
+              <button onClick={() => editFan(menu.slot, 'off')}>Turn off</button>
+            </div>
+          ) : (
+            <div className="fm-acts">
+              <button onClick={() => editFan(menu.slot, 'in')}>Add fan · blow in</button>
+              <button onClick={() => editFan(menu.slot, 'out')}>Add fan · blow out</button>
+            </div>
+          )}
+          <div className="fm-note">{online ? 'Runs a new simulation (~40 s) unless the layout is already stored.' : 'Engine offline: stored results only.'}</div>
+        </div>
+      )}
 
       {(job || msg) && (
         <div className="toast">

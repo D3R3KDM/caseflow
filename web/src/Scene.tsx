@@ -16,7 +16,8 @@ export type Anchor = 'cpu' | 'gpu' | 'intake' | 'glass' | 'exhaust'
  * default view; the ring turns with the camera so the screens stay arranged around the case and readable. */
 export interface HoloSpec { id: string; pos: [number, number, number]; yaw: number; anchor?: Anchor; content: ReactNode }
 
-const PX = 0.0044                            // world units per CSS pixel of a screen
+const SCALE = 1 / 250                        // world units per mm of the case
+const PX = 0.0039                            // world units per CSS pixel of a screen
 const FLOOR = -0.95
 const AZ0 = 0.42, EL0 = 0.14                 // default view: a little from the front, slightly above
 const FIT_W = 9.1, FIT_H = 4.7               // world extent the default view must show (screens included)
@@ -84,7 +85,11 @@ interface Anim {
   }
 }
 
-export default function CaseScene({ res, layers, panels, resetKey }: { res: SimRes | null; layers: Layers; panels: HoloSpec[]; resetKey: number }) {
+export interface Pick { slot: string; empty: boolean; x: number; y: number }
+
+export default function CaseScene({ res, layers, panels, resetKey, onPick, selected }: {
+  res: SimRes | null; layers: Layers; panels: HoloSpec[]; resetKey: number; onPick?: (p: Pick | null) => void; selected?: string | null
+}) {
   const host = useRef<HTMLDivElement>(null)
   const viewer = useRef<Viewer | null>(null)
   const group = useRef<THREE.Group | null>(null)
@@ -96,6 +101,12 @@ export default function CaseScene({ res, layers, panels, resetKey }: { res: SimR
   specs.current = panels
   const anchors = useRef<Partial<Record<Anchor, THREE.Vector3>>>({})
   const css = useRef<{ ring: THREE.Group; gl: THREE.Group; fit: () => void } | null>(null)
+  // clickable case fans and empty mounts
+  const pickRoots = useRef<THREE.Object3D[]>([])
+  const onPickRef = useRef(onPick)
+  onPickRef.current = onPick
+  const selectedRef = useRef(selected)
+  selectedRef.current = selected
   const elFor = (id: string) => {
     let d = els.current.get(id)
     if (!d) {
@@ -118,6 +129,54 @@ export default function CaseScene({ res, layers, panels, resetKey }: { res: SimR
     const ringFrame = new THREE.Group()
     cssScene.add(ringFrame)
     const holoGL = new THREE.Group()
+    // pick a case fan / empty mount with a click (a drag still orbits)
+    const ray = new THREE.Raycaster()
+    const ndc = new THREE.Vector2()
+    const hoverRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.03, 8, 72), new THREE.MeshBasicMaterial({ color: 0xe8f8ff, transparent: true, opacity: 0.9, depthTest: false }))
+    hoverRing.renderOrder = 30
+    hoverRing.visible = false
+    v.scene.add(hoverRing)
+    let hovered: THREE.Object3D | null = null
+    const hitAt = (e: PointerEvent) => {
+      const r = v.renderer.domElement.getBoundingClientRect()
+      ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1)
+      ray.setFromCamera(ndc, v.camera)
+      for (const h of ray.intersectObjects(pickRoots.current, true)) {
+        let o: THREE.Object3D | null = h.object
+        while (o && !o.userData.pick) o = o.parent
+        if (o) return o
+      }
+      return null
+    }
+    const cv = v.renderer.domElement
+    let down: { x: number; y: number; t: number } | null = null
+    const onDown = (e: PointerEvent) => { down = { x: e.clientX, y: e.clientY, t: performance.now() } }
+    const onUp = (e: PointerEvent) => {
+      const d = down
+      down = null
+      if (!d || e.button !== 0 || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 5 || performance.now() - d.t > 450) return
+      const o = hitAt(e)
+      onPickRef.current?.(o ? { slot: o.userData.pick.slot, empty: o.userData.pick.empty, x: e.clientX, y: e.clientY } : null)
+    }
+    const onMove = (e: PointerEvent) => {
+      if (e.buttons) return
+      hovered = hitAt(e)
+      cv.style.cursor = hovered ? 'pointer' : ''
+    }
+    cv.addEventListener('pointerdown', onDown)
+    cv.addEventListener('pointerup', onUp)
+    cv.addEventListener('pointermove', onMove)
+    const placeRing = () => {
+      const sel = selectedRef.current ? pickRoots.current.find((o) => o.userData.pick.slot === selectedRef.current) : undefined
+      const o = hovered && pickRoots.current.includes(hovered) ? hovered : sel
+      hoverRing.visible = !!o
+      if (!o) return
+      const pk = o.userData.pick as { pos: THREE.Vector3; normal: THREE.Vector3; size: number }
+      hoverRing.position.copy(pk.pos).addScaledVector(pk.normal, 0.06)
+      hoverRing.lookAt(hoverRing.position.clone().add(pk.normal))
+      const pulse = o === sel ? 1 + 0.05 * Math.sin(performance.now() / 160) : 1
+      hoverRing.scale.setScalar((pk.size / 2) * SCALE * 1.08 * pulse)
+    }
     v.scene.add(holoGL)
     const sizeCss = () => cssR.setSize(host.current!.clientWidth || 1, host.current!.clientHeight || 1)
     const ro = new ResizeObserver(sizeCss)
@@ -209,6 +268,12 @@ export default function CaseScene({ res, layers, panels, resetKey }: { res: SimR
         if (rotor) rotor.rotation.y += dt * (f.userData.spin as number)
       }
       updateScreens(dt)
+      placeRing()
+      // fog follows the camera: only the far floor fades, the case never goes dark when zoomed out
+      const fog = v.scene.fog as THREE.Fog
+      const dist = v.camera.position.distanceTo(v.controls.target)
+      fog.near = dist + 2.5
+      fog.far = dist + 10
       const ps = a.parts
       if (!ps || !ps.pts.visible) return
       const pos = ps.pts.geometry.attributes.position as THREE.BufferAttribute
@@ -230,6 +295,9 @@ export default function CaseScene({ res, layers, panels, resetKey }: { res: SimR
     return () => {
       off()
       ro.disconnect()
+      cv.removeEventListener('pointerdown', onDown)
+      cv.removeEventListener('pointerup', onUp)
+      cv.removeEventListener('pointermove', onMove)
       for (const h of holos.current.values()) h.ro.disconnect()
       holos.current.clear()
       cssR.domElement.remove()
@@ -287,9 +355,10 @@ export default function CaseScene({ res, layers, panels, resetKey }: { res: SimR
     g.clear()
     anim.current.fans = []
     anim.current.parts = null
+    pickRoots.current = []
     if (!res) return
     const { D, W, H } = res.case
-    const S = 1 / 250
+    const S = SCALE
     // case frame (x front->rear, y glass->tray, z up) is left-handed: mirror it so that, through the glass,
     // the front is on the right and the rear I/O on the left - as the PC stands on a desk
     const P = (x: number, y: number, z: number) => new THREE.Vector3((D / 2 - x) * S, (z - H / 2) * S, (W / 2 - y) * S)
@@ -390,6 +459,13 @@ export default function CaseScene({ res, layers, panels, resetKey }: { res: SimR
         ring.lookAt(inward[m.wall])
         ring.position.copy(pos)
         add(ring)
+        // invisible disc so an empty mount is easy to click
+        const s0 = Math.max(...m.sizes)
+        const hit = new THREE.Mesh(new THREE.CircleGeometry((s0 / 2) * S, 32), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }))
+        hit.lookAt(inward[m.wall])
+        hit.position.copy(pos)
+        hit.userData.pick = { slot: m.slot, empty: true, pos: pos.clone(), normal: inward[m.wall].clone(), size: s0 }
+        pickRoots.current.push(add(hit))
         continue
       }
       const color = f.mode === 'in' ? C.intake : C.exhaust
@@ -398,6 +474,8 @@ export default function CaseScene({ res, layers, panels, resetKey }: { res: SimR
       fan.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), flow)   // local +Y = airflow
       fan.position.copy(pos).addScaledVector(inward[m.wall], 0.05)
       anim.current.fans.push(add(fan))
+      fan.userData.pick = { slot: m.slot, empty: false, pos: pos.clone(), normal: inward[m.wall].clone(), size: f.size }
+      pickRoots.current.push(fan)
       const arrow = new THREE.ArrowHelper(flow, pos.clone().addScaledVector(flow, -0.08), 0.17, color, 0.045, 0.026)
       ;(arrow.line.material as THREE.LineBasicMaterial).transparent = true
       ;(arrow.line.material as THREE.LineBasicMaterial).opacity = 0.75
