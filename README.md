@@ -37,7 +37,22 @@ All results are at CPU 88 W, GPU 300 W and a room at 25 °C. The current layout 
 
 ## Run
 
-Windows: double-click **`start.bat`**. It starts the engine on port 8600 and the web app on port 5190, then opens <http://localhost:5190>.
+**Just look:** the web app runs without Python. The views and the 32-layout ranking are precomputed:
+
+```bash
+cd web && npm install && npm run dev        # http://localhost:5190
+```
+
+**Full setup** (live hardware readout and new simulations). You need Python 3.11+, Node 18+, and an NVIDIA GPU for speed:
+
+```bash
+python -m venv .venv
+.venv\Scripts\pip install torch --index-url https://download.pytorch.org/whl/cu124   # CUDA build of PyTorch
+.venv\Scripts\pip install -r requirements.txt
+cd web && npm install
+```
+
+Then on Windows double-click **`start.bat`**. It starts the engine on port 8600 and the web app on port 5190, then opens <http://localhost:5190>.
 
 ```bash
 # engine (from this folder)
