@@ -1,5 +1,40 @@
 {
-  "_about": "Local PC parts library for PC Airflow. Coordinates in mm inside the case: x = front (0) -> rear (D), y = glass side (0) -> motherboard tray side (W), z = bottom (0) -> top (H). 'est' marks values estimated from layout descriptions (no official drawing).",
+  "_about": "Local PC parts library for PC Airflow. Coordinates in mm inside the case: x = front (0) -> rear (D), y = glass side (0) -> motherboard tray side (W), z = bottom (0) -> top (H). 'est' marks values estimated from layout descriptions (no official drawing). Cooling: part temperature = room + intake air rise + P / G with G = 1 / (r_base + r_air_full * speed^-0.7), where speed = rpm / rpm_max of the fans on that cooler; s_min = a fan's speed at 0 % PWM (most PWM fans keep turning).",
+  "defaults": {
+    "ambient_c": 23,
+    "curves": {
+      "case": {"source": "cpu", "points": [[40, 14], [60, 40], [75, 100], [85, 100]]},
+      "cpu": {"points": [[40, 15], [60, 50], [75, 100], [85, 100]]}
+    },
+    "scenarios": [
+      {"id": "idle", "name": "Idle", "cpu": 0.0, "gpu": 0.0},
+      {"id": "office", "name": "Everyday use", "cpu": 0.3, "gpu": 0.0, "note": "the reference PC measured 42 W / 14 W"},
+      {"id": "cpu_game", "name": "CPU-heavy game", "cpu": 0.97, "gpu": 0.38, "note": "the reference PC measured 86 W / 145 W in this game"},
+      {"id": "gpu_game", "name": "GPU-heavy game", "cpu": 0.7, "gpu": 0.9},
+      {"id": "stress", "name": "Full stress", "cpu": 1.0, "gpu": 1.0}
+    ],
+    "note": "Curves: the reference PC's ASUS Fan Xpert smart mode (case fans and CPU fans follow the CPU temperature); duty in % against °C. A scenario's load is a fraction between a part's idle_w and its max_w (CPU) or tdp_w (GPU)."
+  },
+  "cpus": [
+    {"id": "amd-ryzen-7-9700x", "name": "AMD Ryzen 7 9700X", "brand": "AMD", "aliases": ["9700x", "ryzen 7 9700x", "ryzen 9700x"],
+     "cores": 8, "tdp_w": 65, "max_w": 88, "idle_w": 22, "t_max_c": 95, "r_die_k_per_w": 0.32, "est": ["idle_w", "r_die_k_per_w"],
+     "note": "max_w = PPT at the default 65 W TDP. r_die (die, solder, heat spreader, paste) is fitted to the reference PC: 86 W and 65.3 °C in a CPU-heavy game, room 23 °C.",
+     "sources": ["https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9700x.html"]},
+    {"id": "amd-ryzen-7-9800x3d", "name": "AMD Ryzen 7 9800X3D", "brand": "AMD", "aliases": ["9800x3d", "ryzen 7 9800x3d", "x3d"],
+     "cores": 8, "tdp_w": 120, "max_w": 162, "idle_w": 25, "t_max_c": 95, "r_die_k_per_w": 0.26, "est": ["idle_w", "r_die_k_per_w"],
+     "note": "max_w = PPT at the 120 W TDP.",
+     "sources": ["https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html"]},
+    {"id": "amd-ryzen-9-9950x", "name": "AMD Ryzen 9 9950X", "brand": "AMD", "aliases": ["9950x", "ryzen 9 9950x"],
+     "cores": 16, "tdp_w": 170, "max_w": 230, "idle_w": 30, "t_max_c": 95, "r_die_k_per_w": 0.17, "est": ["idle_w", "r_die_k_per_w"],
+     "note": "max_w = PPT at the 170 W TDP; two dies share the heat.",
+     "sources": ["https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-9-9950x.html"]},
+    {"id": "intel-core-i7-14700k", "name": "Intel Core i7-14700K", "brand": "Intel", "aliases": ["14700k", "i7 14700k", "i7-14700k"],
+     "cores": 20, "tdp_w": 125, "max_w": 253, "idle_w": 12, "t_max_c": 100, "r_die_k_per_w": 0.17, "est": ["idle_w", "r_die_k_per_w"],
+     "note": "Intel specification: processor base power 125 W, maximum turbo power 253 W, TjMax 100 °C.", "sources": []},
+    {"id": "intel-core-ultra-7-265k", "name": "Intel Core Ultra 7 265K", "brand": "Intel", "aliases": ["265k", "ultra 7 265k", "core ultra 7"],
+     "cores": 20, "tdp_w": 125, "max_w": 250, "idle_w": 10, "t_max_c": 105, "r_die_k_per_w": 0.18, "est": ["idle_w", "r_die_k_per_w"],
+     "note": "Intel specification: processor base power 125 W, maximum turbo power 250 W, TjMax 105 °C.", "sources": []}
+  ],
   "cases": [
     {
       "id": "lianli-lancool-207",
@@ -71,8 +106,11 @@
       "brand": "NVIDIA",
       "aliases": ["5080", "rtx 5080", "5080 fe", "founders edition", "nvidia 5080"],
       "length_mm": 304, "height_mm": 137, "thickness_mm": 40, "slots": 2,
-      "tdp_w": 360,
+      "tdp_w": 360, "idle_w": 15, "t_max_c": 88,
       "cooler": "dual_flow_through",
+      "cooling": {"r_base_k_per_w": 0.045, "r_air_full_k_per_w": 0.055, "passive_speed": 0.06, "fans": 2, "fan_rpm_max": 3600, "fan_noise_dba": 52,
+                  "fan_curve": [[40, 0], [45, 30], [60, 32], [70, 45], [80, 70], [88, 100]], "est": true,
+                  "note": "Fitted to the reference PC: 145 W and 49.3 °C with the fans at 31 % (1120 rpm), room 23 °C; 300 W gives about 70 °C at 45 %. The fans stop below about 40 °C (zero-RPM idle, measured: stopped at 14 W). passive_speed stands in for the case air that still crosses the fins when they stop."},
       "detected_by": "PCI subsystem vendor 10DE (NVIDIA) on this PC",
       "sources": [
         "https://lanoc.org/review/video-cards/nvidia-rtx-5080-founders-edition?start=2",
@@ -87,8 +125,10 @@
       "brand": "generic",
       "aliases": ["generic gpu", "triple fan", "open air"],
       "length_mm": 330, "height_mm": 135, "thickness_mm": 60, "slots": 3,
-      "tdp_w": 320,
+      "tdp_w": 320, "idle_w": 20, "t_max_c": 88,
       "cooler": "open_air",
+      "cooling": {"r_base_k_per_w": 0.04, "r_air_full_k_per_w": 0.05, "passive_speed": 0.08, "fans": 3, "fan_rpm_max": 3000, "fan_noise_dba": 48,
+                  "fan_curve": [[50, 0], [55, 30], [65, 35], [75, 55], [85, 100]], "est": true},
       "sources": [],
       "amazon_query": "RTX graphics card triple fan"
     }
@@ -103,6 +143,8 @@
       "height_mm": 155, "width_mm": 125, "depth_mm": 135,
       "fans": [{"fan": "thermalright-tl-c12c-s", "count": 2, "arrangement": "front + middle, push"}],
       "heatpipes": 6,
+      "r_air_full_k_per_w": 0.11, "est": ["r_air_full_k_per_w"],
+      "cooling_note": "Fin-to-air resistance with both fans at full speed; fitted together with the CPU's r_die to the reference PC.",
       "sources": [
         "https://www.quietpc.com/tr-pa-120se",
         "https://pangoly.com/en/product/thermalright-peerless-assassin-120-se-argb"
@@ -112,17 +154,17 @@
   ],
   "fans": [
     {"id": "lianli-207-front-140", "name": "Lian Li LANCOOL 207 front fan (140 mm ARGB)", "brand": "Lian Li", "aliases": ["207 front"],
-     "size_mm": 140, "thickness_mm": 30, "rpm_max": 1900, "cfm": 109.3, "static_mmh2o": 3.3, "noise_dba": 34.86,
+     "size_mm": 140, "thickness_mm": 30, "rpm_max": 1900, "cfm": 109.3, "static_mmh2o": 3.3, "noise_dba": 34.86, "s_min": 0.26,
      "sources": ["https://lanoc.org/news/hardware-news/lian-li-re-invents-the-atx-layout-with-the-lancool-207"]},
     {"id": "lianli-207-bottom-120-rev", "name": "Lian Li LANCOOL 207 bottom fan (120 mm, reverse blade)", "brand": "Lian Li", "aliases": ["207 bottom"],
-     "size_mm": 120, "thickness_mm": 25, "rpm_max": 1950, "cfm": 71.1, "static_mmh2o": 1.99, "noise_dba": 30.81,
+     "size_mm": 120, "thickness_mm": 25, "rpm_max": 1950, "cfm": 71.1, "static_mmh2o": 1.99, "noise_dba": 30.81, "s_min": 0.22,
      "sources": ["https://lanoc.org/news/hardware-news/lian-li-re-invents-the-atx-layout-with-the-lancool-207"]},
     {"id": "thermalright-tl-c12c-s", "name": "Thermalright TL-C12C-S (120 mm)", "brand": "Thermalright", "aliases": ["tl-c12c", "c12c"],
-     "size_mm": 120, "thickness_mm": 25, "rpm_max": 1550, "cfm": 66.2, "static_mmh2o": 1.53, "noise_dba": 25.6,
+     "size_mm": 120, "thickness_mm": 25, "rpm_max": 1550, "cfm": 66.2, "static_mmh2o": 1.53, "noise_dba": 25.6, "s_min": 0.23,
      "sources": ["https://www.quietpc.com/tr-pa-120se"]},
     {"id": "generic-120", "name": "120 mm fan, model unknown (typical values)", "brand": "generic", "aliases": ["unknown", "generic 120", "120mm"],
-     "size_mm": 120, "thickness_mm": 25, "rpm_max": 1500, "cfm": 55, "static_mmh2o": 1.6, "noise_dba": 25, "est": true, "sources": []},
+     "size_mm": 120, "thickness_mm": 25, "rpm_max": 1500, "cfm": 55, "static_mmh2o": 1.6, "noise_dba": 25, "s_min": 0.2, "est": true, "sources": []},
     {"id": "generic-140", "name": "140 mm fan, model unknown (typical values)", "brand": "generic", "aliases": ["generic 140", "140mm"],
-     "size_mm": 140, "thickness_mm": 25, "rpm_max": 1400, "cfm": 70, "static_mmh2o": 1.6, "noise_dba": 26, "est": true, "sources": []}
+     "size_mm": 140, "thickness_mm": 25, "rpm_max": 1400, "cfm": 70, "static_mmh2o": 1.6, "noise_dba": 26, "s_min": 0.2, "est": true, "sources": []}
   ]
 }
