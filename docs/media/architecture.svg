@@ -1,75 +1,78 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 384" width="1060" height="384" font-family="IBM Plex Sans, Segoe UI, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 404" width="1060" height="404" font-family="IBM Plex Sans, Segoe UI, Helvetica, Arial, sans-serif">
   <title>CaseFlow architecture</title>
   <defs>
     <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6fa8c8"/></marker>
   </defs>
-  <rect width="1060" height="384" fill="#0b1119"/>
+  <rect width="1060" height="404" fill="#0b1119"/>
   <text x="24" y="34" fill="#dde9f3" font-size="16" font-weight="700">Three parts on one machine</text>
-  <text x="24" y="54" fill="#8b98a9" font-size="12">the web app works on its own from precomputed files; the engine adds live hardware readings and new simulations</text>
+  <text x="24" y="54" fill="#8b98a9" font-size="12">the engine simulates each layout once (its bank); the browser solves any room, load and fan curve from the bank in milliseconds</text>
 
   <!-- browser -->
   <g transform="translate(24,80)">
-    <rect width="300" height="250" fill="rgba(140,200,255,0.05)" stroke="#2a4a63"/>
+    <rect width="300" height="270" fill="rgba(140,200,255,0.05)" stroke="#2a4a63"/>
     <path d="M0 0 h12 M0 0 v12" stroke="#63e0ff" stroke-width="2"/>
     <text x="16" y="28" fill="#63e0ff" font-family="IBM Plex Mono, Consolas, monospace" font-size="11">WEB · localhost:5190</text>
     <text x="16" y="52" fill="#dde9f3" font-weight="700" font-size="14">Browser app</text>
     <text x="16" y="72" fill="#8b98a9" font-size="12">React + three.js (Vite)</text>
     <g font-size="12" fill="#c3d0dc">
-      <text x="16" y="102">· 3D case, fans, fins, glass</text>
-      <text x="16" y="122">· flow particles traced in the</text>
-      <text x="28" y="138">velocity field (RK2 streamlines)</text>
-      <text x="16" y="158">· heat slice, dust deposits</text>
-      <text x="16" y="178">· floating HUD windows 01–06</text>
+      <text x="16" y="100"><tspan font-family="IBM Plex Mono, Consolas, monospace" fill="#dde9f3">scenario.ts</tspan>  fan curves ⇄ temps,</text>
+      <text x="28" y="116">steady state in ~1 ms per layout</text>
+      <text x="16" y="136">· 3D heat = P_cpu · k_cpu + P_gpu · k_gpu</text>
+      <text x="16" y="156">· 32 layouts re-ranked live</text>
+      <text x="16" y="176">· Scenario, Fan curves, Trends windows</text>
     </g>
-    <rect x="16" y="196" width="268" height="40" fill="rgba(99,224,255,0.06)" stroke="#2f7fa3"/>
-    <text x="28" y="214" fill="#dde9f3" font-size="11.5">public/data/*.json</text>
-    <text x="28" y="229" fill="#8b98a9" font-size="11">precomputed views + 32-layout ranking</text>
+    <rect x="16" y="196" width="268" height="58" fill="rgba(99,224,255,0.06)" stroke="#2f7fa3"/>
+    <text x="28" y="214" fill="#dde9f3" font-size="11.5">public/data/</text>
+    <text x="28" y="230" fill="#8b98a9" font-size="11">your layout's bank (3D fields) +</text>
+    <text x="28" y="245" fill="#8b98a9" font-size="11">32 bank summaries: works offline</text>
   </g>
 
   <!-- server -->
   <g transform="translate(380,80)">
-    <rect width="290" height="250" fill="rgba(140,200,255,0.05)" stroke="#2a4a63"/>
+    <rect width="290" height="270" fill="rgba(140,200,255,0.05)" stroke="#2a4a63"/>
     <path d="M0 0 h12 M0 0 v12" stroke="#63e0ff" stroke-width="2"/>
     <text x="16" y="28" fill="#63e0ff" font-family="IBM Plex Mono, Consolas, monospace" font-size="11">API · 127.0.0.1:8600</text>
     <text x="16" y="52" fill="#dde9f3" font-weight="700" font-size="14">FastAPI service</text>
     <text x="16" y="72" fill="#8b98a9" font-size="12">server/app.py</text>
     <g font-family="IBM Plex Mono, Consolas, monospace" font-size="11.5" fill="#c3d0dc">
       <text x="16" y="104">GET  /api/health</text>
-      <text x="16" y="124">GET  /api/hardware</text>
-      <text x="16" y="144">GET  /api/library</text>
-      <text x="16" y="164">POST /api/simulate  → job id</text>
+      <text x="16" y="124">GET  /api/library</text>
+      <text x="16" y="144">GET  /api/default_build</text>
+      <text x="16" y="164">POST /api/bank      → job id</text>
       <text x="16" y="184">GET  /api/job/{id}  → progress</text>
     </g>
-    <text x="16" y="214" fill="#8b98a9" font-size="11.5">one GPU job at a time (lock);</text>
-    <text x="16" y="230" fill="#8b98a9" font-size="11.5">optional calibration from a measured °C</text>
+    <text x="16" y="216" fill="#8b98a9" font-size="11.5">a cached bank returns at once;</text>
+    <text x="16" y="232" fill="#8b98a9" font-size="11.5">a new layout runs on the GPU (~90 s),</text>
+    <text x="16" y="248" fill="#8b98a9" font-size="11.5">one job at a time (lock)</text>
   </g>
 
   <!-- engine -->
   <g transform="translate(726,80)">
-    <rect width="310" height="250" fill="rgba(217,119,43,0.06)" stroke="#8a5328"/>
+    <rect width="310" height="270" fill="rgba(217,119,43,0.06)" stroke="#8a5328"/>
     <path d="M0 0 h12 M0 0 v12" stroke="#d9772b" stroke-width="2"/>
     <text x="16" y="28" fill="#d9772b" font-family="IBM Plex Mono, Consolas, monospace" font-size="11">ENGINE · PyTorch on the GPU</text>
     <text x="16" y="52" fill="#dde9f3" font-weight="700" font-size="14">engine/</text>
     <g font-size="12" fill="#c3d0dc">
-      <text x="16" y="80"><tspan font-family="IBM Plex Mono, Consolas, monospace" fill="#dde9f3">sim.py</tspan>  build → grid, fans, run, package</text>
-      <text x="16" y="102"><tspan font-family="IBM Plex Mono, Consolas, monospace" fill="#dde9f3">lbm.py</tspan>  D3Q19 lattice Boltzmann</text>
-      <text x="16" y="124"><tspan font-family="IBM Plex Mono, Consolas, monospace" fill="#dde9f3">thermal.py</tspan>  heat transport, calibration</text>
-      <text x="16" y="146"><tspan font-family="IBM Plex Mono, Consolas, monospace" fill="#dde9f3">optimize.py</tspan>  32-layout search</text>
-      <text x="16" y="168"><tspan font-family="IBM Plex Mono, Consolas, monospace" fill="#dde9f3">hardware.py</tspan>  CPU / board / RAM (CIM),</text>
-      <text x="104" y="184">GPU °C + W (nvidia-smi)</text>
+      <text x="16" y="78"><tspan font-family="IBM Plex Mono, Consolas, monospace" fill="#dde9f3">sim.py</tspan>  build → grid, fan operating point</text>
+      <text x="16" y="98"><tspan font-family="IBM Plex Mono, Consolas, monospace" fill="#dde9f3">lbm.py</tspan>  D3Q19 lattice Boltzmann (batched)</text>
+      <text x="16" y="118"><tspan font-family="IBM Plex Mono, Consolas, monospace" fill="#dde9f3">thermal.py</tspan>  heat per watt (batched)</text>
+      <text x="16" y="138"><tspan font-family="IBM Plex Mono, Consolas, monospace" fill="#dde9f3">bank.py</tspan>  3 fan speeds → bank, cache</text>
+      <text x="16" y="158"><tspan font-family="IBM Plex Mono, Consolas, monospace" fill="#dde9f3">scenario.py</tspan>  the same solver as the web</text>
+      <text x="16" y="178"><tspan font-family="IBM Plex Mono, Consolas, monospace" fill="#dde9f3">optimize.py</tspan>  32 layouts, ranked per scenario</text>
     </g>
-    <rect x="16" y="200" width="278" height="36" fill="rgba(217,119,43,0.08)" stroke="#8a5328"/>
-    <text x="28" y="223" fill="#dde9f3" font-size="11.5">data/parts/library.json · data/optimize.json</text>
+    <rect x="16" y="196" width="278" height="58" fill="rgba(217,119,43,0.08)" stroke="#8a5328"/>
+    <text x="28" y="216" fill="#dde9f3" font-size="11.5">data/banks/ (cache) · data/optimize.json</text>
+    <text x="28" y="233" fill="#8b98a9" font-size="11">data/parts/library.json · data/validation.json</text>
   </g>
 
   <!-- arrows -->
   <g stroke="#6fa8c8" stroke-width="1.4" fill="none">
-    <path d="M326 170 H376" marker-end="url(#a)" marker-start="url(#a)"/>
-    <path d="M672 170 H722" marker-end="url(#a)" marker-start="url(#a)"/>
+    <path d="M326 180 H376" marker-end="url(#a)" marker-start="url(#a)"/>
+    <path d="M672 180 H722" marker-end="url(#a)" marker-start="url(#a)"/>
   </g>
-  <text x="351" y="160" fill="#8b98a9" font-size="10.5" text-anchor="middle">/api</text>
-  <text x="351" y="188" fill="#8b98a9" font-size="10.5" text-anchor="middle">proxy</text>
-  <text x="697" y="160" fill="#8b98a9" font-size="10.5" text-anchor="middle">calls</text>
-  <path d="M881 330 V350 H174 V334" stroke="#2f7fa3" stroke-width="1.2" fill="none" stroke-dasharray="4 4" marker-end="url(#a)"/>
-  <text x="528" y="372" fill="#6fa8c8" font-size="10.5" text-anchor="middle">scripts/precompute.py writes the static views the web app falls back to</text>
+  <text x="351" y="170" fill="#8b98a9" font-size="10.5" text-anchor="middle">/api</text>
+  <text x="351" y="198" fill="#8b98a9" font-size="10.5" text-anchor="middle">proxy</text>
+  <text x="697" y="170" fill="#8b98a9" font-size="10.5" text-anchor="middle">calls</text>
+  <path d="M881 350 V370 H174 V354" stroke="#2f7fa3" stroke-width="1.2" fill="none" stroke-dasharray="4 4" marker-end="url(#a)"/>
+  <text x="528" y="392" fill="#6fa8c8" font-size="10.5" text-anchor="middle">scripts/precompute.py writes the offline data: your layout's bank and the 32 summaries</text>
 </svg>

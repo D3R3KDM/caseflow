@@ -39,21 +39,40 @@ cdp.on('Page.screencastFrame', async ({ data, metadata, sessionId }) => {
   try { await cdp.send('Page.screencastFrameAck', { sessionId }) } catch { /* closing */ }
 })
 await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 90, maxWidth: W, maxHeight: H, everyNthFrame: 1 })
-await page.mouse.click(621, 517); await wait(2200)   // click a fan: flip / turn off menu
-await page.keyboard.press('Escape'); await wait(500)
-await drag(720, 430, 672, 426, 3000)          // orbit a little: look along the case
-await wait(700)
-await dock('Lines'); await wait(2200); await dock('Lines')
-await dock('Heat'); await dock('Flow'); await wait(2600)
-await tab('Worst'); await wait(3000)          // the worst layout: rear fan blowing in
-await tab('Your layout'); await wait(2200)
-await dock('Heat'); await dock('Flow'); await wait(900)
-await dock('Screens'); await wait(1600); await dock('Screens'); await wait(1300)   // hide / show the floating screens
-await dock('Configure'); await wait(2600); await dock('Configure'); await wait(600)
-await drag(672, 426, 790, 436, 3200)          // orbit to the other side
+const box = async (loc) => (await loc.boundingBox())
+/** Drag a range input's thumb from its current value to a new one, slowly enough to watch. */
+const slide = async (loc, lo, hi, from, to, ms) => {
+  const r = await box(loc)
+  const x = (v) => r.x + 8 + ((v - lo) / (hi - lo)) * (r.width - 16)
+  await drag(x(from), r.y + r.height / 2, x(to), r.y + r.height / 2, ms)
+}
+await wait(1000)
+await dock('Curves'); await wait(1200)                                                   // the case-fan curve, fans at 62 %
+{
+  const c = await box(page.locator('svg.curve').first())
+  const X = (t) => c.x + 30 + ((t - 20) / 80) * (c.width - 40), Y = (d) => c.y + 10 + (1 - d / 100) * (c.height - 32)
+  await drag(X(60), Y(40), X(60), Y(75), 1800); await wait(1600)                         // a steeper curve: fans speed up, CPU cools
+}
+await page.getByText('Reset this curve', { exact: true }).click(); await wait(900)
+await dock('Curves')
+await page.getByText('Stress', { exact: true }).click(); await wait(1800)            // a heavier load: fans spin up
+await slide(page.locator('.sl input[type=range]').first(), 10, 40, 23, 35, 2400); await wait(1000)   // a hot room
+await dock('Heat'); await wait(1800)
+await dock('Trends'); await wait(1500)
+{
+  const t = await box(page.locator('.tr-plot svg').first())
+  await page.mouse.move(t.x + 40, t.y + t.height / 2)
+  for (let i = 0; i <= 24; i++) { await page.mouse.move(t.x + 40 + (i / 24) * (t.width - 110), t.y + t.height / 2); await wait(70) }
+  await wait(1200)
+}
+await dock('Trends')
+await tab('Worst'); await wait(2600)                                                    // the worst layout
+await tab('Your layout'); await wait(1600)
+await dock('Heat')
+await drag(720, 430, 672, 426, 2600)                                                    // orbit a little
 await page.mouse.move(720, 430)
 for (let i = 0; i < 6; i++) { await page.mouse.wheel(0, -60); await wait(120) }
-await wait(1800)
+await wait(1600)
 
 await cdp.send('Page.stopScreencast')
 await wait(300)
