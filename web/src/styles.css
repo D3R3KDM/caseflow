@@ -271,3 +271,41 @@ input[type='range'] { accent-color: var(--cyan); width: 100%; }
 .fm-note { margin-top: 8px; font: 9.5px var(--mono); color: var(--ink3); }
 .dp-sub { margin: -3px 0 9px; font: 10px var(--mono); color: var(--ink3); line-height: 1.45; }
 .warnline { color: var(--amber); }
+
+/* ---------- 01 scenario ---------- */
+.presets { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 10px; }
+.presets button { padding: 5px 8px; background: rgba(140, 200, 255, 0.04); border: 1px solid var(--line); color: var(--ink2); font: 10px var(--mono); letter-spacing: 0.04em; cursor: pointer; }
+.presets button:hover { color: var(--ink); border-color: var(--line2); }
+.presets button.on { color: var(--cyan); border-color: rgba(99, 224, 255, 0.6); background: rgba(99, 224, 255, 0.08); box-shadow: inset 0 -1px 0 var(--cyan); }
+.sl { display: block; margin: 0 0 9px; }
+.sl-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1px; }
+.sl-v { font-size: 11px; color: var(--ink); }
+.sl select { margin-top: 3px; }
+.scn-out { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0 2px; padding-top: 8px; border-top: 1px solid var(--line); }
+.scn-out b { display: block; font: 500 17px/1.2 var(--display); font-variant-numeric: tabular-nums; }
+.scn-out u { text-decoration: none; margin-left: 2px; font: 9px var(--mono); color: var(--ink3); }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--cyan); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---------- 02 fan curves ---------- */
+.tabs3 { display: flex; width: 100%; margin-bottom: 8px; }
+.tabs3 button { flex: 1; }
+.cv-src { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 6px; }
+.curve { display: block; touch-action: none; user-select: none; }
+.cv-grid { stroke: rgba(140, 200, 255, 0.09); stroke-width: 1; }
+.cv-tick { font: 8.5px var(--mono); fill: rgba(221, 233, 243, 0.42); }
+.cv-axis { font: 9px var(--mono); fill: rgba(221, 233, 243, 0.5); }
+.cv-pt { fill: #e8f8ff; stroke: var(--cyan); stroke-width: 1.5; cursor: grab; filter: drop-shadow(0 0 4px rgba(99, 224, 255, 0.9)); }
+.cv-pt.on { cursor: grabbing; fill: var(--cyan); }
+.cv-now { fill: none; stroke: #ffd36a; stroke-width: 2; filter: drop-shadow(0 0 5px rgba(255, 211, 106, 0.9)); }
+.cv-now-l { stroke: rgba(255, 211, 106, 0.35); stroke-dasharray: 2 3; }
+.cv-foot { margin-top: 4px; font-size: 11px; color: #ffd36a; }
+
+/* configure: fan control and fixed duty; airflow rows gain an rpm column */
+.mt-2 { grid-template-columns: 1fr auto 44px; }
+.mt-2 .ctl button { padding: 3px 6px; }
+.mt-fix { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 40px; gap: 8px; align-items: center; }
+.mt-fix .mono { font-size: 10.5px; text-align: right; }
+.af { grid-template-columns: 82px 38px 26px 38px 1fr; }
+.af-n small { margin-left: 4px; font-size: 8.5px; color: var(--amber); }
+.af-r { text-align: right; color: var(--ink3); }
+.pp-kv dd small { font-size: 9.5px; color: var(--ink3); }

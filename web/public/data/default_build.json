@@ -1,0 +1,62 @@
+{
+ "case": "lianli-lancool-207",
+ "gpu": "nvidia-rtx-5080-fe",
+ "cooler": "thermalright-pa120-se-argb",
+ "cpu": "amd-ryzen-7-9700x",
+ "fans": [
+  {
+   "slot": "front_low",
+   "fan": "lianli-207-front-140",
+   "mode": "in",
+   "control": "curve",
+   "pct": 70
+  },
+  {
+   "slot": "front_high",
+   "fan": "lianli-207-front-140",
+   "mode": "in",
+   "control": "curve",
+   "pct": 70
+  },
+  {
+   "slot": "bottom_front",
+   "fan": "lianli-207-bottom-120-rev",
+   "mode": "in",
+   "control": "curve",
+   "pct": 70
+  },
+  {
+   "slot": "bottom_rear",
+   "fan": "lianli-207-bottom-120-rev",
+   "mode": "in",
+   "control": "curve",
+   "pct": 70
+  },
+  {
+   "slot": "top_2",
+   "fan": "generic-120",
+   "mode": "out",
+   "control": "curve",
+   "pct": 80
+  },
+  {
+   "slot": "top_3",
+   "fan": "generic-120",
+   "mode": "out",
+   "control": "curve",
+   "pct": 80
+  },
+  {
+   "slot": "rear",
+   "fan": "generic-120",
+   "mode": "out",
+   "control": "curve",
+   "pct": 80
+  }
+ ],
+ "load": {
+  "cpu_w": 86.0,
+  "gpu_w": 146.0,
+  "ambient_c": 23.0
+ }
+}

@@ -50,24 +50,6 @@ class SimQuery(BaseModel):
     build: dict
 
 
-def _run(jid: str, q: SimQuery) -> None:
-    job = _jobs[jid]
-    try:
-        with _lock:
-            r = sim.simulate_build(q.build, callback=lambda p: job.__setitem__("progress", p))
-        job.update(result=sim.package(r), status="done", progress=1.0)
-    except Exception as exc:  # pragma: no cover - reported to the client
-        job.update(status="error", error=f"{exc!r} {traceback.format_exc()[-400:]}")
-
-
-@app.post("/api/simulate")
-def simulate(q: SimQuery) -> dict:
-    jid = uuid.uuid4().hex[:10]
-    _jobs[jid] = {"status": "running", "progress": 0.0}
-    threading.Thread(target=_run, args=(jid, q), daemon=True).start()
-    return {"job": jid}
-
-
 def _run_bank(jid: str, q: SimQuery) -> None:
     job = _jobs[jid]
     try:

@@ -1,13 +1,16 @@
 import { CSS_IN, CSS_OUT } from './palette'
-import type { Mount, SimFan } from './types'
+import type { Box, Mount } from './types'
+
+/** A fan as the schematic draws it: which mount, which way it blows. */
+export interface SchFan { slot: string; mode: 'in' | 'out'; size?: number }
 
 /** Side view through the glass (rear on the left, front on the right): shell, PSU, board, GPU, cooler,
  * and every mount with its fan direction. */
 interface Props {
   dims: { D: number; W: number; H: number }
-  boxes: { name: string; kind: string; b: number[] }[]
+  boxes: Box[]
   mounts: Mount[]
-  fans: SimFan[]
+  fans: SchFan[]
   width?: number
 }
 
@@ -21,7 +24,7 @@ export default function Schematic({ dims, boxes, mounts, fans, width = 124 }: Pr
   const rect = (b: number[], fill: string, stroke: string, key: string) => (
     <rect key={key} x={X(b[1])} y={Y(b[5])} width={(b[1] - b[0]) * sc} height={(b[5] - b[4]) * sc} fill={fill} stroke={stroke} strokeWidth={0.6} />
   )
-  const mountMark = (m: Mount, f: SimFan | undefined) => {
+  const mountMark = (m: Mount, f: SchFan | undefined) => {
     const mode = f?.mode ?? null
     const col = mode === 'in' ? CSS_IN : mode === 'out' ? CSS_OUT : 'rgba(140,200,255,0.25)'
     const half = ((f?.size ?? Math.max(...m.sizes)) / 2) * sc

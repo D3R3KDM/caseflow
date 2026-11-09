@@ -2,11 +2,10 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import * as THREE from 'three'
 import { CSS3DObject, CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js'
-import { b64ToBuffer, f16ToF32 } from './api'
 import { makeFan, makeFinStack, meshTexture } from './models'
 import { C, thermal } from './palette'
 import { traceStreamlines, type Field } from './streamlines'
-import type { SimRes } from './types'
+import type { Geometry, Wall } from './types'
 import { createViewer, disposeObject, type Viewer } from './viewer'
 
 export const T_MAX = 12                      // °C above room at the top of the colour scale
@@ -15,6 +14,21 @@ export type Anchor = 'cpu' | 'gpu' | 'intake' | 'glass' | 'exhaust'
 /** A floating screen around the case. pos is in the "ring frame": x right, y up, z towards the viewer for the
  * default view; the ring turns with the camera so the screens stay arranged around the case and readable. */
 export interface HoloSpec { id: string; pos: [number, number, number]; yaw: number; anchor?: Anchor; content: ReactNode }
+/** A case fan as drawn: where it sits, which way it blows, how fast it turns (rpm / rpm_max). */
+export interface SceneFan { slot: string; mode: 'in' | 'out'; wall: Wall; a: number; b: number; size: number; speed: number }
+/** Everything the 3D view draws. Each part is rebuilt only when its key changes: the case and parts (geoKey), the
+ * streamlines (flowKey); temperatures recolour what is there, fan speeds only change how fast the fans turn. */
+export interface SceneData {
+  geoKey: string
+  geometry: Geometry
+  fans: SceneFan[]
+  flowKey: string | null
+  u: Float32Array | null          // air velocity, m/s, [3, X, Y, Z]
+  T: Float32Array | null          // air temperature above the room, K, [X, Y, Z]
+  dust: number[][] | null         // deposit points, mm
+  cpuFan: number                  // CPU cooler fan speed 0..1
+  gpuFan: number                  // GPU fan speed 0..1 (0 = stopped)
+}
 
 const SCALE = 1 / 250                        // world units per mm of the case
 const PX = 0.0039                            // world units per CSS pixel of a screen
@@ -84,15 +98,25 @@ interface Anim {
     phase: Float32Array; P: (x: number, y: number, z: number) => THREE.Vector3; toMm: (p: number) => number
   }
 }
+/** What the heat recolouring needs from the flow and case builds. */
+interface Paint {
+  lineCol: THREE.BufferAttribute | null; linePos: Float32Array | null
+  heat: { tex: THREE.DataTexture; data: Uint8Array; jy: number } | null
+}
+const SPIN = 18                      // rad/s at full speed
 
 export interface Pick { slot: string; empty: boolean; x: number; y: number }
 
-export default function CaseScene({ res, layers, panels, resetKey, onPick, selected }: {
-  res: SimRes | null; layers: Layers; panels: HoloSpec[]; resetKey: number; onPick?: (p: Pick | null) => void; selected?: string | null
+export default function CaseScene({ scene, layers, panels, resetKey, onPick, selected }: {
+  scene: SceneData | null; layers: Layers; panels: HoloSpec[]; resetKey: number; onPick?: (p: Pick | null) => void; selected?: string | null
 }) {
   const host = useRef<HTMLDivElement>(null)
   const viewer = useRef<Viewer | null>(null)
   const group = useRef<THREE.Group | null>(null)
+  const sub = useRef<{ kase: THREE.Group; flow: THREE.Group; dust: THREE.Group } | null>(null)
+  const paint = useRef<Paint>({ lineCol: null, linePos: null, heat: null })
+  const sceneRef = useRef(scene)
+  sceneRef.current = scene
   const anim = useRef<Anim>({ fans: [], ring: null, parts: null })
   // floating screens
   const els = useRef(new Map<string, HTMLDivElement>())
@@ -207,6 +231,9 @@ export default function CaseScene({ res, layers, panels, resetKey, onPick, selec
     anim.current.ring = ring
     const g = new THREE.Group()
     v.scene.add(g)
+    const kase = new THREE.Group(), flowG = new THREE.Group(), dustG = new THREE.Group()
+    g.add(kase, flowG, dustG)
+    sub.current = { kase, flow: flowG, dust: dustG }
     viewer.current = v
     group.current = g
     const tmp = new THREE.Vector3()
@@ -347,22 +374,71 @@ export default function CaseScene({ res, layers, panels, resetKey, onPick, selec
 
   useEffect(() => { css.current?.fit() }, [resetKey])
 
-  // ---------- case, parts and fields ----------
+  // ---------- shared helpers for the builds below ----------
+  const frame = (geo: Geometry) => {
+    const { D, W, H } = geo.case
+    // case frame (x front->rear, y glass->tray, z up) is left-handed: mirror it so that, through the glass,
+    // the front is on the right and the rear I/O on the left - as the PC stands on a desk
+    const P = (x: number, y: number, z: number) => new THREE.Vector3((D / 2 - x) * SCALE, (z - H / 2) * SCALE, (W / 2 - y) * SCALE)
+    const mountPos = (m: { wall: string; a: number; b: number }) =>
+      m.wall === 'front' ? P(0, m.a, m.b) : m.wall === 'rear' ? P(D, m.a, m.b) : m.wall === 'top' ? P(m.a, m.b, H) : P(m.a, m.b, 0)
+    return { D, W, H, P, mountPos }
+  }
+  /** Colour everything that shows air temperature from the current field (cheap: no geometry is rebuilt). */
+  const recolor = () => {
+    const sc = sceneRef.current
+    if (!sc) return
+    const T = sc.T
+    const [X, Y, Z] = sc.geometry.shape
+    const tempAt = (px: number, py: number, pz: number) => {
+      if (!T) return 0
+      const i = Math.min(X - 1, Math.max(0, Math.floor(px))), j = Math.min(Y - 1, Math.max(0, Math.floor(py))), k = Math.min(Z - 1, Math.max(0, Math.floor(pz)))
+      return T[(i * Y + j) * Z + k]
+    }
+    const c = new THREE.Color()
+    const pt = paint.current
+    if (pt.lineCol && pt.linePos) {
+      const n = pt.linePos.length / 3
+      for (let k = 0; k < n; k++) {
+        thermal(tempAt(pt.linePos[3 * k], pt.linePos[3 * k + 1], pt.linePos[3 * k + 2]) / T_MAX, c)
+        pt.lineCol.setXYZ(k, c.r, c.g, c.b)
+      }
+      pt.lineCol.needsUpdate = true
+    }
+    const ps = anim.current.parts
+    if (ps) for (let k = 0; k < ps.temp.length; k++) ps.temp[k] = tempAt(ps.poly[3 * k], ps.poly[3 * k + 1], ps.poly[3 * k + 2])
+    if (pt.heat) {
+      const { data, tex, jy } = pt.heat
+      const sc2 = new THREE.Color()
+      for (let i = 0; i < X; i++)
+        for (let k = 0; k < Z; k++) {
+          const t = (T ? T[(i * Y + jy) * Z + k] : 0) / T_MAX
+          thermal(t, c)
+          sc2.copy(c).convertLinearToSRGB()
+          const o = (k * X + (X - 1 - i)) * 4                       // texture u runs along +X = rear -> front
+          data[o] = Math.round(sc2.r * 255); data[o + 1] = Math.round(sc2.g * 255); data[o + 2] = Math.round(sc2.b * 255)
+          data[o + 3] = T ? Math.round(255 * Math.min(0.8, 0.12 + 0.9 * Math.max(0, t))) : 0
+        }
+      tex.needsUpdate = true
+    }
+  }
+
+  // ---------- case and parts: rebuilt when the build changes ----------
+  const geoKey = scene?.geoKey ?? ''
   useEffect(() => {
-    const g = group.current
-    if (!g) return
-    g.children.forEach(disposeObject)
-    g.clear()
+    const k = sub.current
+    if (!k) return
+    for (const gg of [k.kase, k.flow, k.dust]) { gg.children.forEach(disposeObject); gg.clear() }
     anim.current.fans = []
     anim.current.parts = null
     pickRoots.current = []
-    if (!res) return
-    const { D, W, H } = res.case
+    paint.current = { lineCol: null, linePos: null, heat: null }
+    const sc = sceneRef.current
+    if (!sc) return
+    const geo = sc.geometry
+    const { D, W, H, P, mountPos } = frame(geo)
     const S = SCALE
-    // case frame (x front->rear, y glass->tray, z up) is left-handed: mirror it so that, through the glass,
-    // the front is on the right and the rear I/O on the left - as the PC stands on a desk
-    const P = (x: number, y: number, z: number) => new THREE.Vector3((D / 2 - x) * S, (z - H / 2) * S, (W / 2 - y) * S)
-    const add = <T extends THREE.Object3D>(o: T) => { g.add(o); return o }
+    const add = <T extends THREE.Object3D>(o: T) => { k.kase.add(o); return o }
     const lineMat = (opacity: number, color = C.line) => new THREE.LineBasicMaterial({ color, transparent: true, opacity })
     const outline = (m: THREE.Mesh, opacity: number) => { m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry, 20), lineMat(opacity))); return m }
     const boxGeo = (b: number[]) => new THREE.BoxGeometry(Math.max(b[1] - b[0], 1) * S, Math.max(b[5] - b[4], 1) * S, Math.max(b[3] - b[2], 1) * S)
@@ -401,19 +477,19 @@ export default function CaseScene({ res, layers, panels, resetKey, onPick, selec
     panel(D, H, P(D / 2, 0, H / 2), [0, 0, 0], new THREE.MeshPhysicalMaterial({ color: 0xa8dcff, transparent: true, opacity: 0.045, roughness: 0.04, side: THREE.DoubleSide, depthWrite: false }))
     {
       // corner brackets on the glass
-      const k = 34, pts: number[] = []
+      const kk = 34, pts: number[] = []
       const corner = (x: number, z: number, sx: number, sz: number) => {
-        const a = P(x, -2, z), b = P(x + sx * k, -2, z), c2 = P(x, -2, z + sz * k)
+        const a = P(x, -2, z), b = P(x + sx * kk, -2, z), c2 = P(x, -2, z + sz * kk)
         pts.push(a.x, a.y, a.z, b.x, b.y, b.z, a.x, a.y, a.z, c2.x, c2.y, c2.z)
       }
       corner(8, 8, 1, 1); corner(D - 8, 8, -1, 1); corner(8, H - 8, 1, -1); corner(D - 8, H - 8, -1, -1)
-      const geo = new THREE.BufferGeometry()
-      geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
-      add(new THREE.LineSegments(geo, lineMat(0.9, C.intake)))
+      const g2 = new THREE.BufferGeometry()
+      g2.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
+      add(new THREE.LineSegments(g2, lineMat(0.9, C.intake)))
     }
 
     // components
-    for (const bx of res.boxes) {
+    for (const bx of geo.boxes) {
       const b = bx.b
       if (bx.kind === 'psu') boxMesh(b, solid(0x0d1218), 0.28)
       else if (bx.kind === 'board') {
@@ -433,6 +509,7 @@ export default function CaseScene({ res, layers, panels, resetKey, onPick, selec
         const f = makeFan(Math.min(b[1] - b[0], b[3] - b[2]) * 0.92, S, 0x9fb6cc, 70, 10)
         f.rotation.x = Math.PI
         f.position.copy(centre(b))
+        f.userData.kind = 'gpu'
         anim.current.fans.push(add(f))
       } else if (bx.kind === 'cpu_hs') {
         const fins = makeFinStack((b[1] - b[0]) * S, (b[5] - b[4]) * S, (b[3] - b[2]) * S, 22, 0x75808d)
@@ -443,16 +520,15 @@ export default function CaseScene({ res, layers, panels, resetKey, onPick, selec
         const f = makeFan(Math.min(b[3] - b[2], b[5] - b[4]), S, 0xd6e6ff, 70, b[1] - b[0])
         f.rotation.z = Math.PI / 2                                  // airflow front -> rear = -X
         f.position.copy(centre(b))
+        f.userData.kind = 'cpu'
         anim.current.fans.push(add(f))
       } else if (bx.kind === 'vent') boxMesh(b, new THREE.MeshBasicMaterial({ color: 0x4f7396, transparent: true, opacity: 0.22 }))
     }
 
     // case fans + empty mounts
-    const mountPos = (m: { wall: string; a: number; b: number }) =>
-      m.wall === 'front' ? P(0, m.a, m.b) : m.wall === 'rear' ? P(D, m.a, m.b) : m.wall === 'top' ? P(m.a, m.b, H) : P(m.a, m.b, 0)
     const inward: Record<string, THREE.Vector3> = { front: new THREE.Vector3(-1, 0, 0), rear: new THREE.Vector3(1, 0, 0), top: new THREE.Vector3(0, -1, 0), bottom: new THREE.Vector3(0, 1, 0) }
-    for (const m of res.mounts) {
-      const f = res.fans.find((x) => x.slot === m.slot)
+    for (const m of geo.mounts) {
+      const f = sc.fans.find((x) => x.slot === m.slot)
       const pos = mountPos(m)
       if (!f) {
         const ring = new THREE.Mesh(new THREE.TorusGeometry((Math.max(...m.sizes) / 2) * S * 0.86, 0.0025, 6, 64), new THREE.MeshBasicMaterial({ color: 0x35506b }))
@@ -469,10 +545,12 @@ export default function CaseScene({ res, layers, panels, resetKey, onPick, selec
         continue
       }
       const color = f.mode === 'in' ? C.intake : C.exhaust
-      const fan = makeFan(f.size, S, color, f.pct, f.size >= 140 ? 30 : 25)
+      const fan = makeFan(f.size, S, color, 70, f.size >= 140 ? 30 : 25)
       const flow = inward[m.wall].clone().multiplyScalar(f.mode === 'in' ? 1 : -1)
       fan.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), flow)   // local +Y = airflow
       fan.position.copy(pos).addScaledVector(inward[m.wall], 0.05)
+      fan.userData.kind = 'case'
+      fan.userData.slot = m.slot
       anim.current.fans.push(add(fan))
       fan.userData.pick = { slot: m.slot, empty: false, pos: pos.clone(), normal: inward[m.wall].clone(), size: f.size }
       pickRoots.current.push(fan)
@@ -485,13 +563,13 @@ export default function CaseScene({ res, layers, panels, resetKey, onPick, selec
     // anchor points the screens point at
     {
       const cen = (kinds: string[]) => {
-        const bs = res.boxes.filter((b) => kinds.includes(b.kind)).map((b) => b.b)
+        const bs = geo.boxes.filter((b) => kinds.includes(b.kind)).map((b) => b.b)
         if (!bs.length) return undefined
         const m = [0, 1, 2, 3, 4, 5].map((i) => (i % 2 ? Math.max : Math.min)(...bs.map((b) => b[i])))
         return P((m[0] + m[1]) / 2, m[2] + 4, (m[4] + m[5]) / 2)       // on the glass-facing side of the part
       }
-      const fanC = (pred: (f: SimRes['fans'][number]) => boolean) => {
-        const fs = res.fans.filter(pred)
+      const fanC = (pred: (f: SceneFan) => boolean) => {
+        const fs = sc.fans.filter(pred)
         if (!fs.length) return undefined
         const v = new THREE.Vector3()
         fs.forEach((f) => v.add(mountPos(f)))
@@ -506,17 +584,46 @@ export default function CaseScene({ res, layers, panels, resetKey, onPick, selec
       }
     }
 
-    // airflow field -> streamlines and moving particles
-    const [X, Y, Z] = res.shape
-    const N = X * Y * Z
-    const u = f16ToF32(b64ToBuffer(res.u))
-    const T = f16ToF32(b64ToBuffer(res.T))
-    const field: Field = { dims: [X, Y, Z], u, cp: new Float32Array(N), scale: 1 }
-    const offc = res.off, dx = res.dx_mm
+    // heat slice through the GPU: its texture is filled by recolor()
+    const [X, , Z] = geo.shape
+    const dx = geo.dx_mm, offc = geo.off
+    const gb = geo.boxes.find((b) => b.kind === 'gpu')
+    const ySlice = gb ? (gb.b[2] + gb.b[3]) / 2 : W / 2
+    const jy = Math.round(ySlice / dx + offc)
+    const data = new Uint8Array(X * Z * 4)
+    const tex = new THREE.DataTexture(data, X, Z, THREE.RGBAFormat)
+    tex.magFilter = THREE.LinearFilter
+    tex.colorSpace = THREE.SRGBColorSpace
+    tex.needsUpdate = true
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(X * dx * S, Z * dx * S), new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false }))
+    plane.position.copy(P((X * dx) / 2 - offc * dx, ySlice, (Z * dx) / 2 - offc * dx))
+    plane.name = 'heat'
+    add(plane)
+    paint.current.heat = { tex, data, jy }
+  }, [geoKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---------- airflow: streamlines and moving particles, rebuilt when the velocity field changes ----------
+  const flowKey = scene?.flowKey ?? ''
+  useEffect(() => {
+    const k = sub.current
+    if (!k) return
+    k.flow.children.forEach(disposeObject)
+    k.flow.clear()
+    anim.current.parts = null
+    paint.current.lineCol = null
+    paint.current.linePos = null
+    const sc = sceneRef.current
+    if (!sc || !sc.u) return
+    const geo = sc.geometry
+    const { D, W, H, P } = frame(geo)
+    const add = <T extends THREE.Object3D>(o: T) => { k.flow.add(o); return o }
+    const [X, Y, Z] = geo.shape
+    const field: Field = { dims: [X, Y, Z], u: sc.u, cp: new Float32Array(X * Y * Z), scale: 1 }
+    const offc = geo.off, dx = geo.dx_mm
     const cell = (mm: number) => mm / dx + offc
     const toMm = (p: number) => (p - offc) * dx
     const seeds: [number, number, number][] = []
-    for (const f of res.fans.filter((q) => q.mode === 'in'))
+    for (const f of sc.fans.filter((q) => q.mode === 'in'))
       for (let a = -45; a <= 45; a += 15)
         for (let b = -45; b <= 45; b += 15) {
           if (f.wall === 'front') seeds.push([cell(14), cell(f.a + a), cell(f.b + b)])
@@ -526,30 +633,24 @@ export default function CaseScene({ res, layers, panels, resetKey, onPick, selec
         }
     for (let x = 40; x < D; x += 70) for (let z = 40; z < H; z += 70) seeds.push([cell(x), cell(W * 0.45), cell(z)])
     const sl = traceStreamlines(field, seeds, { h: 0.7, maxSteps: 1100, full: [X, Y, Z] })
-    const tempAt = (px: number, py: number, pz: number) => {
-      const i = Math.min(X - 1, Math.max(0, Math.floor(px))), j = Math.min(Y - 1, Math.max(0, Math.floor(py))), k = Math.min(Z - 1, Math.max(0, Math.floor(pz)))
-      return T[(i * Y + j) * Z + k]
-    }
-    const c = new THREE.Color()
     {
       const n = sl.positions.length / 3
-      const pos = new Float32Array(sl.positions.length), col = new Float32Array(sl.positions.length)
-      for (let k = 0; k < n; k++) {
-        const v = P(toMm(sl.positions[3 * k]), toMm(sl.positions[3 * k + 1]), toMm(sl.positions[3 * k + 2]))
-        pos.set([v.x, v.y, v.z], 3 * k)
-        thermal(tempAt(sl.positions[3 * k], sl.positions[3 * k + 1], sl.positions[3 * k + 2]) / T_MAX, c)
-        col.set([c.r, c.g, c.b], 3 * k)
+      const pos = new Float32Array(sl.positions.length)
+      for (let q = 0; q < n; q++) {
+        const v = P(toMm(sl.positions[3 * q]), toMm(sl.positions[3 * q + 1]), toMm(sl.positions[3 * q + 2]))
+        pos.set([v.x, v.y, v.z], 3 * q)
       }
       const lg = new THREE.BufferGeometry()
       lg.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-      lg.setAttribute('color', new THREE.BufferAttribute(col, 3))
+      const col = new THREE.BufferAttribute(new Float32Array(sl.positions.length), 3)
+      lg.setAttribute('color', col)
       const lines = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false }))
       lines.name = 'lines'
       add(lines)
+      paint.current.lineCol = col
+      paint.current.linePos = sl.positions
     }
     if (sl.paths.length) {
-      const temp = new Float32Array(sl.polyline.length / 3)
-      for (let k = 0; k < temp.length; k++) temp[k] = tempAt(sl.polyline[3 * k], sl.polyline[3 * k + 1], sl.polyline[3 * k + 2])
       const count = Math.min(1700, sl.paths.length * 8)
       const pg = new THREE.BufferGeometry()
       pg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3))
@@ -559,44 +660,45 @@ export default function CaseScene({ res, layers, panels, resetKey, onPick, selec
       pts.frustumCulled = false
       add(pts)
       const phase = new Float32Array(count)
-      for (let k = 0; k < count; k++) phase[k] = Math.random() * (sl.paths[k % sl.paths.length].count - 1)
-      anim.current.parts = { pts, paths: sl.paths, poly: sl.polyline, speed: sl.polySpeed, temp, phase, P, toMm }
+      for (let q = 0; q < count; q++) phase[q] = Math.random() * (sl.paths[q % sl.paths.length].count - 1)
+      anim.current.parts = { pts, paths: sl.paths, poly: sl.polyline, speed: sl.polySpeed, temp: new Float32Array(sl.polyline.length / 3), phase, P, toMm }
     }
+    recolor()
+  }, [flowKey, geoKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    // heat slice through the GPU: colour and opacity both follow the air temperature
-    const gb = res.boxes.find((b) => b.kind === 'gpu')
-    const ySlice = gb ? (gb.b[2] + gb.b[3]) / 2 : W / 2
-    const jy = Math.round(cell(ySlice))
-    const tex = new Uint8Array(X * Z * 4)
-    const sc = new THREE.Color()
-    for (let i = 0; i < X; i++)
-      for (let k = 0; k < Z; k++) {
-        const t = T[(i * Y + jy) * Z + k] / T_MAX
-        thermal(t, c)
-        sc.copy(c).convertLinearToSRGB()
-        const o = (k * X + (X - 1 - i)) * 4                         // texture u runs along +X = rear -> front
-        tex[o] = Math.round(sc.r * 255); tex[o + 1] = Math.round(sc.g * 255); tex[o + 2] = Math.round(sc.b * 255)
-        tex[o + 3] = Math.round(255 * Math.min(0.8, 0.12 + 0.9 * Math.max(0, t)))
-      }
-    const dt = new THREE.DataTexture(tex, X, Z, THREE.RGBAFormat)
-    dt.magFilter = THREE.LinearFilter
-    dt.colorSpace = THREE.SRGBColorSpace
-    dt.needsUpdate = true
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(X * dx * S, Z * dx * S), new THREE.MeshBasicMaterial({ map: dt, transparent: true, side: THREE.DoubleSide, depthWrite: false }))
-    plane.position.copy(P((X * dx) / 2 - offc * dx, ySlice, (Z * dx) / 2 - offc * dx))
-    plane.name = 'heat'
-    add(plane)
+  // ---------- temperatures: recolour the streamlines, particles and heat slice ----------
+  useEffect(() => { recolor() }, [scene?.T, flowKey, geoKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    if (res.dust?.points.length) {
-      const dp = new Float32Array(res.dust.points.length * 3)
-      res.dust.points.forEach((p, i) => { const v = P(p[0], p[1], p[2]); dp.set([v.x, v.y, v.z], 3 * i) })
-      const dg = new THREE.BufferGeometry()
-      dg.setAttribute('position', new THREE.BufferAttribute(dp, 3))
-      const dust = new THREE.Points(dg, new THREE.PointsMaterial({ color: C.dust, size: 0.009, map: dot(), transparent: true, opacity: 0.85, depthWrite: false }))
-      dust.name = 'dust'
-      add(dust)
+  // ---------- dust deposits ----------
+  useEffect(() => {
+    const k = sub.current
+    if (!k) return
+    k.dust.children.forEach(disposeObject)
+    k.dust.clear()
+    const sc = sceneRef.current
+    if (!sc?.dust?.length) return
+    const { P } = frame(sc.geometry)
+    const dp = new Float32Array(sc.dust.length * 3)
+    sc.dust.forEach((p, i) => { const v = P(p[0], p[1], p[2]); dp.set([v.x, v.y, v.z], 3 * i) })
+    const dg = new THREE.BufferGeometry()
+    dg.setAttribute('position', new THREE.BufferAttribute(dp, 3))
+    const dust = new THREE.Points(dg, new THREE.PointsMaterial({ color: C.dust, size: 0.009, map: dot(), transparent: true, opacity: 0.85, depthWrite: false }))
+    dust.name = 'dust'
+    k.dust.add(dust)
+  }, [scene?.dust, geoKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---------- fan speeds: how fast each fan turns (GPU fans stop at idle) ----------
+  const spinKey = scene ? scene.fans.map((f) => f.speed.toFixed(2)).join(',') + `|${scene.cpuFan.toFixed(2)}|${scene.gpuFan.toFixed(2)}` : ''
+  useEffect(() => {
+    const sc = sceneRef.current
+    if (!sc) return
+    const bySlot = new Map(sc.fans.map((f) => [f.slot, f.speed]))
+    for (const f of anim.current.fans) {
+      const u = f.userData
+      const s = u.kind === 'case' ? bySlot.get(u.slot) ?? 0 : u.kind === 'cpu' ? sc.cpuFan : u.kind === 'gpu' ? sc.gpuFan : 0
+      u.spin = s * SPIN
     }
-  }, [res])
+  }, [spinKey, geoKey])
 
   // ---------- layers ----------
   useEffect(() => {
@@ -608,7 +710,7 @@ export default function CaseScene({ res, layers, panels, resetKey, onPick, selec
     }
     if (css.current) css.current.gl.visible = layers.panels
     for (const h of holos.current.values()) h.obj.visible = layers.panels
-  }, [layers, res, idKey])
+  }, [layers, scene?.geoKey, scene?.flowKey, scene?.dust, idKey])
 
   return (
     <div className="scene" ref={host}>

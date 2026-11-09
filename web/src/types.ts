@@ -1,5 +1,8 @@
+import type { Bank, BankLevel, Curve, Curves, Pt } from './scenario'
+
 export type Mode = 'off' | 'in' | 'out'
 export type Wall = 'front' | 'rear' | 'top' | 'bottom'
+export type Control = 'curve' | 'fixed'
 
 export interface Mount { slot: string; wall: Wall; a: number; b: number; sizes: number[] }
 export interface CasePart {
@@ -7,35 +10,49 @@ export interface CasePart {
   max_gpu_len_mm: number; max_cooler_h_mm: number; mounts: Mount[]; preinstalled: { slot: string; fan: string; mode: Mode }[]
   sources: string[]; amazon_query?: string
 }
-export interface GpuPart { id: string; name: string; brand: string; aliases: string[]; length_mm: number; tdp_w: number; cooler: string; sources: string[]; amazon_query?: string }
-export interface CoolerPart { id: string; name: string; brand: string; aliases: string[]; type: string; height_mm: number; fans?: { fan: string }[]; sources: string[]; amazon_query?: string }
-export interface FanPart { id: string; name: string; brand: string; size_mm: number; cfm: number; static_mmh2o: number; rpm_max: number }
-export interface Lib { cases: CasePart[]; gpus: GpuPart[]; coolers: CoolerPart[]; fans: FanPart[] }
-
-export interface FanSlot { slot: string; fan: string; mode: Mode; pct: number }
-export interface Build { case: string; gpu: string; cooler: string; fans: FanSlot[]; load: { cpu_w: number; gpu_w: number; ambient_c: number } }
-
-export interface PartRes { intake_rise_c: number; temp_c: number; watts: number }
-export interface SimFan { slot: string; mode: 'in' | 'out'; pct: number; wall: Wall; a: number; b: number; size: number; name: string; q_m3s: number; op_frac?: number }
-export interface SimRes {
-  label: string; build?: Build; shape: [number, number, number]; off: number; dx_mm: number
-  case: { D: number; W: number; H: number }; case_name: string
-  mounts: Mount[]; panels: Record<string, string>; fans: SimFan[]
-  boxes: { name: string; kind: string; b: number[] }[]
-  u: string; T: string; parts: { cpu: PartRes; gpu: PartRes }
-  pressure: string; flow_in_m3s: number; flow_out_m3s: number; case_pa?: number
-  dead_air_fraction: number; air_max_rise_c: number; seconds: number; notes: string[]
-  dust: null | { dust_entering_rel: number; deposited_frac: number; d_um: number; by_part: { name: string; share: number }[]; points: number[][] }
+export interface GpuPart {
+  id: string; name: string; brand: string; aliases: string[]; length_mm: number; tdp_w: number; idle_w: number; t_max_c: number
+  cooler: string; cooling: { fans: number; fan_rpm_max: number; fan_curve: Pt[] }; sources: string[]; amazon_query?: string
+}
+export interface CoolerPart { id: string; name: string; brand: string; aliases: string[]; type: string; height_mm: number; fans?: { fan: string; count?: number }[]; sources: string[]; amazon_query?: string }
+export interface FanPart { id: string; name: string; brand: string; size_mm: number; cfm: number; static_mmh2o: number; rpm_max: number; s_min?: number; noise_dba?: number }
+export interface CpuPart { id: string; name: string; brand: string; cores: number; tdp_w: number; max_w: number; idle_w: number; t_max_c: number; note?: string }
+export interface Preset { id: string; name: string; cpu: number; gpu: number; note?: string }
+export interface Lib {
+  cases: CasePart[]; gpus: GpuPart[]; coolers: CoolerPart[]; fans: FanPart[]; cpus: CpuPart[]
+  defaults: { ambient_c: number; curves: { case: Curve; cpu: Curve }; scenarios: Preset[] }
 }
 
-export interface RankRow {
-  name: string; build: Build; current?: boolean; gpu_c: number; cpu_c: number; score: number; pressure: string
-  dust_in: number; dust_rel?: number; combined?: number; cfm_in: number; cfm_out: number
+export interface FanSlot { slot: string; fan: string; mode: Mode; control?: Control; pct: number }
+export interface Build {
+  case: string; gpu: string; cooler: string; cpu?: string; fans: FanSlot[]; curves?: Partial<Curves>
+  load?: { cpu_w: number; gpu_w: number; ambient_c: number }
 }
+
+/** A room temperature and a load, given as fractions between each part's idle power (0) and its limit (1). */
+export interface Scenario { ambient_c: number; cpu: number; gpu: number; preset: string | null }
+
+export interface Box { name: string; kind: string; b: number[] }
+export interface GeoFan { slot: string; fan: string; mode: 'in' | 'out'; control?: Control; pct?: number; wall: Wall; a: number; b: number; size: number; name: string; filtered?: boolean }
+export interface Geometry {
+  shape: [number, number, number]; off: number; dx_mm: number; case: { D: number; W: number; H: number }; case_name: string
+  mounts: Mount[]; panels: Record<string, string>; boxes: Box[]; checks: Record<string, unknown>; fans: GeoFan[]
+}
+/** An 8-bit field: value = (byte - 128) / 127 * scale (signed) or byte / 255 * scale. */
+export interface Q8 { b64: string; scale: number; signed: boolean }
+export interface BankPkg extends Bank {
+  version: number; key: string; levels: BankLevel[]; curve_fans: string[]; geometry: Geometry; seconds?: number
+  fields?: { u: Q8; kc: Q8; kg: Q8; dust_points: number[][] }[]
+}
+
+export interface Layout { name: string; build: Build; current: boolean; bank: Bank & { key: string; curve_fans: string[] } }
 export interface Opt {
-  ranking: RankRow[]; best: string; coolest?: string; cleanest?: string | null; cpu?: string | null; worst?: string
-  top?: string; tied?: string[]; tie_margin?: number
-  objective: string; dust_weight?: number; space?: string; minutes?: number
+  version: number; layouts: Layout[]; dust_weight: number; tie_margin: number; space: string; objective: string; minutes: number
+}
+/** One layout's result in the current scenario (the search screen ranks these). */
+export interface RankRow {
+  name: string; build: Build; current: boolean; cpu_c: number; gpu_c: number; throttled: boolean; noise_dba: number
+  case_duty: number; cfm_in: number; dust_rel: number; score: number; tied: boolean
 }
 
 export type ViewKey = 'current' | 'best' | 'cpu' | 'worst' | 'custom'

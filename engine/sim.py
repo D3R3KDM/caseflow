@@ -488,26 +488,3 @@ def deposit_points(dep: np.ndarray, model: dict, n: int = 2500) -> list:
     pick = rng.choice(len(idx), size=min(n, int(w.sum())), p=w / w.sum())
     pts = (idx[pick] - g.off + rng.random((len(pick), 3))) * DX
     return np.round(pts, 1).tolist()
-
-
-def package(r: dict, notes: list | None = None, label: str = "") -> dict:
-    """JSON-serialisable result for the web viewer (fields as base64 float16)."""
-    import base64
-
-    def b64(a):
-        return base64.b64encode(np.ascontiguousarray(a).tobytes()).decode("ascii")
-
-    m = r["model"]
-    X, Y, Z = m["shape"]
-    D, W, H = m["dims"]
-    dust = r["dust"]
-    return {
-        "label": label, "shape": [X, Y, Z], "off": m["grid"].off, "dx_mm": DX, "case": {"D": D, "W": W, "H": H},
-        "case_name": m["case"]["name"], "mounts": m["case"]["mounts"], "panels": m["case"].get("panels", {}),
-        "fans": m["fans"], "boxes": m["boxes"], "checks": m["checks"],
-        "u": b64(r["u"].astype(np.float16)), "T": b64(r["T"].astype(np.float16)),
-        "parts": r["parts"], "pressure": r["pressure"], "flow_in_m3s": r["flow_in_m3s"], "flow_out_m3s": r["flow_out_m3s"],
-        "case_pa": r.get("case_pa"), "dead_air_fraction": r["dead_air_fraction"], "air_max_rise_c": r["air_max_rise_c"], "seconds": r["seconds"],
-        "ambient_c": r["load"]["ambient_c"], "notes": notes or [],
-        "dust": None if not dust else {k: v for k, v in dust.items() if k != "dep"} | {"points": deposit_points(dust["dep"], m)},
-    }
