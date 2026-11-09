@@ -95,6 +95,19 @@ export function bankState(bank: Bank, duty: number): BankState {
   return out
 }
 
+export function dustRate(bank: Bank, duty: number): number | null {
+  const lv = bank.levels.filter((L) => L.dust)
+  if (!lv.length) return null
+  if (lv.length === 1) {
+    const d = lv[0].dust!
+    return lv[0].flow_in_m3s * d.dust_entering_rel * d.deposited_frac
+  }
+  const xs = lv.map((L) => L.duty ?? 1)
+  const unfiltered = interp(xs, lv.map((L) => L.dust!.dust_entering_rel), duty)
+  const settles = interp(xs, lv.map((L) => L.dust!.deposited_frac), duty)
+  return bankState(bank, duty).flow_in_m3s * Math.min(Math.max(unfiltered, 0), 1) * Math.min(Math.max(settles, 0), 1)
+}
+
 // ----------------------------------------------------------------------------- setup from a build
 interface LibPart { id: string; [k: string]: unknown }
 export interface ScenarioLib {
@@ -213,6 +226,7 @@ export interface CaseFanState { slot: string; curve: boolean; duty: number; spee
 export interface ScenarioResult {
   ambient_c: number; cpu: PartState; gpu: PartState; case_duty: number; fans: CaseFanState[]
   flow_in_m3s: number; flow_out_m3s: number; case_pa: number; air_mean_rise_c: number; air_max_rise_c: number; noise_dba: number
+  dust_rate: number | null
 }
 
 export function solve(bank: Bank, su: Setup, ambientC: number, cpuW: number, gpuW: number): ScenarioResult {
@@ -256,5 +270,6 @@ export function solve(bank: Bank, su: Setup, ambientC: number, cpuW: number, gpu
     air_mean_rise_c: b.k_air_mean[0] * pc + b.k_air_mean[1] * pg,
     air_max_rise_c: b.k_air_max[0] * pc + b.k_air_max[1] * pg,
     noise_dba: noise,
+    dust_rate: dustRate(bank, s.d_case),
   }
 }

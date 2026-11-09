@@ -101,6 +101,21 @@ def bank_state(bank: dict, duty: float) -> dict:
     return out
 
 
+def dust_rate(bank: dict, duty: float) -> float | None:
+    """How fast outside dust settles inside (m^3/s of outside air whose dust stays in the case): intake flow x the
+    unfiltered share x the share of what enters that settles. The two shares are interpolated linearly in duty."""
+    lv = [L for L in bank["levels"] if L.get("dust")]
+    if not lv:
+        return None
+    if len(lv) == 1:
+        d = lv[0]["dust"]
+        return lv[0]["flow_in_m3s"] * d["dust_entering_rel"] * d["deposited_frac"]
+    xs = [L["duty"] for L in lv]
+    unfiltered = _interp(xs, [L["dust"]["dust_entering_rel"] for L in lv], duty)
+    settles = _interp(xs, [L["dust"]["deposited_frac"] for L in lv], duty)
+    return bank_state(bank, duty)["flow_in_m3s"] * min(max(unfiltered, 0.0), 1.0) * min(max(settles, 0.0), 1.0)
+
+
 # ----------------------------------------------------------------------------- setup from a build
 def setup_for(build: dict, lib: dict) -> dict:
     """The numbers the solver needs from a build and the parts library (no airflow)."""
@@ -243,4 +258,5 @@ def solve(bank: dict, su: dict, ambient_c: float, cpu_w: float, gpu_w: float) ->
         "air_mean_rise_c": b["k_air_mean"][0] * pc + b["k_air_mean"][1] * pg,
         "air_max_rise_c": b["k_air_max"][0] * pc + b["k_air_max"][1] * pg,
         "noise_dba": noise,
+        "dust_rate": dust_rate(bank, s["d_case"]),
     }

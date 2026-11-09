@@ -1,0 +1,112 @@
+{
+ "build": "reference PC (engine/sim.py default_build)",
+ "bank_key": "4daf7dfc5b08c0e1",
+ "minutes": 3.7065834323565165,
+ "rows": [
+  {
+   "scenario": "office",
+   "name": "Everyday use",
+   "ambient_c": 23,
+   "cpu_w": 41.8,
+   "gpu_w": 15.0,
+   "instant": {
+    "cpu_c": 45.69634687169475,
+    "gpu_c": 30.22405130932504,
+    "case_duty": 0.21405250933203177,
+    "cpu_fan_speed": 0.4222582740960868,
+    "gpu_fan_speed": 0.0
+   },
+   "direct": {
+    "case_duty": 0.21405250933203177,
+    "cpu_fan_speed": 0.4222582740960868,
+    "gpu_fan_speed": 0.0,
+    "cpu_c": 45.50501785396235,
+    "gpu_c": 30.43740647034965,
+    "cpu_rise": 0.685448169708252,
+    "gpu_rise": 0.8502206802368164
+   },
+   "runs": 1,
+   "error_cpu_c": 0.19132901773240008,
+   "error_gpu_c": -0.21335516102460872
+  },
+  {
+   "scenario": "cpu_game",
+   "name": "CPU-heavy game",
+   "ambient_c": 23,
+   "cpu_w": 86.02,
+   "gpu_w": 146.1,
+   "instant": {
+    "cpu_c": 65.60687617711537,
+    "gpu_c": 49.719042722323216,
+    "case_duty": 0.6242750470846147,
+    "cpu_fan_speed": 0.7589098218792943,
+    "gpu_fan_speed": 0.3062920569630976
+   },
+   "direct": {
+    "case_duty": 0.6242750470846147,
+    "cpu_fan_speed": 0.7589098218792943,
+    "gpu_fan_speed": 0.3062920569630976,
+    "cpu_c": 65.41519490220841,
+    "gpu_c": 49.793616569432466,
+    "cpu_rise": 3.358611583709717,
+    "gpu_rise": 1.8275290727615356
+   },
+   "runs": 1,
+   "error_cpu_c": 0.19168127490695497,
+   "error_gpu_c": -0.07457384710924941
+  },
+  {
+   "scenario": "gpu_game",
+   "name": "GPU-heavy game",
+   "ambient_c": 23,
+   "cpu_w": 68.19999999999999,
+   "gpu_w": 325.5,
+   "instant": {
+    "cpu_c": 62.99499153591497,
+    "gpu_c": 71.59724785727354,
+    "case_duty": 0.5197996614365988,
+    "cpu_fan_speed": 0.6918714494218176,
+    "gpu_fan_speed": 0.4899311964318386
+   },
+   "direct": {
+    "case_duty": 0.5197996614365988,
+    "cpu_fan_speed": 0.6918714494218176,
+    "gpu_fan_speed": 0.4899311964318386,
+    "cpu_c": 62.81747082461862,
+    "gpu_c": 71.57352510181681,
+    "cpu_rise": 8.239803314208984,
+    "gpu_rise": 4.4011993408203125
+   },
+   "runs": 1,
+   "error_cpu_c": 0.17752071129635283,
+   "error_gpu_c": 0.023722755456731193
+  },
+  {
+   "scenario": "stress",
+   "name": "Full stress",
+   "ambient_c": 35,
+   "cpu_w": 88.0,
+   "gpu_w": 360.0,
+   "instant": {
+    "cpu_c": 79.01236201371984,
+    "gpu_c": 79.01408408627833,
+    "case_duty": 1.0,
+    "cpu_fan_speed": 1.0,
+    "gpu_fan_speed": 0.6753521021569583
+   },
+   "direct": {
+    "case_duty": 1.0,
+    "cpu_fan_speed": 1.0,
+    "gpu_fan_speed": 0.6753521021569583,
+    "cpu_c": 78.65124925613398,
+    "gpu_c": 79.51964063134088,
+    "cpu_rise": 5.811249256134033,
+    "gpu_rise": 2.594529867172241
+   },
+   "runs": 1,
+   "error_cpu_c": 0.3611127575858575,
+   "error_gpu_c": -0.5055565450625465
+  }
+ ],
+ "max_abs_error_c": 0.5055565450625465
+}

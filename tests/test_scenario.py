@@ -14,7 +14,7 @@ from engine import scenario as sc  # noqa: E402
 from engine.sim import default_build, load_library  # noqa: E402
 
 
-def synthetic_bank(duties=(0.12, 0.45, 1.0)) -> dict:
+def synthetic_bank(duties=(0.12, 0.45, 1.0), dust=False) -> dict:
     """A bank whose per-watt rises scale exactly like 1 / speed and flows like speed (the physical scaling)."""
     levels = []
     for d in duties:
@@ -24,6 +24,7 @@ def synthetic_bank(duties=(0.12, 0.45, 1.0)) -> dict:
             "k_air_mean": [0.010 / s, 0.012 / s], "k_air_max": [0.06 / s, 0.05 / s],
             "flow_in_m3s": 0.060 * s, "flow_out_m3s": 0.055 * s, "case_pa": 3.0 * s * s,
             "fans": [{"slot": "front_low", "q_m3s": 0.03 * s}, {"slot": "rear", "q_m3s": 0.027 * s}],
+            "dust": {"dust_entering_rel": 0.75 - 0.1 * s, "deposited_frac": 0.25 + 0.05 * s, "d_um": 20, "by_part": []} if dust else None,
         })
     return {"levels": levels}
 
@@ -130,6 +131,7 @@ def test_typescript_port_agrees(setup):
     cases = [{"bank": synthetic_bank(), "setup": su, "ambient_c": amb, "cpu_w": pc, "gpu_w": pg}
              for su in (setup, flat(setup), hot, by_gpu)
              for amb, pc, pg in ((18, 22, 15), (23, 86, 146), (28, 68, 326), (35, 88, 360))]
+    cases += [{"bank": synthetic_bank(dust=True), "setup": setup, "ambient_c": amb, "cpu_w": 86, "gpu_w": 146} for amb in (18, 30)]
     mixed = default_build()
     mixed["fans"][0].update(control="fixed", pct=55)
     mixed["curves"] = {"case": {"source": "max", "points": [[30, 20], [70, 90]]}}
@@ -146,6 +148,15 @@ def test_typescript_port_agrees(setup):
             assert ts[part]["throttled"] == py[part]["throttled"]
         for k in ("case_duty", "flow_in_m3s", "flow_out_m3s", "case_pa", "air_mean_rise_c", "noise_dba"):
             assert ts[k] == pytest.approx(py[k], abs=1e-6), k
+        assert (ts["dust_rate"] is None) == (py["dust_rate"] is None)
+        if py["dust_rate"] is not None:
+            assert ts["dust_rate"] == pytest.approx(py["dust_rate"], abs=1e-12)
         assert [f["rpm"] for f in ts["fans"]] == pytest.approx([f["rpm"] for f in py["fans"]], abs=1e-6)
     for b, ts in zip(builds, out["setups"]):
         assert ts == json.loads(json.dumps(sc.setup_for(b, lib)))
+
+
+def test_dust_settles_faster_with_faster_fans():
+    bank = synthetic_bank(dust=True)
+    assert sc.dust_rate(bank, 1.0) > sc.dust_rate(bank, 0.3) > 0
+    assert sc.dust_rate(synthetic_bank(), 0.5) is None          # no dust run: no rate
