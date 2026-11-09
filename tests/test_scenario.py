@@ -1,5 +1,8 @@
 """Scenario model checks (no GPU): fan curves, bank interpolation, and the coupled fan / temperature solve."""
 import copy
+import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -110,3 +113,39 @@ def test_a_part_past_its_limit_is_throttled(setup):
     assert r["cpu"]["throttled"] and r["cpu"]["watts"] < 88
     assert r["cpu"]["temp_c"] == pytest.approx(su["cpu"]["t_max"], abs=0.05)
     assert not r["gpu"]["throttled"]
+
+
+NODE = shutil.which("node")
+WEB = Path(__file__).resolve().parents[1] / "web"
+
+
+@pytest.mark.skipif(NODE is None, reason="node is not installed")
+def test_typescript_port_agrees(setup):
+    """web/src/scenario.ts (what the browser runs) must give the same answers as this module."""
+    lib = load_library()
+    hot = copy.deepcopy(setup)
+    hot["cooler"]["r_air_full"] = 0.6                          # throttles
+    by_gpu = copy.deepcopy(setup)
+    by_gpu["curves"]["case"]["source"] = "gpu"
+    cases = [{"bank": synthetic_bank(), "setup": su, "ambient_c": amb, "cpu_w": pc, "gpu_w": pg}
+             for su in (setup, flat(setup), hot, by_gpu)
+             for amb, pc, pg in ((18, 22, 15), (23, 86, 146), (28, 68, 326), (35, 88, 360))]
+    mixed = default_build()
+    mixed["fans"][0].update(control="fixed", pct=55)
+    mixed["curves"] = {"case": {"source": "max", "points": [[30, 20], [70, 90]]}}
+    builds = [default_build(), mixed]
+    p = subprocess.run([NODE, str(WEB / "scripts" / "check_scenario.mjs")], cwd=WEB, capture_output=True, text=True,
+                       timeout=180, input=json.dumps({"cases": cases, "setups": [{"build": b, "lib": lib} for b in builds]}))
+    assert p.returncode == 0, p.stderr[-2000:]
+    out = json.loads(p.stdout)
+    for c, ts in zip(cases, out["results"]):
+        py = sc.solve(c["bank"], c["setup"], c["ambient_c"], c["cpu_w"], c["gpu_w"])
+        for part in ("cpu", "gpu"):
+            for k in ("temp_c", "watts", "fan_duty", "fan_speed", "intake_rise_c", "g_w_per_k"):
+                assert ts[part][k] == pytest.approx(py[part][k], abs=1e-6), (part, k)
+            assert ts[part]["throttled"] == py[part]["throttled"]
+        for k in ("case_duty", "flow_in_m3s", "flow_out_m3s", "case_pa", "air_mean_rise_c", "noise_dba"):
+            assert ts[k] == pytest.approx(py[k], abs=1e-6), k
+        assert [f["rpm"] for f in ts["fans"]] == pytest.approx([f["rpm"] for f in py["fans"]], abs=1e-6)
+    for b, ts in zip(builds, out["setups"]):
+        assert ts == json.loads(json.dumps(sc.setup_for(b, lib)))

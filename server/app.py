@@ -22,7 +22,7 @@ from fastapi import FastAPI, HTTPException  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
-from engine import sim  # noqa: E402
+from engine import bank, sim  # noqa: E402
 
 app = FastAPI(title="CaseFlow service")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -66,6 +66,27 @@ def simulate(q: SimQuery) -> dict:
     _jobs[jid] = {"status": "running", "progress": 0.0}
     threading.Thread(target=_run, args=(jid, q), daemon=True).start()
     return {"job": jid}
+
+
+def _run_bank(jid: str, q: SimQuery) -> None:
+    job = _jobs[jid]
+    try:
+        with _lock:
+            b = bank.get(q.build, callback=lambda p: job.__setitem__("progress", p))
+        job.update(result=bank.package(b), status="done", progress=1.0)
+    except Exception as exc:  # pragma: no cover - reported to the client
+        job.update(status="error", error=f"{exc!r} {traceback.format_exc()[-400:]}")
+
+
+@app.post("/api/bank")
+def make_bank(q: SimQuery) -> dict:
+    """A build's bank (airflow, heat and dust at three case-fan duties): from the cache in data/banks, or computed on
+    the GPU (about 1.5 min). The browser then solves any room temperature, load and fan curve itself."""
+    jid = uuid.uuid4().hex[:10]
+    cached = bank.load(bank.bank_key(q.build)) is not None
+    _jobs[jid] = {"status": "running", "progress": 0.0, "cached": cached}
+    threading.Thread(target=_run_bank, args=(jid, q), daemon=True).start()
+    return {"job": jid, "cached": cached}
 
 
 @app.get("/api/job/{jid}")

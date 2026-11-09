@@ -42,6 +42,7 @@ ASSIST_CAP = 1.25              # a fan helped by the case pressure delivers at m
 # 5080 FE's speed in games (~41 %). Their real speed follows their own curve; engine/scenario.py turns that into the
 # cooler's conductance, while the air they stir in the case stays at this speed.
 GPU_FAN_MS = 1.6               # air speed through the GPU's own fans
+GPU_FAN_REF_SPEED = 0.41       # the GPU fan speed (rpm / rpm_max) that GPU_FAN_MS stands for
 COOLER_FAN_SPEED = 0.7         # CPU cooler fans: share of their rated flow
 MMH2O_TO_PA = 9.80665
 

@@ -142,9 +142,18 @@ def get(build: dict, callback=None, levels=LEVELS, steps: int = 8000, with_dust:
     return b
 
 
+def quantize(a: np.ndarray, signed: bool) -> dict:
+    """8-bit field for the viewer (colours and streamlines need no more): value = (byte - 128) / 127 * scale for a
+    signed field, byte / 255 * scale otherwise. Half the size of float16."""
+    a = np.asarray(a, np.float32)
+    scale = float(np.abs(a).max()) or 1.0
+    q = np.round(a / scale * 127.0) + 128.0 if signed else np.round(np.clip(a, 0, None) / scale * 255.0)
+    return {"b64": base64.b64encode(q.astype(np.uint8).tobytes()).decode("ascii"), "scale": scale, "signed": signed}
+
+
 def package(bank: dict) -> dict:
-    """JSON for the web viewer: the summary plus the fields as base64 float16 per level."""
-    def b64(a):
-        return base64.b64encode(np.ascontiguousarray(a).tobytes()).decode("ascii")
-    return {**bank["summary"], "fields": [{"u": b64(f["u"]), "kc": b64(f["kc"]), "kg": b64(f["kg"]),
-                                           "dust_points": np.round(f["dust_points"], 1).tolist()} for f in bank["fields"]]}
+    """JSON for the web viewer: the summary, plus per level the air velocity (m/s, [3, X, Y, Z]) and the air
+    temperature rise per watt of CPU and of GPU power (K/W, [X, Y, Z]) as 8-bit fields, and the dust deposits."""
+    return {**bank["summary"], "fields": [{"u": quantize(f["u"], True), "kc": quantize(f["kc"], False),
+                                           "kg": quantize(f["kg"], False), "dust_points": np.round(f["dust_points"], 1).tolist()}
+                                          for f in bank["fields"]]}
