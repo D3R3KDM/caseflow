@@ -309,3 +309,28 @@ input[type='range'] { accent-color: var(--cyan); width: 100%; }
 .af-n small { margin-left: 4px; font-size: 8.5px; color: var(--amber); }
 .af-r { text-align: right; color: var(--ink3); }
 .pp-kv dd small { font-size: 9.5px; color: var(--ink3); }
+
+/* ---------- 03 trends (dataviz: hairline solid grid, 2px lines, text in text tokens, crosshair tooltip, table view) ---------- */
+.trend { margin: 0 0 6px; }
+.tr-h { display: flex; justify-content: space-between; align-items: baseline; }
+.tr-t { font-size: 11.5px; color: var(--ink); }
+.tr-tb { padding: 0; }
+.tr-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 4px 0 2px; font-size: 10.5px; color: var(--ink2); }
+.tr-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.tr-plot { position: relative; }
+.tr-plot svg { display: block; }
+.tr-grid { stroke: rgba(140, 200, 255, 0.1); stroke-width: 1; }
+.tr-tick { font: 8.5px var(--mono); fill: rgba(221, 233, 243, 0.48); font-variant-numeric: tabular-nums; }
+.tr-end { font: 10px var(--mono); fill: rgba(221, 233, 243, 0.85); }
+.tr-now { stroke: rgba(221, 233, 243, 0.28); stroke-width: 1; }
+.tr-cross { stroke: rgba(221, 233, 243, 0.6); stroke-width: 1; }
+.tr-tip { position: absolute; pointer-events: none; min-width: 128px; padding: 6px 8px; background: rgba(6, 14, 22, 0.94); border: 1px solid var(--line2); font-size: 10.5px; }
+.tr-tip-x { margin-bottom: 3px; font: 9.5px var(--mono); color: var(--ink3); }
+.tr-tip-r { display: grid; grid-template-columns: 14px auto 1fr; gap: 5px; align-items: center; }
+.tr-tip-r b { font: 600 11px var(--mono); color: var(--ink); }
+.tr-tip-r span { color: var(--ink3); }
+.tr-table { width: 100%; margin: 4px 0; border-collapse: collapse; font: 10px var(--mono); font-variant-numeric: tabular-nums; }
+.tr-table th { font-weight: 500; color: var(--ink3); text-align: right; padding: 2px 4px; border-bottom: 1px solid var(--line); }
+.tr-table td { text-align: right; padding: 2px 4px; color: var(--ink2); }
+.tr-table tr.on td { color: var(--ink); }
+.tr-sw { display: flex; align-items: center; justify-content: space-between; margin: 8px 0 4px; padding-top: 8px; border-top: 1px solid var(--line); }

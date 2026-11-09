@@ -6,7 +6,8 @@ import { AirPanel, DustPanel, Holo, PartPanel, SearchPanel, VerdictPanel } from 
 import HudWindow, { resetWindows } from './HudWindow'
 import { THERMAL_CSS } from './palette'
 import CaseScene, { T_MAX, type HoloSpec, type Layers, type Pick, type SceneData, type SceneFan } from './Scene'
-import { loadWatts, setupFor, solve, type Bank, type Curves, type ScenarioBuild, type ScenarioLib, type ScenarioResult, type Source } from './scenario'
+import TrendChart, { SERIES } from './TrendChart'
+import { loadWatts, setupFor, solve, type Bank, type Curves, type ScenarioBuild, type ScenarioLib, type ScenarioResult, type Setup, type Source } from './scenario'
 import { WHERE, type BankPkg, type Build, type Control, type FanSlot, type Geometry, type Lib, type Mode, type Opt, type RankRow, type Scenario, type ViewKey } from './types'
 
 const amazon = (q: string) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}`
@@ -63,6 +64,12 @@ function rankLayouts(opt: Opt, lib: Lib, sc: Scenario, curves: Curves, cpu: stri
   return rows
 }
 
+/** The same setup with every fan held at its current duty (flat curves): what the fans would do if they did not react. */
+function heldSetup(su: Setup, r: ScenarioResult): Setup {
+  const flat = (d: number): [number, number][] => [[0, d * 100], [100, d * 100]]
+  return { ...su, curves: { case: { source: 'cpu', points: flat(r.case_duty) }, cpu: { points: flat(r.cpu.fan_duty) }, gpu: { points: flat(r.gpu.fan_duty) } } }
+}
+
 function useNarrow(px = 900) {
   const q = `(max-width: ${px}px)`
   const [m, setM] = useState(() => window.matchMedia(q).matches)
@@ -97,7 +104,8 @@ export default function App() {
   const [curves, setCurves] = useState<Curves | null>(null)
   const [cpuId, setCpuId] = useState('amd-ryzen-7-9700x')
   const [layers, setLayers] = useState<Layers>({ flow: true, lines: false, dust: true, heat: false, panels: true })
-  const [win, setWin] = useState({ scn: true, curve: false, cfg: false, info: false })
+  const [win, setWin] = useState({ scn: true, curve: false, trend: false, cfg: false, info: false })
+  const [sweep, setSweep] = useState<'gpu' | 'cpu'>('gpu')
   const [curveTab, setCurveTab] = useState<'case' | 'cpu' | 'gpu'>('case')
   const [allRows, setAllRows] = useState(false)
   const [job, setJob] = useState<{ p: number; label: string } | null>(null)
@@ -189,6 +197,7 @@ export default function App() {
   const watts = setup ? loadWatts(setup, scn.cpu, scn.gpu) : [0, 0]
   const res: ScenarioResult | null = useMemo(() => (setup && summary ? solve(summary, setup, scn.ambient_c, watts[0], watts[1]) : null),
     [setup, summary, scn]) // eslint-disable-line react-hooks/exhaustive-deps
+  const resD = useDeferredValue(res)
   const homeLayout = opt?.layouts.find((L) => L.current)
   const refRes: ScenarioResult | null = useMemo(() => {
     if (view === 'current' || !lib || !curves || !homeLayout) return null
@@ -197,12 +206,30 @@ export default function App() {
     return solve(homeLayout.bank, su, scn.ambient_c, pc, pg)
   }, [view, lib, curves, homeLayout, scn, cpuId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ---------- trends: the steady state across room temperature and across load (solid: fans follow their curves;
+  // dashed: fans held at the speed they have now) ----------
+  const trends = useMemo(() => {
+    if (!win.trend || !summary || !setup || !resD) return null
+    const held = heldSetup(setup, resD)
+    const at = (su: Setup, room: number, cf: number, gf: number) => { const [pc, pg] = loadWatts(su, cf, gf); return solve(summary, su, room, pc, pg) }
+    const rooms = Array.from({ length: 31 }, (_, i) => 10 + i)
+    const loads = Array.from({ length: 21 }, (_, i) => i * 5)
+    const room = [setup, held].map((su) => rooms.map((t) => at(su, t, scnD.cpu, scnD.gpu)))
+    const load = [setup, held].map((su) => loads.map((l) => (sweep === 'gpu' ? at(su, scnD.ambient_c, scnD.cpu, l / 100) : at(su, scnD.ambient_c, l / 100, scnD.gpu))))
+    const series = (rs: ScenarioResult[][]) => [
+      { id: 'cpu', label: 'CPU', color: SERIES.cpu, ys: rs[0].map((r) => r.cpu.temp_c) },
+      { id: 'gpu', label: 'GPU', color: SERIES.gpu, ys: rs[0].map((r) => r.gpu.temp_c) },
+      { id: 'cpu-h', label: 'CPU', color: SERIES.cpu, dashed: true, ys: rs[1].map((r) => r.cpu.temp_c) },
+      { id: 'gpu-h', label: 'GPU', color: SERIES.gpu, dashed: true, ys: rs[1].map((r) => r.gpu.temp_c) },
+    ]
+    return { rooms, loads, room: series(room), load: series(load) }
+  }, [win.trend, summary, setup, resD, scnD, sweep]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ---------- what the 3D view draws ----------
   // a layout without its own bank yet still shows its case, parts and fans: geometry from any bank with the same parts
   const geo: Geometry | null = pkg?.geometry
     ?? (viewBuild ? Object.entries(banks).find(([id]) => id.split('#')[0] === partsKey(viewBuild))?.[1].geometry : undefined) ?? null
   const fields = bankFields(pkg)
-  const resD = useDeferredValue(res)
   const T = useMemo(() => (fields && pkg && resD ? composeT(fields, pkg.levels, resD.case_duty, resD.cpu.watts, resD.gpu.watts) : null), [fields, pkg, resD])
   const lvl = pkg && res ? nearestLevel(pkg.levels, res.case_duty) : 0
   const sceneData: SceneData | null = useMemo(() => {
@@ -432,7 +459,7 @@ export default function App() {
                 <div><span className="lbl">noise</span><b>{res.noise_dba.toFixed(0)}<u>dBA</u></b></div>
               </div>
             )}
-            <p className="fine">Load runs from idle ({setup.cpu.idle_w} W / {setup.gpu.idle_w} W) to the power limit ({setup.cpu.max_w} W / {setup.gpu.max_w} W). The fans follow their curves (<button className="linkbtn" onClick={() => setWin({ ...win, curve: true })}>Fan curves</button>), so a warmer room or a heavier load spins them up.</p>
+            <p className="fine">Load runs from idle ({setup.cpu.idle_w} W / {setup.gpu.idle_w} W) to the power limit ({setup.cpu.max_w} W / {setup.gpu.max_w} W). The fans follow their curves (<button className="linkbtn" onClick={() => setWin({ ...win, curve: true })}>Fan curves</button>), so a warmer room or a heavier load spins them up: <button className="linkbtn" onClick={() => setWin({ ...win, trend: true })}>Trends</button> shows by how much.</p>
           </HudWindow>
         )}
 
@@ -460,6 +487,19 @@ export default function App() {
             <p className="fine">{curveTab === 'gpu'
               ? 'The card\'s own curve: below about 40 °C the fans stop (zero-RPM idle).'
               : 'The board\'s curve, as ASUS Fan Xpert sets it (the reference PC\'s smart mode). Drag the points.'} Curves change instantly; no new simulation is needed.</p>
+          </HudWindow>
+        )}
+
+        {win.trend && trends && (
+          <HudWindow id="trends" code="03" title="Trends" side="right" x={win.curve ? 384 : 20} y={72} w={340} layoutKey={layoutKey} onClose={() => setWin({ ...win, trend: false })}>
+            <TrendChart title="Temperature against room temperature" xs={trends.rooms} series={trends.room} xFmt={(x) => `${x}`} xUnit="room °C" now={scn.ambient_c} />
+            <div className="tr-sw">
+              <span className="lbl">sweep</span>
+              <span className="seg3">{(['gpu', 'cpu'] as const).map((k) => <button key={k} className={sweep === k ? 'on' : ''} onClick={() => setSweep(k)}>{k} load</button>)}</span>
+            </div>
+            <TrendChart title={`Temperature against ${sweep.toUpperCase()} load (the other at ${pct(sweep === 'gpu' ? scn.cpu : scn.gpu)})`} xs={trends.loads} series={trends.load}
+              xFmt={(x) => `${x}%`} xUnit={`${sweep} load`} now={(sweep === 'gpu' ? scn.gpu : scn.cpu) * 100} />
+            <p className="fine">Solid: the fans follow their curves. Dashed: the same fans held at the speed they run at now. With fans that do not react, a room 5 °C warmer makes everything exactly 5 °C hotter.</p>
           </HudWindow>
         )}
 
@@ -537,6 +577,7 @@ export default function App() {
         <span className="sep" />
         <button className={win.scn ? 'on' : ''} onClick={() => setWin({ ...win, scn: !win.scn })}>Scenario</button>
         <button className={win.curve ? 'on' : ''} onClick={() => setWin({ ...win, curve: !win.curve })}>Curves</button>
+        <button className={win.trend ? 'on' : ''} onClick={() => setWin({ ...win, trend: !win.trend })}>Trends</button>
         <button className={win.cfg ? 'on' : ''} onClick={() => setWin({ ...win, cfg: !win.cfg })}>Configure</button>
         <button className={win.info ? 'on' : ''} onClick={() => setWin({ ...win, info: !win.info })}>Method</button>
         <button title="Reset the view and the windows" onClick={() => { resetWindows(); setLayoutKey((k) => k + 1) }}>⟲</button>
