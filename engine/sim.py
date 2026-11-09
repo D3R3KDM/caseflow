@@ -21,6 +21,7 @@ import numpy as np
 import torch
 
 from engine.lbm import LBMConfig, LBMSolver
+from engine.scenario import fan_speed
 from engine.thermal import solve_temperature_converged
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,8 +38,11 @@ CD_ORIFICE = 0.6               # discharge coefficient of a passive opening (sha
 POROSITY = {"open": 0.6, "vent": 0.4}   # open-area fraction: empty fan grille on mesh / vented slot covers (est.)
 FILTER_OPEN = 0.7              # extra open-area factor of a dust filter
 ASSIST_CAP = 1.25              # a fan helped by the case pressure delivers at most 1.25x its free flow
-GPU_FAN_MS = 1.6               # air speed through the GPU's own fans (fixed; the real ones follow the GPU's curve)
-COOLER_FAN_FRAC = 0.7          # CPU cooler fans: share of their rated flow (fixed; the real ones follow CPU temp)
+# The GPU's and the CPU cooler's own fans move air inside the case at a representative speed: 1.6 m/s is about the
+# 5080 FE's speed in games (~41 %). Their real speed follows their own curve; engine/scenario.py turns that into the
+# cooler's conductance, while the air they stir in the case stays at this speed.
+GPU_FAN_MS = 1.6               # air speed through the GPU's own fans
+COOLER_FAN_SPEED = 0.7         # CPU cooler fans: share of their rated flow
 MMH2O_TO_PA = 9.80665
 
 
@@ -89,19 +93,22 @@ def search(lib: dict, q: str, cat: str | None = None, limit: int = 12) -> list[d
 
 def default_build() -> dict:
     """The user's actual PC (2026-11-07): the case's four stock fans - 2 x 140 mm front intake and 2 x 120 mm
-    reverse-blade bottom intake under the GPU - plus their own 120 mm fans on top x2 + rear (exhaust)."""
+    reverse-blade bottom intake under the GPU - plus their own 120 mm fans on top x2 + rear (exhaust).
+    Every case fan follows the board's case-fan curve (control "curve"); pct is the duty it runs at when set to
+    "fixed". Load: the CPU-heavy game measured on this PC (86 W CPU, 146 W GPU) in a 23 degC room."""
     return {
         "case": "lianli-lancool-207", "gpu": "nvidia-rtx-5080-fe", "cooler": "thermalright-pa120-se-argb",
+        "cpu": "amd-ryzen-7-9700x",
         "fans": [
-            {"slot": "front_low", "fan": "lianli-207-front-140", "mode": "in", "pct": 70},
-            {"slot": "front_high", "fan": "lianli-207-front-140", "mode": "in", "pct": 70},
-            {"slot": "bottom_front", "fan": "lianli-207-bottom-120-rev", "mode": "in", "pct": 70},
-            {"slot": "bottom_rear", "fan": "lianli-207-bottom-120-rev", "mode": "in", "pct": 70},
-            {"slot": "top_2", "fan": "generic-120", "mode": "out", "pct": 80},
-            {"slot": "top_3", "fan": "generic-120", "mode": "out", "pct": 80},
-            {"slot": "rear", "fan": "generic-120", "mode": "out", "pct": 80},
+            {"slot": "front_low", "fan": "lianli-207-front-140", "mode": "in", "control": "curve", "pct": 70},
+            {"slot": "front_high", "fan": "lianli-207-front-140", "mode": "in", "control": "curve", "pct": 70},
+            {"slot": "bottom_front", "fan": "lianli-207-bottom-120-rev", "mode": "in", "control": "curve", "pct": 70},
+            {"slot": "bottom_rear", "fan": "lianli-207-bottom-120-rev", "mode": "in", "control": "curve", "pct": 70},
+            {"slot": "top_2", "fan": "generic-120", "mode": "out", "control": "curve", "pct": 80},
+            {"slot": "top_3", "fan": "generic-120", "mode": "out", "control": "curve", "pct": 80},
+            {"slot": "rear", "fan": "generic-120", "mode": "out", "control": "curve", "pct": 80},
         ],
-        "load": {"cpu_w": 88.0, "gpu_w": 300.0, "ambient_c": 25.0},
+        "load": {"cpu_w": 86.0, "gpu_w": 146.0, "ambient_c": 23.0},
     }
 
 
@@ -139,7 +146,11 @@ def _wall_box(wall, a, b, s, D, W, H):
     raise ValueError(wall)
 
 
-def build_model(build: dict, lib: dict | None = None) -> dict:
+def build_model(build: dict, lib: dict | None = None, case_duty: float | None = None,
+                cooler_speed: float = COOLER_FAN_SPEED, gpu_ms: float = GPU_FAN_MS) -> dict:
+    """Voxel model of a build. case_duty: PWM duty (0..1) of the case fans that follow the case-fan curve
+    (control "curve"); None runs every fan at its own pct. Fans set to "fixed" always run at their pct. A fan's
+    speed (rpm / rpm_max) is s_min + (1 - s_min) * duty: most PWM fans keep turning at 0 %."""
     lib = lib or load_library()
     case = find(lib, "cases", build["case"])
     gpu = find(lib, "gpus", build["gpu"])
@@ -190,13 +201,15 @@ def build_model(build: dict, lib: dict | None = None) -> dict:
         if m is None or f.get("mode") not in ("in", "out"):
             continue
         fan = find(lib, "fans", f["fan"])
-        frac = f.get("pct", 100) / 100.0
+        follows = f.get("control", "curve") == "curve" and case_duty is not None
+        duty = case_duty if follows else f.get("pct", 100) / 100.0
+        frac = fan_speed(duty, fan.get("s_min", 0.2))               # rpm / rpm_max
         q_free = fan["cfm"] * CFM_TO_M3S * frac * DERATE            # fan laws: Q ~ rpm, p ~ rpm^2
         p_max = fan.get("static_mmh2o", 1.6) * MMH2O_TO_PA * frac ** 2
-        active.append((f, m, fan, q_free, p_max))
-    case_pa, q_ops = operating_point([(f["mode"], qf, pm) for f, _, _, qf, pm in active], a_eff)
+        active.append((f, m, fan, q_free, p_max, duty, frac))
+    case_pa, q_ops = operating_point([(a[0]["mode"], a[3], a[4]) for a in active], a_eff)
     fan_info = []
-    for (f, m, fan, q_free, p_max), q in zip(active, q_ops):
+    for (f, m, fan, q_free, p_max, duty, frac), q in zip(active, q_ops):
         s = fan["size_mm"] if fan["size_mm"] in m["sizes"] else max(m["sizes"])
         bx, n_in = _wall_box(m["wall"], m["a"], m["b"], s, D, W, H)
         c = g.box(np.zeros(shape, bool), *bx)
@@ -208,6 +221,7 @@ def build_model(build: dict, lib: dict | None = None) -> dict:
             fu[k][c[0]:c[1], c[2]:c[3], c[4]:c[5]] = d[k]
         fan_info.append({**f, "wall": m["wall"], "a": m["a"], "b": m["b"], "size": s, "name": fan["name"],
                          "q_m3s": q, "q_free_m3s": q_free, "op_frac": q / q_free if q_free else 0.0, "v_ms": v,
+                         "duty": duty, "speed": frac, "rpm": frac * fan["rpm_max"],
                          "filtered": bool(filters.get(m["wall"], False))})
         openings.append({"box": c, "kind": "fan", "mode": f["mode"], "filtered": bool(filters.get(m["wall"], False)), "wall": m["wall"]})
     # PSU
@@ -228,7 +242,7 @@ def build_model(build: dict, lib: dict | None = None) -> dict:
     gy0, gy1 = py - Hh, py
     gz1 = bd["gpu_slot_top_z"]
     gz0 = gz1 - T
-    v_gpu = GPU_FAN_MS * U_LAT_PER_MS
+    v_gpu = gpu_ms * U_LAT_PER_MS
     if gpu["cooler"] == "dual_flow_through":
         zl = 0.3 * L
         zones = [(gx0, gx0 + zl), (gx1 - zl, gx1)]
@@ -257,7 +271,7 @@ def build_model(build: dict, lib: dict | None = None) -> dict:
     cz0, cz1 = sz - cw / 2, sz + cw / 2
     cy0, cy1 = py - ch, py
     cfan = find(lib, "fans", cooler["fans"][0]["fan"])
-    v_cool = cfan["cfm"] * CFM_TO_M3S * COOLER_FAN_FRAC / (cfan["size_mm"] / 1000.0) ** 2 * U_LAT_PER_MS
+    v_cool = cfan["cfm"] * CFM_TO_M3S * cooler_speed / (cfan["size_mm"] / 1000.0) ** 2 * U_LAT_PER_MS
     segs = [("fan", 0, 25), ("tower", 25, 67), ("fan", 67, 92), ("tower", 92, cd)] if cooler["type"] == "dual_tower" else [("fan", 0, 25), ("tower", 25, cd)]
     for kind, a, b in segs:
         if kind == "fan":
@@ -399,6 +413,21 @@ def run_airflow(model: dict, steps: int = 8000, callback=None) -> tuple[torch.Te
     u, p = res.u[0], res.p[0]
     del solver
     return u, p
+
+
+def run_airflow_batch(model: dict, fu: torch.Tensor, steps: int = 8000, callback=None) -> torch.Tensor:
+    """Time-averaged velocity [L, 3, X, Y, Z] (lattice units) for L sets of fan velocities fu [L, 3, X, Y, Z] in the
+    same geometry, solved together as one batch on the GPU (one run per level would cost L times the kernel calls)."""
+    n = fu.shape[0]
+    cfg = LBMConfig(u_in=0.0, tau=0.52, smagorinsky=0.16, sponge=0)
+    solid = torch.from_numpy(model["solid"])[None].expand(n, -1, -1, -1).contiguous()
+    solver = LBMSolver(solid, cfg, open_inlet=False, forced_mask=torch.from_numpy(model["forced"]), forced_u=fu,
+                       reservoir_mask=torch.from_numpy(model["reservoir"]), open_shell=True)
+    res = solver.run(steps=steps, avg_from=int(steps * 0.5), report_every=200,
+                     callback=(lambda s, n_, cd: callback(s / n_)) if callback else None, check_nan_every=1000)
+    u = res.u
+    del solver
+    return u
 
 
 def simulate_build(build: dict, steps: int = 8000, callback=None, with_dust: bool = True) -> dict:
