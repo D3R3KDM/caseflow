@@ -390,7 +390,7 @@ $$
 | | |
 |---|---|
 | **CaseFlow 自己能读的** | 显卡温度、功率、风扇百分比、使用率（`nvidia-smi`）；CPU 功率（Windows 的 Energy Meter 计数器，RAPL）和使用率；CPU / 主板 / 内存型号。 |
-| **读不到的** | 机箱风扇转速、CPU 温度：它们在主板的 Super I/O 芯片里，Windows 不开放，要装传感器驱动才能读（之前说先不装）。室温没有传感器，只能你告诉它。 |
+| **读不到的** | 机箱风扇转速、CPU 温度：它们在主板的 Super I/O 芯片里，Windows 不开放，要装传感器驱动才能读（之前说先不装）。装了 Corsair iCUE 的话，可以用它自带的“传感器记录”存下来，见下面。室温没有传感器，只能你告诉它。 |
 
 步骤：
 1. 双击 `start.bat` 打开引擎，然后正常玩 10 分钟游戏。引擎在后台每 2 秒记一次显卡温度、功率、风扇、使用率，以及 CPU 的功率和使用率，保留 30 分钟。CaseFlow 自己跑模拟的那段时间会被剔掉，不会混进来。
@@ -400,6 +400,15 @@ $$
 5. 点 **Run simulation**（约 45 秒）。
 
 ![Configure 窗口下半部分：风扇转速旁边显示 RPM，下面是功率、室温、校准和 use my last 10 min of gaming](screens/caseflow_configure.png)
+
+**用 iCUE 记下风扇转速和 CPU 温度**（不用装新驱动，iCUE 自己带着）：
+1. iCUE 右上角齿轮 → **传感器记录**。
+2. 勾选 MB 风扇 #1–#6、CPU 包、GPU #1 风扇 #1 / #2、GPU #1 温度 #1 / #2。
+3. 目标文件夹选 `caseflow\logs\icue`，记录间隔 2 秒，有限记录时间 30 分钟。
+4. 点开始记录，然后玩游戏。CaseFlow 引擎也开着：它每 2 秒把 CPU 和显卡的功率写进 `logs/sensors_YYYYMMDD.csv`。
+5. 运行 `python scripts/session_report.py`。它把两份记录按时间对齐，只取显卡 150 W 以上的时段，算出每个风扇接口的平均转速、CPU 温度和功率、显卡温度和功率。
+
+iCUE 只给接口编号（MB 风扇 #1–#6），不给名字。在 Armoury Crate 的 Fan Xpert 里对一下同一时刻的转速，就知道哪个编号是哪个接口。
 
 这样算出来的就是“你这台电脑、你玩的游戏、你的房间”下的温度。如果真实转速和默认差很多，可以把转速告诉 Claude Code，让它按真实转速把 32 种布局重算一遍（约 25 分钟）。
 
@@ -451,6 +460,7 @@ caseflow/
 │  ├─ check_convergence.py  步数、迭代次数加倍，看温度还变不变
 │  ├─ sanity_check.py       守恒检查：风扇送风、进出风量、能量
 │  ├─ sensitivity.py        敏感性：参数、网格、负载、风扇转速
+│  ├─ session_report.py     把 iCUE 传感器记录和 CaseFlow 的功率记录按时间对齐，算游戏时的平均值
 │  └─ serve.sh              引擎（断了自动重启）
 ├─ data/                    parts/library.json 配件库 · optimize.json 搜索结果
 ├─ tests/test_engine.py     不用显卡的快速检查

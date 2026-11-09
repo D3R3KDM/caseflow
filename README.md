@@ -45,7 +45,7 @@ Fan speeds and power are **settings**, not readings from the PC, and utilisation
 
 | Input | Value used | Source |
 |---|---|---|
-| Stock fan speed | 70 %: ≈1330 rpm (front 140), ≈1365 rpm (bottom 120) | Set. The board drives the fans from its Q-Fan curve, and Windows cannot read case-fan rpm without a sensor driver. Configure shows the rpm next to each slider, so it can be matched to Armoury Crate or the BIOS. |
+| Stock fan speed | 70 %: ≈1330 rpm (front 140), ≈1365 rpm (bottom 120) | Set. The board drives the fans from its Q-Fan curve, and Windows cannot read case-fan rpm without a sensor driver. Configure shows the rpm next to each slider, so it can be matched to Armoury Crate or the BIOS. Corsair iCUE's sensor logging can record the fan headers to CSV; `scripts/session_report.py` joins that with CaseFlow's own power log. |
 | Spare fans | 80 %: ≈1200 rpm | Model unknown: a typical 120 mm fan (1500 rpm, 55 CFM, 1.6 mmH₂O). |
 | Fan flow | rated CFM × speed × 0.6, then the operating point against the case pressure | Rated flow and static pressure from the spec sheets; 0.6 is an estimate. The current layout takes in 130 CFM. |
 | CPU cooler and GPU fans | fixed: ≈53 CFM through the cooler, 1.6 m/s (≈66 CFM) through the GPU | Set. The real 5080 FE stops its fans at light load and runs them at about 1,500 rpm in games. |
@@ -166,7 +166,8 @@ engine/
   hardware.py     CPU / board / RAM (Windows CIM), GPU sensors (nvidia-smi), CPU power (Energy Meter)
 server/app.py     FastAPI: /api/health, /hardware, /hardware/session, /library, /default_build, /simulate, /job/{id}
 scripts/          precompute.py (web views), serve.sh (engine with auto-restart),
-                  check_convergence.py, sanity_check.py, sensitivity.py (checks)
+                  check_convergence.py, sanity_check.py, sensitivity.py (checks),
+                  session_report.py (iCUE sensor log + CaseFlow's power log, averaged over a gaming session)
 data/             parts library, search result (optimize.json)
 web/              Vite + React + three.js app (3D case with floating holographic screens)
 tests/            engine checks

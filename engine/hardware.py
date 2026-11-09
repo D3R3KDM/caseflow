@@ -149,14 +149,21 @@ class SensorLog:
     CPU package power comes from Windows' Energy Meter counters (see CpuPower).
 
     busy: optional callable, True while CaseFlow itself runs a simulation on the GPU. Those samples are kept but
-    left out of the summary, so the simulation's own GPU load is not mistaken for a game."""
+    left out of the summary, so the simulation's own GPU load is not mistaken for a game.
 
-    def __init__(self, period_s: float = 2.0, keep_min: float = 30.0, busy=None):
+    log_dir: optional folder; every sample is also appended to sensors_YYYYMMDD.csv there, so a session can be
+    analysed after the 30 minutes in memory are gone (e.g. next to a Corsair iCUE sensor log)."""
+
+    COLS = ("t", "time", "sim", "cpu_power_w", "cpu_util", "gpu_power_w", "gpu_temp_c", "gpu_fan_pct",
+            "gpu_util_pct", "gpu_clock_mhz", "gpu_power_limit_w")
+
+    def __init__(self, period_s: float = 2.0, keep_min: float = 30.0, busy=None, log_dir=None):
         import collections
         import threading
 
         self.period = period_s
         self.busy = busy
+        self.log_dir = log_dir
         self.buf: collections.deque = collections.deque(maxlen=int(keep_min * 60 / period_s))
         self.lock = threading.Lock()
         self._stop = threading.Event()
@@ -186,6 +193,26 @@ class SensorLog:
                 row.update({f"gpu_{k}": v for k, v in g[0].items() if k != "name"})
             with self.lock:
                 self.buf.append(row)
+            if self.log_dir is not None:
+                self._write(row)
+
+    def _write(self, row: dict) -> None:
+        import time
+        from pathlib import Path
+
+        try:
+            d = Path(self.log_dir)
+            d.mkdir(parents=True, exist_ok=True)
+            f = d / time.strftime("sensors_%Y%m%d.csv", time.localtime(row["t"]))
+            new = not f.exists()
+            vals = {**row, "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(row["t"])), "sim": int(row["sim"])}
+            with f.open("a", encoding="utf-8") as fh:
+                if new:
+                    fh.write(",".join(self.COLS) + "\n")
+                fh.write(",".join("" if vals.get(k) is None else (f"{vals[k]:.3f}" if isinstance(vals[k], float) else str(vals[k]))
+                                  for k in self.COLS) + "\n")
+        except OSError:
+            pass                                                  # logging to disk is best effort
 
     def latest(self) -> dict:
         with self.lock:

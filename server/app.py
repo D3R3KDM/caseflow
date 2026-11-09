@@ -29,7 +29,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 _jobs: dict[str, dict] = {}
 _lock = threading.Lock()          # one GPU simulation at a time
 _hw: dict = {}
-_log = SensorLog(busy=_lock.locked).start()       # GPU / CPU samples every 2 s, last 30 min
+_log = SensorLog(busy=_lock.locked, log_dir=ROOT / "logs").start()   # every 2 s: 30 min in memory, all on disk
 
 
 @app.get("/api/health")
