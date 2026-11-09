@@ -17,6 +17,8 @@ const partsKey = (b: Build) => `${b.case}|${b.gpu}|${b.cooler}`
 const layoutId = (b: Build) => partsKey(b) + '#' + b.fans.filter((f) => f.mode !== 'off')
   .map((f) => `${f.slot}:${f.fan}:${f.mode}:${f.control ?? 'curve'}${(f.control ?? 'curve') === 'fixed' ? ':' + f.pct : ''}`).sort().join('|')
 const asLib = (lib: Lib) => lib as unknown as ScenarioLib
+/** Preset buttons, short enough for one row (the full name is the tooltip). */
+const SHORT: Record<string, string> = { idle: 'Idle', office: 'Everyday', cpu_game: 'CPU game', gpu_game: 'GPU game', stress: 'Stress' }
 const pct = (x: number) => `${Math.round(x * 100)}%`
 
 /** Plain-language steps that turn one fan layout into another. */
@@ -323,7 +325,7 @@ export default function App() {
     const lv = pkg?.levels[lvl]
     const dustRel = res.dust_rate != null && (refRes?.dust_rate ?? res.dust_rate) ? res.dust_rate / (refRes?.dust_rate ?? res.dust_rate) : null
     screens.push(
-      { id: 'search', title: 'Layout search', pos: [-3.35, -0.04, -0.12], yaw: 0.2, content: (
+      { id: 'search', title: 'Layout search', pos: [-3.35, -0.7, -0.12], yaw: 0.2, content: (
         <Holo tag="LAYOUT SEARCH" sub={`${n} layouts · live`} width={300} flashKey="search">
           <SearchPanel rows={rows} shown={shown} tagOf={tagOf} onOpen={(r) => openBuild(r.build)} allRows={allRows} setAllRows={setAllRows} lo={lo} hi={hi}
             isOn={(r) => !!viewBuild && layoutId(r.build) === layoutId(viewBuild)} scenario={scnName} dustWeight={opt?.dust_weight ?? 2} />
@@ -433,12 +435,12 @@ export default function App() {
 
       <div className="hud">
         {win.scn && lib && setup && (
-          <HudWindow id="scenario" code="01" title="Scenario" side="left" x={20} y={72} w={318} layoutKey={layoutKey} onClose={() => setWin({ ...win, scn: false })}
+          <HudWindow id="scenario" code="01" title="Scenario" side="left" x={20} y={72} w={340} layoutKey={layoutKey} onClose={() => setWin({ ...win, scn: false })}
             meta={res ? `${res.noise_dba.toFixed(0)} dBA` : ''}>
-            <span className="lbl">Load</span>
             <div className="presets">
               {lib.defaults.scenarios.map((p) => (
-                <button key={p.id} className={scn.preset === p.id ? 'on' : ''} title={p.note ?? ''} onClick={() => setScn({ ...scn, cpu: p.cpu, gpu: p.gpu, preset: p.id })}>{p.name}</button>
+                <button key={p.id} className={scn.preset === p.id ? 'on' : ''} title={p.name + (p.note ? ` - ${p.note}` : '')}
+                  onClick={() => setScn({ ...scn, cpu: p.cpu, gpu: p.gpu, preset: p.id })}>{SHORT[p.id] ?? p.name}</button>
               ))}
             </div>
             <Slider label="Room" value={scn.ambient_c} min={10} max={40} step={0.5} show={`${scn.ambient_c.toFixed(1)} °C`} onChange={(v) => setScn({ ...scn, ambient_c: v })} />
@@ -446,11 +448,6 @@ export default function App() {
               onChange={(v) => setScn({ ...scn, cpu: v / 100, preset: null })} />
             <Slider label="GPU load" value={Math.round(scn.gpu * 100)} min={0} max={100} step={1} show={<>{pct(scn.gpu)} · {watts[1].toFixed(0)} W</>}
               onChange={(v) => setScn({ ...scn, gpu: v / 100, preset: null })} />
-            <label className="sl"><span className="lbl">CPU</span>
-              <select className="field" value={cpuId} onChange={(e) => setCpuId(e.target.value)}>
-                {lib.cpus.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.max_w} W</option>)}
-              </select>
-            </label>
             {res && (
               <div className="scn-out">
                 <div><span className="lbl">case fans</span><b>{pct(res.case_duty)}</b></div>
@@ -459,7 +456,8 @@ export default function App() {
                 <div><span className="lbl">noise</span><b>{res.noise_dba.toFixed(0)}<u>dBA</u></b></div>
               </div>
             )}
-            <p className="fine">Load runs from idle ({setup.cpu.idle_w} W / {setup.gpu.idle_w} W) to the power limit ({setup.cpu.max_w} W / {setup.gpu.max_w} W). The fans follow their curves (<button className="linkbtn" onClick={() => setWin({ ...win, curve: true })}>Fan curves</button>), so a warmer room or a heavier load spins them up: <button className="linkbtn" onClick={() => setWin({ ...win, trend: true })}>Trends</button> shows by how much.</p>
+            <p className="fine" title={`Load runs from idle (${setup.cpu.idle_w} W / ${setup.gpu.idle_w} W) to the power limit (${setup.cpu.max_w} W / ${setup.gpu.max_w} W).`}>
+              Fans follow their <button className="linkbtn" onClick={() => setWin({ ...win, curve: true })}>curves</button>: a warmer room or heavier load spins them up (<button className="linkbtn" onClick={() => setWin({ ...win, trend: true })}>trends</button>).</p>
           </HudWindow>
         )}
 
@@ -504,7 +502,7 @@ export default function App() {
         )}
 
         {win.cfg && viewBuild && cs && lib && (
-          <HudWindow id="configure" code="05" title="Configure" side="left" x={win.scn ? 352 : 20} y={72} w={330} layoutKey={layoutKey} onClose={() => setWin({ ...win, cfg: false })} meta={online ? 'LIVE' : 'ENGINE OFF'}>
+          <HudWindow id="configure" code="05" title="Configure" side="left" x={win.scn ? 374 : 20} y={72} w={330} layoutKey={layoutKey} onClose={() => setWin({ ...win, cfg: false })} meta={online ? 'LIVE' : 'ENGINE OFF'}>
             <div className="cfg-parts">
               {([['Case', 'case', lib.cases], ['GPU', 'gpu', lib.gpus], ['Cooler', 'cooler', lib.coolers]] as const).map(([l, k, list]) => (
                 <label key={k}><span className="lbl">{l}</span>
@@ -513,6 +511,11 @@ export default function App() {
                   </select>
                 </label>
               ))}
+              <label><span className="lbl">CPU · no new simulation needed</span>
+                <select className="field" value={cpuId} onChange={(e) => setCpuId(e.target.value)}>
+                  {lib.cpus.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.max_w} W, Tj {c.t_max_c} °C</option>)}
+                </select>
+              </label>
             </div>
             <span className="lbl">Case fans</span>
             <div className="mounts">
