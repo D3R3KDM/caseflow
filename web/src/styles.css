@@ -334,3 +334,8 @@ input[type='range'] { accent-color: var(--cyan); width: 100%; }
 .tr-table td { text-align: right; padding: 2px 4px; color: var(--ink2); }
 .tr-table tr.on td { color: var(--ink); }
 .tr-sw { display: flex; align-items: center; justify-content: space-between; margin: 8px 0 4px; padding-top: 8px; border-top: 1px solid var(--line); }
+
+/* floating screens move by their title strip (Scene.tsx startDrag); double-click puts one back */
+.holo-wrap .h-head { cursor: grab; user-select: none; touch-action: none; }
+.holo-wrap.dragging .h-head { cursor: grabbing; }
+.holo-wrap.dragging .holo { box-shadow: 0 0 34px rgba(99, 224, 255, 0.34), inset 0 0 30px rgba(99, 224, 255, 0.08); }

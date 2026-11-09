@@ -157,7 +157,7 @@ docs/             guide, figures, screenshots, video
 
 ## Interface
 
-The 3D case sits in the middle of six floating holographic screens, each wired to its part by a glowing leader line:
+The 3D case sits in the middle of six floating holographic screens, each wired to its part by a glowing leader line. Drag a screen by its title to move it (the place is remembered); double-click the title to put it back, or ⟲ in the dock for all of them:
 
 - **CPU** and **GPU**: temperature gauge, intake air rise, power (and throttling), fan rpm ("stopped" when the GPU fans idle), cooler conductance.
 - **Airflow**: in / out CFM, case pressure, and every fan's flow and rpm; the noise estimate.

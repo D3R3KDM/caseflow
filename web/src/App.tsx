@@ -5,7 +5,7 @@ import { bankFields, composeT, nearestLevel } from './fields'
 import { AirPanel, DustPanel, Holo, PartPanel, SearchPanel, VerdictPanel } from './Holo'
 import HudWindow, { resetWindows } from './HudWindow'
 import { THERMAL_CSS } from './palette'
-import CaseScene, { T_MAX, type HoloSpec, type Layers, type Pick, type SceneData, type SceneFan } from './Scene'
+import CaseScene, { resetHolos, T_MAX, type HoloSpec, type Layers, type Pick, type SceneData, type SceneFan } from './Scene'
 import TrendChart, { SERIES } from './TrendChart'
 import { loadWatts, setupFor, solve, type Bank, type Curves, type ScenarioBuild, type ScenarioLib, type ScenarioResult, type Setup, type Source } from './scenario'
 import { WHERE, type BankPkg, type Build, type Control, type FanSlot, type Geometry, type Lib, type Mode, type Opt, type RankRow, type Scenario, type ViewKey } from './types'
@@ -583,7 +583,8 @@ export default function App() {
         <button className={win.trend ? 'on' : ''} onClick={() => setWin({ ...win, trend: !win.trend })}>Trends</button>
         <button className={win.cfg ? 'on' : ''} onClick={() => setWin({ ...win, cfg: !win.cfg })}>Configure</button>
         <button className={win.info ? 'on' : ''} onClick={() => setWin({ ...win, info: !win.info })}>Method</button>
-        <button title="Reset the view and the windows" onClick={() => { resetWindows(); setLayoutKey((k) => k + 1) }}>⟲</button>
+        <button title="Reset the view, the windows and the screens (drag a screen by its title; double-click the title to put it back)"
+          onClick={() => { resetWindows(); resetHolos(); setLayoutKey((k) => k + 1) }}>⟲</button>
       </nav>
     </div>
   )

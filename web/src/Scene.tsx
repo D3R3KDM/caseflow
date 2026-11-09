@@ -39,6 +39,28 @@ const FIT_W = 9.1, FIT_H = 4.7               // world extent the default view mu
 interface HoloObj {
   obj: CSS3DObject; w: number; h: number; ro: ResizeObserver
   line: THREE.Line; marker: THREE.Group; packet: THREE.Mesh; stand: THREE.Line; base: THREE.Mesh; phase: number
+  detach: () => void                           // removes the screen's drag listeners
+}
+
+/** Screens the user dragged: position in the ring frame, kept in localStorage so a reload keeps the arrangement. */
+type Pos3 = [number, number, number]
+const HOLO_KEY = 'caseflow.holo.'
+function loadMoved(): Map<string, Pos3> {
+  const m = new Map<string, Pos3>()
+  try {
+    for (const k of Object.keys(localStorage)) {
+      if (!k.startsWith(HOLO_KEY)) continue
+      const v = JSON.parse(localStorage.getItem(k) ?? 'null')
+      if (Array.isArray(v) && v.length === 3 && v.every((x) => Number.isFinite(x))) m.set(k.slice(HOLO_KEY.length), v as Pos3)
+    }
+  } catch { /* storage unavailable */ }
+  return m
+}
+/** Put every dragged screen back where it started (the ⟲ button). */
+export function resetHolos() {
+  try {
+    Object.keys(localStorage).filter((k) => k.startsWith(HOLO_KEY)).forEach((k) => localStorage.removeItem(k))
+  } catch { /* storage unavailable */ }
 }
 
 let dotTex: THREE.Texture | null = null
@@ -123,6 +145,8 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
   const holos = useRef(new Map<string, HoloObj>())
   const specs = useRef<HoloSpec[]>(panels)
   specs.current = panels
+  const moved = useRef<Map<string, Pos3> | null>(null)
+  if (!moved.current) moved.current = loadMoved()
   const anchors = useRef<Partial<Record<Anchor, THREE.Vector3>>>({})
   const css = useRef<{ ring: THREE.Group; gl: THREE.Group; fit: () => void } | null>(null)
   // clickable case fans and empty mounts
@@ -251,7 +275,8 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
         const s = byId.get(id)
         if (!s) continue
         const { obj } = hobj
-        obj.position.set(s.pos[0], s.pos[1], s.pos[2])
+        const p = moved.current?.get(id) ?? s.pos
+        obj.position.set(p[0], p[1], p[2])
         obj.lookAt(cam.position)
         obj.rotateY(s.yaw)
         obj.updateMatrixWorld(true)
@@ -325,7 +350,7 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
       cv.removeEventListener('pointerdown', onDown)
       cv.removeEventListener('pointerup', onUp)
       cv.removeEventListener('pointermove', onMove)
-      for (const h of holos.current.values()) h.ro.disconnect()
+      for (const h of holos.current.values()) { h.ro.disconnect(); h.detach() }
       holos.current.clear()
       cssR.domElement.remove()
       css.current = null
@@ -344,6 +369,7 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
       k.ring.remove(h.obj)
       for (const o of [h.line, h.marker, h.packet, h.stand, h.base]) { k.gl.remove(o); disposeObject(o) }
       h.ro.disconnect()
+      h.detach()
       holos.current.delete(id)
     }
     panels.forEach((p, i) => {
@@ -366,13 +392,70 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
       base.rotation.x = -Math.PI / 2
       for (const o of [line, marker, packet]) o.renderOrder = 20
       for (const o of [line, marker, packet, stand, base]) { o.frustumCulled = false; k.gl.add(o) }
-      const h: HoloObj = { obj, w: 260, h: 200, ro: new ResizeObserver(() => { h.w = el.offsetWidth || h.w; h.h = el.offsetHeight || h.h }), line, marker, packet, stand, base, phase: i * 0.37 }
+      const onDown = (e: PointerEvent) => startDrag(p.id, e)
+      const onDbl = (e: MouseEvent) => {
+        if (!(e.target as HTMLElement).closest('.h-head')) return
+        moved.current?.delete(p.id)                                  // double-click the title: back to its place
+        try { localStorage.removeItem(HOLO_KEY + p.id) } catch { /* storage unavailable */ }
+      }
+      el.addEventListener('pointerdown', onDown)
+      el.addEventListener('dblclick', onDbl)
+      const detach = () => { el.removeEventListener('pointerdown', onDown); el.removeEventListener('dblclick', onDbl) }
+      const h: HoloObj = { obj, w: 260, h: 200, ro: new ResizeObserver(() => { h.w = el.offsetWidth || h.w; h.h = el.offsetHeight || h.h }), line, marker, packet, stand, base, phase: i * 0.37, detach }
       h.ro.observe(el)
       holos.current.set(p.id, h)
     })
   }, [idKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { css.current?.fit() }, [resetKey])
+  /** Drag a screen by its title strip. The pointer is cast onto a plane through the screen, facing the camera; the
+   * new place is kept in the ring frame, so the screen stays where it was put relative to the view as you orbit. */
+  const startDrag = (id: string, e: PointerEvent) => {
+    const v = viewer.current, k = css.current, h = holos.current.get(id), el = els.current.get(id)
+    const t = e.target as HTMLElement
+    if (!v || !k || !h || !el || e.button !== 0 || !t.closest('.h-head') || t.closest('button, a, input, select')) return
+    e.preventDefault()
+    const ray = new THREE.Raycaster()
+    const hit = (ev: PointerEvent, plane: THREE.Plane) => {
+      const r = v.renderer.domElement.getBoundingClientRect()
+      ray.setFromCamera(new THREE.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1), v.camera)
+      return ray.ray.intersectPlane(plane, new THREE.Vector3())
+    }
+    const start = h.obj.getWorldPosition(new THREE.Vector3())
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(v.camera.getWorldDirection(new THREE.Vector3()), start)
+    const p0 = hit(e, plane)
+    if (!p0) return
+    const grab = start.clone().sub(p0)                                // keep the point under the pointer under it
+    // follow the pointer on the window rather than capturing it: a click or double-click on the title keeps its
+    // target (double-click puts the screen back), and the drag goes on outside the screen
+    let dragged = false
+    const move = (ev: PointerEvent) => {
+      if (!dragged && Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) < 3) return
+      dragged = true
+      el.classList.add('dragging')
+      const p = hit(ev, plane)
+      if (!p) return
+      const local = k.ring.worldToLocal(p.add(grab))
+      moved.current?.set(id, [local.x, local.y, local.z])
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+      document.body.style.userSelect = ''
+      el.classList.remove('dragging')
+      const pos = moved.current?.get(id)
+      try { if (dragged && pos) localStorage.setItem(HOLO_KEY + id, JSON.stringify(pos)) } catch { /* storage unavailable */ }
+    }
+    document.body.style.userSelect = 'none'
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+  }
+
+  useEffect(() => {
+    if (resetKey) moved.current?.clear()                             // ⟲: every screen back to its place
+    css.current?.fit()
+  }, [resetKey])
 
   // ---------- shared helpers for the builds below ----------
   const frame = (geo: Geometry) => {
