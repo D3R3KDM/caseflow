@@ -3,14 +3,13 @@ import Schematic from './Schematic'
 import { WHERE, type Opt, type RankRow, type SimRes } from './types'
 
 /** Frame of a floating holographic screen: glow border, corner brackets, scanlines, sweep. */
-export function Holo({ tag, sub, live, width, flashKey, children }: { tag: string; sub?: ReactNode; live?: boolean; width: number; flashKey?: string; children: ReactNode }) {
+export function Holo({ tag, sub, width, flashKey, children }: { tag: string; sub?: ReactNode; width: number; flashKey?: string; children: ReactNode }) {
   return (
     <div className="holo" style={{ width } as CSSProperties} key={flashKey}>
       <i className="hc tl" /><i className="hc tr" /><i className="hc bl" /><i className="hc br" />
       <div className="h-head">
         <span className="h-tag">{tag}</span>
         {sub && <span className="h-sub">{sub}</span>}
-        {live && <i className="h-live" title="live" />}
       </div>
       <div className="h-body">{children}</div>
     </div>
@@ -85,7 +84,6 @@ export function PartPanel({ part, res, cur, compare, name, extra }: PartProps & 
       <div className="pp-foot">
         <span>{name}</span>
         {compare && <span>vs yours <Delta v={cur ? p.temp_c - cur.parts[part].temp_c : null} /></span>}
-        {p.calibrated && <span className="cal">calibrated</span>}
       </div>
     </div>
   )

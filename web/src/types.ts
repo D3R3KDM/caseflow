@@ -15,14 +15,7 @@ export interface Lib { cases: CasePart[]; gpus: GpuPart[]; coolers: CoolerPart[]
 export interface FanSlot { slot: string; fan: string; mode: Mode; pct: number }
 export interface Build { case: string; gpu: string; cooler: string; fans: FanSlot[]; load: { cpu_w: number; gpu_w: number; ambient_c: number } }
 
-export interface HW {
-  cpu: { name: string }; board: string; ram_gb: number
-  gpus: { name: string; temp_c: number | null; power_w: number | null; fan_pct: number | null }[]
-  cpu_temp_c: number | null
-  cpu_power_w?: number | null      // Windows Energy Meter (RAPL), no driver needed
-}
-
-export interface PartRes { intake_rise_c: number; temp_c: number; watts: number; calibrated?: boolean }
+export interface PartRes { intake_rise_c: number; temp_c: number; watts: number }
 export interface SimFan { slot: string; mode: 'in' | 'out'; pct: number; wall: Wall; a: number; b: number; size: number; name: string; q_m3s: number; op_frac?: number }
 export interface SimRes {
   label: string; build?: Build; shape: [number, number, number]; off: number; dx_mm: number
@@ -44,9 +37,6 @@ export interface Opt {
   top?: string; tied?: string[]; tie_margin?: number
   objective: string; dust_weight?: number; space?: string; minutes?: number
 }
-
-export interface SessionAvg { gpu_temp_c: number | null; gpu_power_w: number | null; gpu_fan_pct: number | null; gpu_util_pct: number | null; gpu_clock_mhz: number | null; cpu_util: number | null; cpu_power_w?: number | null }
-export interface Session { minutes: number; samples: number; period_s: number; min_gpu_w: number; load_seconds: number; sim_seconds?: number; all: SessionAvg; load: SessionAvg | null; gpu_temp_max: number | null }
 
 export type ViewKey = 'current' | 'best' | 'cpu' | 'worst' | 'custom'
 

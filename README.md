@@ -45,12 +45,12 @@ Fan speeds and power are **settings**, not readings from the PC, and utilisation
 
 | Input | Value used | Source |
 |---|---|---|
-| Stock fan speed | 70 %: ≈1330 rpm (front 140), ≈1365 rpm (bottom 120) | Set. The board drives the fans from its Q-Fan curve, and Windows cannot read case-fan rpm without a sensor driver. Configure shows the rpm next to each slider, so it can be matched to Armoury Crate or the BIOS. Corsair iCUE's sensor logging can record the fan headers to CSV; `scripts/session_report.py` joins that with CaseFlow's own power log. |
+| Stock fan speed | 70 %: ≈1330 rpm (front 140), ≈1365 rpm (bottom 120) | Set. A real board drives the fans from its Q-Fan curve. Configure shows the rpm next to each slider, so it can be matched to Armoury Crate or the BIOS. |
 | Spare fans | 80 %: ≈1200 rpm | Model unknown: a typical 120 mm fan (1500 rpm, 55 CFM, 1.6 mmH₂O). |
 | Fan flow | rated CFM × speed × 0.6, then the operating point against the case pressure | Rated flow and static pressure from the spec sheets; 0.6 is an estimate. The current layout takes in 130 CFM. |
 | CPU cooler and GPU fans | fixed: ≈53 CFM through the cooler, 1.6 m/s (≈66 CFM) through the GPU | Set. The real 5080 FE stops its fans at light load and runs them at about 1,500 rpm in games. |
-| CPU power | 88 W | The 9700X's power limit (PPT): all cores busy. Games use about 70 W. Measured live, with no driver, from Windows' Energy Meter counters (RAPL); *use my last 10 min of gaming* fills in your real average. |
-| GPU power | 300 W | Typical in games (limit 360 W). Read live with `nvidia-smi`; *use my last 10 min of gaming* fills in your real average. |
+| CPU power | 88 W | The 9700X's power limit (PPT): all cores busy. Games use about 70 W. |
+| GPU power | 300 W | Typical in games (limit 360 W). |
 | Utilisation | not used | Heat follows watts, not % busy. |
 | Room | 25 °C | Set. |
 
@@ -81,7 +81,6 @@ Room temperature and cooler conductance shift every layout by the same amount, s
 **Absolute temperatures.**
 - CPU: within the range of reviews (about 57–72 °C at 88 W) once the in-case pre-heat and the room temperature are taken out.
 - GPU: probably about 5 °C low. Reviews give about 66 °C (64–68) at a room of about 20–23 °C; the model gives 60 °C at 22 °C. On this PC at 154 W the GPU read 49.9 °C with its fans at 30 %, where the model gives about 45 °C at 25 °C.
-- A gaming session removes this: Configure → *use my last 10 min of gaming* fills in the real CPU and GPU power and calibrates the GPU cooler. Then set the room temperature and the fan speeds you see in Armoury Crate.
 
 ## Run
 
@@ -91,7 +90,7 @@ Room temperature and cooler conductance shift every layout by the same amount, s
 cd web && npm install && npm run dev        # http://localhost:5190
 ```
 
-**Full setup** (live hardware readout and new simulations). You need Python 3.11+, Node 18+, and an NVIDIA GPU for speed:
+**Full setup** (new simulations). You need Python 3.11+, Node 18+, and an NVIDIA GPU for speed:
 
 ```bash
 python -m venv .venv
@@ -110,12 +109,7 @@ python -m uvicorn server.app:app --host 127.0.0.1 --port 8600     # or: bash scr
 cd web && npm install && npm run dev                              # http://localhost:5190
 ```
 
-The views (your layout, lowest CPU, worst) and the full 32-layout ranking are precomputed in `web/public/data/`, so the app also works with the engine off. With the engine running you can also:
-
-- read live GPU temperature and power (`nvidia-smi`) and CPU package power (Windows' Energy Meter counters), and keep the last 30 minutes so a gaming session can be used;
-- detect the CPU, motherboard and RAM;
-- edit the build and run new simulations (about 40 s each);
-- calibrate the cooler with a measured GPU temperature.
+The views (your layout, lowest CPU, worst) and the full 32-layout ranking are precomputed in `web/public/data/`, so the app also works with the engine off. With the engine running you can also edit the build and run new simulations (about 40 s each). CaseFlow is a simulator: nothing is read from the PC it runs on.
 
 Python: see `requirements.txt` (PyTorch with CUDA for speed). `start.bat` uses `.venv` in this folder, or `../.venv`.
 
@@ -132,7 +126,7 @@ python -m pytest tests           # fast engine checks (no GPU run)
 | **Geometry** | Parts come from `data/parts/library.json`: dimensions, fan mounts, fan specs and source links. They are placed in the case on a 6 mm grid. <br>Solid: walls, PSU, motherboard, GPU PCB and CPU fin towers (as heat zones). <br>Empty mesh mounts and the vented slot covers are open to the room. |
 | **Air** | Our own D3Q19 lattice-Boltzmann solver (`engine/lbm.py`, PyTorch on the GPU) with BGK collision, Smagorinsky turbulence and bounce-back walls. <br>Fans are cells with a set air velocity. <br>The layer of "room" cells around the case is an open boundary: ambient pressure, with the velocity of the cell inside. So fans deliver their set flow (≈ 95 %) and the openings are not artificially resistive. |
 | **Fans** | Each case fan runs at its **operating point**. <br>Fan curve: Q = Q₀ (1 − Δp / p_max), from the rated flow and static pressure, scaled by the fan laws. <br>All fans see one case pressure p. The passive openings balance the flow as orifices: Q = C_d A √(2\|p\| / ρ). <br>p is found by bisection. Without this step, "all intake, no exhaust" ranked first. With it, those fans stall against +7.8 Pa and that layout drops to 14th. |
-| **Heat** | CPU and GPU power enters the air in their fin stacks and is carried by the solved flow. <br>The transport is conservative: upwind fluxes through cell faces, and mixing only inside the case. So all the heat leaves through the openings (energy balance 99.9 %). <br>It is iterated until the intake temperatures change by less than 0.005 K. <br>Part temperature = intake air rise + P / G, where G is the cooler's conductance. One measured temperature calibrates G. |
+| **Heat** | CPU and GPU power enters the air in their fin stacks and is carried by the solved flow. <br>The transport is conservative: upwind fluxes through cell faces, and mixing only inside the case. So all the heat leaves through the openings (energy balance 99.9 %). <br>It is iterated until the intake temperatures change by less than 0.005 K. <br>Part temperature = intake air rise + P / G, where G is the cooler's conductance. |
 | **Dust** | 40 000 particles of 20 µm are released where air comes in, weighted by inflow; the bottom filter stops 85 %. <br>They drift with the flow plus turbulent diffusion and settling, and stick where they touch a surface. |
 | **Search** | Stock fans stay where they are. The spare fans go on every free mount, each blowing in or out (C(4,3) × 2³ = 32 layouts), and every layout gets the full simulation. <br>Score = CPU + GPU °C + 2 °C × dust settling rate (current layout = 1), where dust settling = unfiltered intake × share that settles. <br>Layouts within 0.5 °C of the top count as a tie: no change is recommended for less. |
 
@@ -153,7 +147,7 @@ These checks found two real bugs, both fixed and the search re-run:
 - Mount positions, opening porosity and cooler conductance are estimates from specs and reviews (marked `est` in the library).
 - Fans are modelled as uniform jets, without swirl, at fixed speeds: real fans follow temperature curves, and the GPU stops its fans at light load. The grid uses a higher viscosity than real air, for stability. Buoyancy is not modelled.
 - The room outside stays at 25 °C, so hot exhaust is never drawn back in.
-- Trust the differences between layouts more than the absolute temperatures. Calibrate with a GPU reading taken under load (150 W or more), best with a gaming session; idle readings are rejected.
+- Trust the differences between layouts more than the absolute temperatures.
 
 ## Layout
 
@@ -161,13 +155,11 @@ These checks found two real bugs, both fixed and the search re-run:
 engine/
   lbm.py          D3Q19 LBM solver (GPU)
   sim.py          build → grid, fan operating point, airflow + heat + dust, web packaging
-  thermal.py      air temperature (advection–diffusion), cooler calibration
+  thermal.py      air temperature (advection–diffusion)
   optimize.py     exhaustive layout search
-  hardware.py     CPU / board / RAM (Windows CIM), GPU sensors (nvidia-smi), CPU power (Energy Meter)
-server/app.py     FastAPI: /api/health, /hardware, /hardware/session, /library, /default_build, /simulate, /job/{id}
+server/app.py     FastAPI: /api/health, /library, /default_build, /simulate, /job/{id}
 scripts/          precompute.py (web views), serve.sh (engine with auto-restart),
-                  check_convergence.py, sanity_check.py, sensitivity.py (checks),
-                  session_report.py (iCUE sensor log + CaseFlow's power log, averaged over a gaming session)
+                  check_convergence.py, sanity_check.py, sensitivity.py (checks)
 data/             parts library, search result (optimize.json)
 web/              Vite + React + three.js app (3D case with floating holographic screens)
 tests/            engine checks

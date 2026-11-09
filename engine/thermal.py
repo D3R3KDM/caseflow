@@ -1,4 +1,4 @@
-"""Air temperature in the case and cooler calibration.
+"""Air temperature in the case.
 
 The LBM gives the time-averaged air velocity; heat is then carried by that air (explicit upwind
 advection + diffusion, walls adiabatic, outside air held at ambient). A part's temperature is
@@ -70,13 +70,3 @@ def solve_temperature_converged(u_lat: torch.Tensor, model: dict, parts: dict, p
             break
         last = now
     return T, done
-
-
-MIN_CAL_WATTS = 150.0     # below this the GPU fans idle or stop, and the conductance is far lower than under load
-
-
-def calibrate_g(measured_c: float, watts: float, ambient_c: float, intake_rise_c: float, min_watts: float = MIN_CAL_WATTS) -> float | None:
-    """Cooler conductance from one measured temperature at a known power. Needs a reading under load: at idle a
-    GPU's fans run slowly or stop, so a 50 W reading would make the cooler look several times weaker than it is."""
-    d = measured_c - ambient_c - intake_rise_c
-    return watts / d if d > 1.0 and watts >= min_watts else None

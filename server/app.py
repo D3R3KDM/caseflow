@@ -1,4 +1,7 @@
-"""CaseFlow local service: hardware readout, parts library, and simulation jobs.
+"""CaseFlow local service: parts library and simulation jobs.
+
+CaseFlow is a simulator: every input (parts, fan layout, power, room temperature) is a setting, nothing is read from
+the PC it runs on.
 
 Run from the caseflow folder:
     python -m uvicorn server.app:app --host 127.0.0.1 --port 8600
@@ -20,40 +23,17 @@ from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
 from engine import sim  # noqa: E402
-from engine.hardware import SensorLog, detect, gpu_sensors  # noqa: E402
-from engine.thermal import MIN_CAL_WATTS, calibrate_g  # noqa: E402
 
 app = FastAPI(title="CaseFlow service")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 _jobs: dict[str, dict] = {}
 _lock = threading.Lock()          # one GPU simulation at a time
-_hw: dict = {}
-_log = SensorLog(busy=_lock.locked, log_dir=ROOT / "logs").start()   # every 2 s: 30 min in memory, all on disk
 
 
 @app.get("/api/health")
 def health() -> dict:
     return {"ok": True, "service": "caseflow"}
-
-
-@app.get("/api/hardware")
-def hardware(refresh: bool = False) -> dict:
-    """CPU / board / RAM once (Windows CIM), GPU sensors (nvidia-smi) on every call."""
-    if refresh or not _hw:
-        _hw.clear()
-        _hw.update(detect())
-    else:
-        _hw["gpus"] = gpu_sensors()
-    _hw["cpu_power_w"] = _log.latest().get("cpu_power_w")      # Windows Energy Meter (RAPL), sampled every 2 s
-    return _hw
-
-
-@app.get("/api/hardware/session")
-def session(minutes: float = 10.0) -> dict:
-    """What the PC actually did in the last minutes (e.g. while you played): GPU power, temperature, fan speed,
-    utilisation, and CPU utilisation, averaged over the samples with the GPU under load (>= 150 W)."""
-    return _log.summary(minutes)
 
 
 @app.get("/api/library")
@@ -68,8 +48,6 @@ def default_build() -> dict:
 
 class SimQuery(BaseModel):
     build: dict
-    calib_gpu: dict | None = None    # {"temp_c": .., "watts": ..} measured under load
-    calib_cpu: dict | None = None
 
 
 def _run(jid: str, q: SimQuery) -> None:
@@ -77,19 +55,7 @@ def _run(jid: str, q: SimQuery) -> None:
     try:
         with _lock:
             r = sim.simulate_build(q.build, callback=lambda p: job.__setitem__("progress", p))
-        notes = []
-        for key, cal in (("gpu", q.calib_gpu), ("cpu", q.calib_cpu)):
-            if cal and cal.get("temp_c") and cal.get("watts"):
-                g = calibrate_g(float(cal["temp_c"]), float(cal["watts"]), r["load"]["ambient_c"],
-                                r["parts"][key]["intake_rise_c"])
-                if g:
-                    p = r["parts"][key]
-                    p.update(g_w_per_k=g, calibrated=True,
-                             temp_c=r["load"]["ambient_c"] + p["intake_rise_c"] + p["watts"] / g)
-                    notes.append(f"{key.upper()} cooler calibrated: {g:.2f} W/K")
-                elif float(cal["watts"]) < MIN_CAL_WATTS:
-                    notes.append(f"{key.upper()} calibration skipped: needs a reading under load (>= {MIN_CAL_WATTS:.0f} W)")
-        job.update(result=sim.package(r, notes), status="done", progress=1.0)
+        job.update(result=sim.package(r), status="done", progress=1.0)
     except Exception as exc:  # pragma: no cover - reported to the client
         job.update(status="error", error=f"{exc!r} {traceback.format_exc()[-400:]}")
 

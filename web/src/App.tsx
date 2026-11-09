@@ -4,7 +4,7 @@ import { AirPanel, DustPanel, Holo, PartPanel, SearchPanel, VerdictPanel } from 
 import HudWindow, { resetWindows } from './HudWindow'
 import { THERMAL_CSS } from './palette'
 import CaseScene, { T_MAX, type HoloSpec, type Layers, type Pick } from './Scene'
-import { WHERE, type Build, type FanSlot, type HW, type Lib, type Mode, type Opt, type RankRow, type Session, type SimRes, type ViewKey } from './types'
+import { WHERE, type Build, type FanSlot, type Lib, type Mode, type Opt, type RankRow, type SimRes, type ViewKey } from './types'
 
 const amazon = (q: string) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}`
 const layoutName = (r?: SimRes | null) => (r ? r.label.split(': ').slice(1).join(': ') || r.label : '')
@@ -43,7 +43,6 @@ function useNarrow(px = 900) {
 
 export default function App() {
   const [online, setOnline] = useState(false)
-  const [hw, setHw] = useState<HW | null>(null)
   const [lib, setLib] = useState<Lib | null>(null)
   const [opt, setOpt] = useState<Opt | null>(null)
   const [views, setViews] = useState<Partial<Record<ViewKey, SimRes>>>({})
@@ -53,8 +52,6 @@ export default function App() {
   const [cfgOpen, setCfgOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
   const [allRows, setAllRows] = useState(false)
-  const [cal, setCal] = useState({ temp: '', watts: '' })
-  const [sess, setSess] = useState<Session | null>(null)
   const [job, setJob] = useState<{ p: number; label: string } | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const [layoutKey, setLayoutKey] = useState(0)
@@ -82,11 +79,6 @@ export default function App() {
   }, [])
   useEffect(() => {
     getJSON<Lib>(online ? '/api/library' : '/data/library.json').catch(() => getJSON<Lib>('/data/library.json')).then(setLib).catch(() => {})
-    if (!online) return
-    let alive = true
-    getJSON<HW>('/api/hardware?refresh=true').then((h) => alive && setHw(h)).catch(() => {})
-    const id = window.setInterval(() => getJSON<HW>('/api/hardware').then((h) => alive && setHw(h)).catch(() => {}), 5000)
-    return () => { alive = false; window.clearInterval(id) }
   }, [online])
   useEffect(() => {
     if (!msg) return
@@ -109,7 +101,6 @@ export default function App() {
   const cs = lib && build ? lib.cases.find((c) => c.id === build.case) ?? null : null
   const gpu = lib && build ? lib.gpus.find((c) => c.id === build.gpu) ?? null : null
   const cooler = lib && build ? lib.coolers.find((c) => c.id === build.cooler) ?? null : null
-  const g0 = hw?.gpus[0]
   const key = (r: RankRow) => r.combined ?? r.score
   const [lo, hi] = useMemo(() => (rows.length ? [Math.min(...rows.map(key)), Math.max(...rows.map(key))] : [0, 1]), [rows])
   const tagOf = (r: RankRow) => [
@@ -136,8 +127,7 @@ export default function App() {
     setMsg(null)
     setJob({ p: 0, label })
     try {
-      const calib = cal.temp && cal.watts ? { temp_c: +cal.temp, watts: +cal.watts } : null
-      const { job: id } = await postJSON<{ job: string }>('/api/simulate', { build: b, calib_gpu: calib })
+      const { job: id } = await postJSON<{ job: string }>('/api/simulate', { build: b })
       for (;;) {
         await new Promise((r) => setTimeout(r, 700))
         const j = await getJSON<{ status: string; progress: number; error?: string; result?: SimRes }>(`/api/job/${id}`)
@@ -217,7 +207,6 @@ export default function App() {
   const flash = `${view}:${res?.label ?? ''}`
   const screens: (HoloSpec & { title: string })[] = []
   if (res) {
-    const cpuName = hw ? hw.cpu.name.replace(/ \d+-Core Processor/, '').replace('AMD ', '') : 'CPU'
     screens.push(
       { id: 'search', title: 'Layout search', pos: [-3.35, -0.04, -0.12], yaw: 0.2, content: (
         <Holo tag="LAYOUT SEARCH" sub={`${n}/${n} simulated`} width={300} flashKey="search">
@@ -225,13 +214,13 @@ export default function App() {
             isOn={(r) => { const v = viewOf(r); return (!!v && v === view) || (view === 'custom' && views.custom?.label === `Custom: ${r.name}`) }} />
         </Holo>) },
       { id: 'cpu', title: 'CPU', pos: [-1.6, 1.08, 0.5], yaw: 0.06, anchor: 'cpu', content: (
-        <Holo tag="CPU" sub={cpuName} live={hw?.cpu_power_w != null} width={250} flashKey={'cpu' + flash}>
-          <PartPanel part="cpu" res={res} cur={cur} compare={compare} name={hw?.cpu_power_w != null ? `live ${hw.cpu_power_w.toFixed(0)} W now` : (cooler?.name.replace('Thermalright ', '').replace(' ARGB', '') ?? 'cooler')}
+        <Holo tag="CPU" sub={cooler?.name.replace('Thermalright ', '').replace(' ARGB', '') ?? 'CPU cooler'} width={250} flashKey={'cpu' + flash}>
+          <PartPanel part="cpu" res={res} cur={cur} compare={compare} name={cooler?.type.replace(/_/g, '-') ?? ''}
             extra={[['cooler', `${(res.parts.cpu as { g_w_per_k?: number }).g_w_per_k?.toFixed(1) ?? '2.0'} W/K`]]} />
         </Holo>) },
       { id: 'gpu', title: 'GPU', pos: [-1.6, -0.78, 0.6], yaw: 0.06, anchor: 'gpu', content: (
-        <Holo tag="GPU" sub={gpu?.name.replace('NVIDIA GeForce ', '') ?? 'GPU'} live={!!g0} width={250} flashKey={'gpu' + flash}>
-          <PartPanel part="gpu" res={res} cur={cur} compare={compare} name={g0 ? `live ${g0.temp_c?.toFixed(0)} °C · ${g0.power_w?.toFixed(0)} W now` : (gpu?.cooler.replace(/_/g, '-') ?? '')}
+        <Holo tag="GPU" sub={gpu?.name.replace('NVIDIA GeForce ', '') ?? 'GPU'} width={250} flashKey={'gpu' + flash}>
+          <PartPanel part="gpu" res={res} cur={cur} compare={compare} name={gpu?.cooler.replace(/_/g, '-') ?? ''}
             extra={[['cooler', `${(res.parts.gpu as { g_w_per_k?: number }).g_w_per_k?.toFixed(1) ?? '8.5'} W/K`]]} />
         </Holo>) },
       { id: 'air', title: 'Airflow', pos: [1.6, 1.08, 0.5], yaw: -0.06, anchor: 'intake', content: (
@@ -278,8 +267,6 @@ export default function App() {
           ))}
         </nav>
         <div className="status">
-          {hw?.cpu_power_w != null && <span className="mono">CPU {hw.cpu_power_w.toFixed(0)} W</span>}
-          {g0 && <span className="mono">GPU {g0.temp_c?.toFixed(0)}°C · {g0.power_w?.toFixed(0)} W</span>}
           <span className="mono"><i className={'led' + (online ? ' on' : '')} />{online ? 'ENGINE ONLINE' : 'OFFLINE · PRECOMPUTED'}</span>
         </div>
       </header>
@@ -362,33 +349,9 @@ export default function App() {
               <label><span className="lbl">GPU W</span><input className="field" value={build.load.gpu_w} onChange={(e) => setBuild({ ...build, load: { ...build.load, gpu_w: +e.target.value || 0 } })} /></label>
               <label><span className="lbl">Room °C</span><input className="field" value={build.load.ambient_c} onChange={(e) => setBuild({ ...build, load: { ...build.load, ambient_c: +e.target.value || 0 } })} /></label>
             </div>
-            <div className="cfg-row">
-              <label><span className="lbl">GPU measured °C</span><input className="field" placeholder="—" value={cal.temp} onChange={(e) => setCal({ ...cal, temp: e.target.value })} /></label>
-              <label><span className="lbl">at W</span><input className="field" placeholder="—" value={cal.watts} onChange={(e) => setCal({ ...cal, watts: e.target.value })} /></label>
-              <button className="textbtn" disabled={!g0?.temp_c} title="Use the GPU's current temperature and power - only meaningful under load (a game running)"
-                onClick={() => {
-                  if (g0?.temp_c == null || g0.power_w == null) return
-                  if (g0.power_w < 150) return setMsg(`GPU is at ${g0.power_w.toFixed(0)} W: calibrate while a game runs (150 W or more); at idle the GPU fans barely spin.`)
-                  setCal({ temp: g0.temp_c.toFixed(0), watts: g0.power_w.toFixed(0) })
-                }}>use live</button>
-            </div>
-            {build.load.gpu_w < 200 && <p className="fine warnline">Below about 200 W the GPU fans slow down or stop (0 % at idle), so the real GPU temperature will be higher than this model shows unless you calibrate at that load.</p>}
-            <div className="sess">
-              <span className="lbl">Your real load</span>
-              <button className="textbtn" disabled={!online} onClick={async () => {
-                try {
-                  const s = await getJSON<Session>('/api/hardware/session?minutes=10')
-                  setSess(s)
-                  if (!s.load || s.load_seconds < 60) return setMsg(`No gaming load in the last 10 min: the GPU drew ${s.min_gpu_w} W or more for only ${s.load_seconds.toFixed(0)} s${s.sim_seconds ? ` (${s.sim_seconds.toFixed(0)} s while CaseFlow itself was simulating are left out)` : ''}. Leave the engine running, play for a few minutes, then press again.`)
-                  const L = s.load
-                  if (L.gpu_power_w) setBuild({ ...build, load: { ...build.load, gpu_w: Math.round(L.gpu_power_w), ...(L.cpu_power_w ? { cpu_w: Math.round(L.cpu_power_w) } : {}) } })
-                  if (L.gpu_temp_c != null && L.gpu_power_w != null) setCal({ temp: L.gpu_temp_c.toFixed(1), watts: L.gpu_power_w.toFixed(0) })
-                } catch (e) { setMsg(String(e)) }
-              }}>use my last 10 min of gaming</button>
-              {sess?.load && <p className="fine">Under load for {(sess.load_seconds / 60).toFixed(1)} min: GPU {sess.load.gpu_power_w?.toFixed(0)} W · {sess.load.gpu_temp_c?.toFixed(1)} °C · fans {sess.load.gpu_fan_pct?.toFixed(0)} % · {sess.load.gpu_util_pct?.toFixed(0)} % busy · CPU {sess.load.cpu_power_w != null ? `${sess.load.cpu_power_w.toFixed(0)} W, ` : ''}{sess.load.cpu_util?.toFixed(0)} % busy. CPU W, GPU W and the calibration are filled in; set Room °C to your room's temperature, then run.</p>}
-            </div>
+            {build.load.gpu_w < 200 && <p className="fine warnline">Below about 200 W a real GPU slows or stops its fans (0 % at idle); this model keeps them at a fixed speed, so it shows the GPU cooler than it would be.</p>}
             <button className="run" disabled={!online || !!job} onClick={() => simulate(build, 'edited layout')}>{online ? 'Run simulation' : 'Engine offline'}</button>
-            <p className="fine">About 45 s on the GPU: airflow, then heat, then dust. The engine samples the GPU every 2 s in the background, so a game played while it runs can be used here (time spent on CaseFlow's own simulations is left out). Calibrate only under load (150 W or more); idle readings are ignored.</p>
+            <p className="fine">About 45 s on the GPU: airflow, then heat, then dust.</p>
           </HudWindow>
         )}
 
@@ -399,9 +362,9 @@ export default function App() {
               <p><span className="lbl">Fans</span>Each case fan runs at its operating point: a linear fan curve (rated flow and static pressure, scaled by fan laws) against one case pressure, which the passive openings balance as orifices. This is why "all intake, no exhaust" does not win: its fans stall against +7.8 Pa.</p>
               <p><span className="lbl">Heat</span>CPU and GPU power enters the air in their fin stacks and is carried by the solved flow (conservative advection–diffusion, iterated to convergence; all 388 W leave through the openings). Part temperature = intake air rise + power / cooler conductance.</p>
               <p><span className="lbl">Dust</span>40 000 particles of 20 µm enter where air comes in (the bottom filter stops 85%), drift with the flow plus turbulent diffusion and settling, and stick where they touch. Dust × is the rate at which outside dust settles inside (unfiltered intake × share that settles), relative to your layout.</p>
-              <p><span className="lbl">Inputs</span>Fan speeds, CPU W and GPU W are settings, not readings. Windows cannot see case-fan rpm or CPU temperature without a sensor driver; GPU power (nvidia-smi) and CPU package power (Windows' Energy Meter counters) are measured live, and a gaming session fills them in. Defaults: stock fans 70 %, your fans 80 % of top speed; CPU 88 W (the 9700X's power limit, all cores busy; games use about 70 W); GPU 300 W (typical in games). Utilisation is not used: heat follows watts, not % busy. Room °C and cooler conductance shift every layout equally. Fan speed and the CPU / GPU split can reorder them, so 3 loads and 5 fan-speed settings were tested: the worst layouts never moved, and the recommended one was never meaningfully worse than yours (see the guide).</p>
+              <p><span className="lbl">Inputs</span>CaseFlow is a simulator: fan speeds, CPU W, GPU W and room °C are settings, nothing is read from this PC. Defaults: stock fans 70 %, your fans 80 % of top speed; CPU 88 W (the 9700X's power limit, all cores busy; games use about 70 W); GPU 300 W (typical in games). Utilisation is not used: heat follows watts, not % busy. Room °C and cooler conductance shift every layout equally. Fan speed and the CPU / GPU split can reorder them, so 3 loads and 5 fan-speed settings were tested: the worst layouts never moved, and the recommended one was never meaningfully worse than yours (see the guide).</p>
               <p><span className="lbl">Search</span>Every placement and direction of your three fans (4 mounts × in / out = {n || 32} layouts) is simulated in full, about 45 s each.</p>
-              <p><span className="lbl">Limits</span>Mount positions, opening porosity and cooler conductance are estimates; trust the differences between layouts more than the absolute °C. A measured GPU temperature calibrates the cooler.</p>
+              <p><span className="lbl">Limits</span>Mount positions, opening porosity and cooler conductance are estimates; trust the differences between layouts more than the absolute °C.</p>
             </div>
           </HudWindow>
         )}

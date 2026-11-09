@@ -36,10 +36,3 @@ def test_search_space():
     c = candidates()
     assert len(c) == 32
     assert sum(is_current(build_for(s)) for s in c.values()) == 1
-
-
-def test_cpu_power_reader_is_safe():
-    """Reads CPU package power from Windows' Energy Meter counters; never raises, None when unavailable or too soon."""
-    from engine.hardware import CpuPower
-
-    assert CpuPower().read() is None          # a rate needs two samples some time apart
