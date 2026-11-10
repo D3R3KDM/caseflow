@@ -1,4 +1,4 @@
-"""CaseFlow local service: parts library and simulation jobs.
+"""CaseFlow local service: parts library, simulation jobs and the neural surrogate.
 
 CaseFlow is a simulator: every input (parts, fan layout, power, room temperature) is a setting, nothing is read from
 the PC it runs on.
@@ -22,13 +22,15 @@ from fastapi import FastAPI, HTTPException  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
-from engine import bank, sim  # noqa: E402
+from engine import bank, sim, surrogate  # noqa: E402
 
 app = FastAPI(title="CaseFlow service")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 _jobs: dict[str, dict] = {}
 _lock = threading.Lock()          # one GPU simulation at a time
+_ai: surrogate.Surrogate | None = None
+_ai_lock = threading.Lock()
 
 
 @app.get("/api/health")
@@ -69,6 +71,35 @@ def make_bank(q: SimQuery) -> dict:
     _jobs[jid] = {"status": "running", "progress": 0.0, "cached": cached}
     threading.Thread(target=_run_bank, args=(jid, q), daemon=True).start()
     return {"job": jid, "cached": cached}
+
+
+def _surrogate() -> surrogate.Surrogate:
+    global _ai
+    with _ai_lock:
+        if _ai is None:
+            if not surrogate.CHECKPOINT.exists():
+                raise HTTPException(503, "no trained network yet (scripts/train_surrogate.py)")
+            _ai = surrogate.Surrogate()
+        return _ai
+
+
+@app.get("/api/ai/info")
+def ai_info() -> dict:
+    """The network: architecture, what it was trained on and how it does on the held-out test layouts."""
+    return {k: v for k, v in _surrogate().info.items() if k not in ("train_keys", "test_keys")}
+
+
+@app.post("/api/ai")
+def ai_bank(q: SimQuery) -> dict:
+    """The neural surrogate's bank for a build, in the format of /api/bank, in well under a second. The app shows it
+    at once and replaces it with the simulation's when that finishes. 422 for builds unlike the training data."""
+    why = surrogate.out_of_domain(q.build)
+    if why:
+        raise HTTPException(422, why)
+    net = _surrogate()
+    with _ai_lock:
+        b = net.predict(q.build)
+    return bank.package(b)
 
 
 @app.get("/api/job/{jid}")

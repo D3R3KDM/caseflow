@@ -4,12 +4,13 @@ import type { CaseFanState, DustStats, PartState, ScenarioResult } from './scena
 import { WHERE, type Geometry, type RankRow } from './types'
 
 /** Frame of a floating holographic screen: glow border, corner brackets, scanlines, sweep. */
-export function Holo({ tag, sub, width, flashKey, children }: { tag: string; sub?: ReactNode; width: number; flashKey?: string; children: ReactNode }) {
+export function Holo({ tag, sub, badge, width, flashKey, children }: { tag: string; sub?: ReactNode; badge?: ReactNode; width: number; flashKey?: string; children: ReactNode }) {
   return (
     <div className="holo" style={{ width } as CSSProperties} key={flashKey}>
       <i className="hc tl" /><i className="hc tr" /><i className="hc bl" /><i className="hc br" />
       <div className="h-head">
         <span className="h-tag">{tag}</span>
+        {badge}
         {sub && <span className="h-sub">{sub}</span>}
       </div>
       <div className="h-body">{children}</div>
@@ -122,7 +123,8 @@ export function AirPanel({ res, fans, refRes }: { res: ScenarioResult; fans: { s
 }
 
 /** Dust: how fast outside dust settles inside, relative to your layout, and where it lands. */
-export function DustPanel({ rel, stats, compare }: { rel: number | null; stats: DustStats | null | undefined; compare: boolean }) {
+export function DustPanel({ rel, stats, compare, note }: { rel: number | null; stats: DustStats | null | undefined; compare: boolean; note?: string }) {
+  if (note) return <div className="fine">{note}</div>
   if (!stats || rel == null) return <div className="fine">No dust run for this layout.</div>
   return (
     <div className="dp">

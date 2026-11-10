@@ -43,6 +43,8 @@ export interface Q8 { b64: string; scale: number; signed: boolean }
 export interface BankPkg extends Bank {
   version: number; key: string; levels: BankLevel[]; curve_fans: string[]; geometry: Geometry; seconds?: number
   fields?: { u: Q8; kc: Q8; kg: Q8; dust_points: number[][] }[]
+  /** "ai": predicted by the neural surrogate (no dust); seen: whether the network trained on this layout */
+  source?: 'ai'; seen?: 'train' | 'test' | 'new'; lbm_limiter_ms?: number | null
 }
 
 export interface Layout { name: string; build: Build; current: boolean; bank: Bank & { key: string; curve_fans: string[] } }

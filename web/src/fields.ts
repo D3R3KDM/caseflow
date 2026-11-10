@@ -20,13 +20,14 @@ export function decodeQ8(q: Q8): Float32Array {
 }
 
 const cache = new Map<string, Fields>()
-/** Decoded fields of a bank (decoded once per bank). */
+/** Decoded fields of a bank (decoded once per bank; the network's and the simulation's bank of a layout apart). */
 export function bankFields(b: BankPkg | null | undefined): Fields | null {
   if (!b?.fields) return null
-  let f = cache.get(b.key)
+  const id = `${b.key}:${b.source ?? 'sim'}`
+  let f = cache.get(id)
   if (!f) {
     f = { u: b.fields.map((x) => decodeQ8(x.u)), kc: b.fields.map((x) => decodeQ8(x.kc)), kg: b.fields.map((x) => decodeQ8(x.kg)), dust: b.fields.map((x) => x.dust_points) }
-    cache.set(b.key, f)
+    cache.set(id, f)
   }
   return f
 }

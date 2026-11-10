@@ -339,3 +339,30 @@ input[type='range'] { accent-color: var(--cyan); width: 100%; }
 .holo-wrap .h-head { cursor: grab; user-select: none; touch-action: none; }
 .holo-wrap.dragging .h-head { cursor: grabbing; }
 .holo-wrap.dragging .holo { box-shadow: 0 0 34px rgba(99, 224, 255, 0.34), inset 0 0 30px rgba(99, 224, 255, 0.08); }
+
+/* ---------- AI surrogate: violet marks what the neural network predicted ---------- */
+.ai-tag { flex: none; margin: 0 2px 0 -2px; padding: 0 4px; font: 600 8.5px/14px var(--mono); letter-spacing: 0.14em; color: #c3b2ff; border: 1px solid rgba(195, 178, 255, 0.55); vertical-align: 1px; }
+.ai-chip { background: rgba(195, 178, 255, 0.1); border: 1px solid rgba(195, 178, 255, 0.55); color: #c3b2ff; font-size: 10px; letter-spacing: 0.14em; padding: 2px 8px; cursor: pointer; animation: ai-pulse 2.4s ease-in-out infinite; }
+@keyframes ai-pulse { 50% { box-shadow: 0 0 10px rgba(195, 178, 255, 0.35); } }
+@media (prefers-reduced-motion: reduce) { .ai-chip { animation: none; } }
+.ai-cmp { width: 100%; border-collapse: collapse; font: 11.5px var(--mono); }
+.ai-cmp thead th { padding: 0 0 5px 10px; font: 400 9px var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink3); text-align: right; }
+.ai-cmp thead th:first-child { padding-left: 0; }
+.ai-cmp tbody th { padding: 3px 0; border-top: 1px solid var(--line); font: 400 10px var(--mono); letter-spacing: 0.04em; color: var(--ink2); text-align: left; }
+.ai-cmp td { padding: 3px 0 3px 10px; border-top: 1px solid var(--line); color: var(--ink); text-align: right; }
+.ai-cmp td.ok { color: var(--cyan); }
+.ai-cmp td.meh { color: var(--ink2); }
+.ai-cmp td.bad { color: var(--amber); }
+.ai-src { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.ai-src .lbl, .ai-filter .lbl { display: inline; }
+.ai-card { display: grid; grid-template-columns: 58px 1fr; gap: 5px 10px; margin: 12px 0 0; padding-top: 10px; border-top: 1px dashed rgba(99, 224, 255, 0.2); }
+.ai-card dt { font: 9px/1.7 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink3); }
+.ai-card dd { margin: 0; font-size: 11px; line-height: 1.45; color: var(--ink2); }
+.ai-filter { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; }
+.ai-list { max-height: 260px; overflow: auto; margin-bottom: 4px; }
+.ai-h, .ai-rk { grid-template-columns: 34px 1fr 36px 36px 28px; }
+.ai-rk::after { display: none; }
+.ai-rk .nm { font-size: 10.5px; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ai-rk .nm em { display: inline; margin: 0 0 0 6px; }
+.ai-key { margin-top: 4px; }
+.ai-rk .nm { font-size: 11px; letter-spacing: 0.06em; }
