@@ -193,5 +193,5 @@ class Surrogate:
         seen = "train" if key in self.info.get("train_keys", ()) else "test" if key in self.info.get("test_keys", ()) else "new"
         summary = {"version": bk.BANK_VERSION, "key": key, "levels": levels, "curve_fans": bk.curve_fans(build),
                    "source": "ai", "seen": seen, "seconds": time.time() - t0, "geometry": bk.geometry(models[0]),
-                   "model": {k: self.info.get(k) for k in ("name", "params", "trained", "test")}}
+                   "model": {k: self.info.get(k) for k in ("name", "params", "config", "trained", "test", "baseline")}}
         return {"summary": summary, "fields": fields}

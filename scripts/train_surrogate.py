@@ -274,10 +274,12 @@ def main() -> None:
                         "w_probe": args.w_probe, "minutes": (time.time() - t_train) / 60, "date": time.strftime("%Y-%m-%d")},
             "test": None if not temps else {"layouts": temps["n_layouts"], "cpu_mae_c": temps["cpu_mae_c"], "gpu_mae_c": temps["gpu_mae_c"],
                                              "cpu_max_c": temps["cpu_max_c"], "gpu_max_c": temps["gpu_max_c"], **(final["test"] or {})},
+            "baseline": None if not temps or "baseline" not in temps else {k: temps["baseline"][k] for k in ("cpu_mae_c", "gpu_mae_c")},
             "train_keys": sorted({mt["key"] for mt in data["meta"] if mt["split"] == "train"}),
             "test_keys": sorted({mt["key"] for mt in data["meta"] if mt["split"] == "test"})}
-    if not args.max_layouts:
+    if not args.max_layouts and not args.tag:          # learning-curve runs keep only their scores
         torch.save({**info, "state": {k: v.half() for k, v in net.state_dict().items()}}, OUT / f"{name}.pt")
+    if not args.max_layouts:
         (OUT / f"{name}_history.json").write_text(json.dumps(hist, indent=1))
         (OUT / f"{name}_eval.json").write_text(json.dumps({**{k: v for k, v in info.items() if k not in ("train_keys", "test_keys")},
                                                            "final": final}, indent=1))

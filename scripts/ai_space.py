@@ -54,7 +54,7 @@ def main() -> None:
             done = s + len(part)
             print(f"[ai {done:5d}/{len(jobs)}] {time.time() - t0:.0f} s", flush=True)
     torch.cuda.empty_cache()
-    info = {k: net.info.get(k) for k in ("name", "params", "trained", "test")}
+    info = {k: net.info.get(k) for k in ("name", "params", "config", "trained", "test", "baseline")}
     out = {"version": 1, "model": info, "mounts": MOUNTS, "mount_fan": MOUNT_FAN, "levels": list(bk.LEVELS),
            "row": "per level: k_cpu_in[2], k_gpu_in[2], k_air_mean[2], k_air_max[2] (K/W; CPU heat, GPU heat), "
                   "flow_in_m3s, flow_out_m3s, case_pa, [q_m3s of each fan in mount order]; code digit per mount: 0 off, 1 in, 2 out",
