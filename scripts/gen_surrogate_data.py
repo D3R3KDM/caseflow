@@ -18,7 +18,6 @@ data/banks, so the run can be stopped at any time (Ctrl+C, or end the python pro
 from __future__ import annotations
 
 import argparse
-import itertools
 import json
 import random
 import sys
@@ -30,31 +29,14 @@ sys.path.insert(0, str(ROOT))
 
 from engine import bank as bk  # noqa: E402
 from engine.optimize import build_for, candidates  # noqa: E402
-from engine.sim import default_build  # noqa: E402
+from engine.surrogate import MOUNT_FAN, MOUNTS, all_codes, build_from_code, code_of  # noqa: E402
 
 OUT = ROOT / "data" / "surrogate"
-MOUNT_FAN = {"front_low": "lianli-207-front-140", "front_high": "lianli-207-front-140",
-             "bottom_front": "lianli-207-bottom-120-rev", "bottom_rear": "lianli-207-bottom-120-rev",
-             "top_1": "generic-120", "top_2": "generic-120", "top_3": "generic-120", "rear": "generic-120"}
-MOUNTS = list(MOUNT_FAN)
-MODES = (None, "in", "out")          # code per mount: 0 off, 1 in, 2 out
 TEST_EVERY = 7
 
 
-def build_from_code(code: tuple[int, ...]) -> dict:
-    b = default_build()
-    b["fans"] = [{"slot": s, "fan": MOUNT_FAN[s], "mode": MODES[c], "control": "curve", "pct": 70}
-                 for s, c in zip(MOUNTS, code) if c]
-    return b
-
-
-def code_of(build: dict) -> tuple[int, ...]:
-    m = {f["slot"]: f["mode"] for f in build["fans"] if f.get("mode") in ("in", "out")}
-    return tuple(MODES.index(m[s]) if s in m else 0 for s in MOUNTS)
-
-
 def random_order() -> list[tuple[int, ...]]:
-    codes = list(itertools.product(range(3), repeat=len(MOUNTS)))
+    codes = all_codes()
     return random.Random(0).sample(codes, len(codes))
 
 
