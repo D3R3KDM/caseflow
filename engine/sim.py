@@ -416,11 +416,12 @@ def run_airflow(model: dict, steps: int = 8000, callback=None) -> tuple[torch.Te
     return u, p
 
 
-def run_airflow_batch(model: dict, fu: torch.Tensor, steps: int = 8000, callback=None) -> torch.Tensor:
+def run_airflow_batch(model: dict, fu: torch.Tensor, steps: int = 8000, callback=None, u_max: float | None = None) -> torch.Tensor:
     """Time-averaged velocity [L, 3, X, Y, Z] (lattice units) for L sets of fan velocities fu [L, 3, X, Y, Z] in the
-    same geometry, solved together as one batch on the GPU (one run per level would cost L times the kernel calls)."""
+    same geometry, solved together as one batch on the GPU (one run per level would cost L times the kernel calls).
+    u_max: velocity limiter (lattice units), for the rare layouts that blow up without it (engine/bank.py)."""
     n = fu.shape[0]
-    cfg = LBMConfig(u_in=0.0, tau=0.52, smagorinsky=0.16, sponge=0)
+    cfg = LBMConfig(u_in=0.0, tau=0.52, smagorinsky=0.16, sponge=0, u_max=u_max)
     solid = torch.from_numpy(model["solid"])[None].expand(n, -1, -1, -1).contiguous()
     solver = LBMSolver(solid, cfg, open_inlet=False, forced_mask=torch.from_numpy(model["forced"]), forced_u=fu,
                        reservoir_mask=torch.from_numpy(model["reservoir"]), open_shell=True)

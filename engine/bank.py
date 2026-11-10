@@ -28,6 +28,7 @@ from engine.thermal import solve_unit_fields
 ROOT = Path(__file__).resolve().parents[1]
 CACHE = ROOT / "data" / "banks"
 LEVELS = (0.12, 0.45, 1.0)        # case-fan duties: the curve's floor, a mid point, full speed
+U_LIMIT = 0.15                    # LBM velocity limiter (lattice units, 4.5 m/s), only for layouts that diverge without it
 BANK_VERSION = 1
 # library fields that do not change the airflow (cooling, power, labels): left out of the cache key
 NOT_AIRFLOW = {"cooling", "idle_w", "t_max_c", "tdp_w", "r_air_full_k_per_w", "cooling_note", "noise_dba", "est",
@@ -62,6 +63,30 @@ def geometry(m: dict) -> dict:
             "fans": [{k: f.get(k) for k in keep} for f in m["fans"]]}
 
 
+def level_summary(d: float | None, m: dict, u_ms: torch.Tensor, kc: torch.Tensor, kg: torch.Tensor, dust: dict | None) -> dict:
+    """What the solver needs from one level: the per-watt rises at the CPU and GPU intakes and in the case air, the
+    flows, and the dust. u_ms [3, X, Y, Z] in m/s, kc / kg [X, Y, Z] in K/W (torch, any device); m: its voxel model.
+    Shared by the simulation and by the neural surrogate (engine/surrogate.py), so both give the same format."""
+    dev = kc.device
+    inside = ~(m["solid"] | m["reservoir"])
+    ci, gi, ins = (torch.from_numpy(a).to(dev) for a in (m["intake"]["cpu"], m["intake"]["gpu"], inside))
+    speed = torch.sqrt((u_ms ** 2).sum(0))
+    q_in = sum(f["q_m3s"] for f in m["fans"] if f["mode"] == "in")
+    q_out = sum(f["q_m3s"] for f in m["fans"] if f["mode"] == "out")
+    return {
+        "duty": d,
+        "k_cpu_in": [float(kc[ci].mean()), float(kg[ci].mean())],
+        "k_gpu_in": [float(kc[gi].mean()), float(kg[gi].mean())],
+        "k_air_mean": [float(kc[ins].mean()), float(kg[ins].mean())],
+        "k_air_max": [float(kc[ins].max()), float(kg[ins].max())],
+        "flow_in_m3s": q_in, "flow_out_m3s": q_out, "case_pa": m["case_pa"],
+        "pressure": "positive" if q_in > q_out * 1.05 else ("negative" if q_out > q_in * 1.05 else "balanced"),
+        "dead_air_fraction": float((speed[ins] < 0.05).float().mean()),
+        "fans": [{k2: f[k2] for k2 in ("slot", "q_m3s", "op_frac", "duty", "speed", "rpm")} for f in m["fans"]],
+        "dust": None if not dust else {k2: v for k2, v in dust.items() if k2 != "dep"} | {"by_part": dust_by_part(dust["dep"], m)},
+    }
+
+
 def compute(build: dict, levels=LEVELS, steps: int = 8000, callback=None, with_dust: bool = True) -> dict:
     """Simulate the build at every level. Returns {"summary": JSON-able, "fields": [per level numpy arrays]}."""
     lib = load_library()
@@ -71,35 +96,27 @@ def compute(build: dict, levels=LEVELS, steps: int = 8000, callback=None, with_d
     models = [build_model(build, lib, case_duty=d) for d in lv]
     m0 = models[0]
     fu = torch.from_numpy(np.stack([m["fu"] for m in models]))
-    u_lat = run_airflow_batch(m0, fu, steps, callback=lambda f: cb(0.55 * f))
+    limiter = None
+    try:
+        u_lat = run_airflow_batch(m0, fu, steps, callback=lambda f: cb(0.55 * f))
+    except FloatingPointError:
+        # A few extreme layouts (a strong exhaust right next to a small vent) pull jets past the lattice's low-Mach
+        # range and the run blows up. They are rerun with a velocity limiter; every other layout runs without one,
+        # so its numbers do not change. The summary says which banks needed it.
+        limiter = U_LIMIT
+        u_lat = run_airflow_batch(m0, fu, steps, callback=lambda f: cb(0.55 * f), u_max=limiter)
     cb(0.56)
     inside = ~(m0["solid"] | m0["reservoir"])
     geo = {"shape": m0["shape"], "solid": m0["solid"], "reservoir": m0["reservoir"], "heat": m0["heat"]}
     K, iters = solve_unit_fields(u_lat, geo, [m0["intake"]["cpu"], m0["intake"]["gpu"], inside],
                                  dx_mm=DX, u_lat_per_ms=U_LAT_PER_MS)
     cb(0.8)
-    dev = K.device
-    ci, gi, ins = (torch.from_numpy(a).to(dev) for a in (m0["intake"]["cpu"], m0["intake"]["gpu"], inside))
     out_levels, fields = [], []
     for k, (d, m) in enumerate(zip(lv, models)):
         kc, kg = K[k, 0], K[k, 1]
         u_ms = u_lat[k].float() / U_LAT_PER_MS
         dust = simulate_dust(u_ms, m) if with_dust else None
-        speed = torch.sqrt((u_ms ** 2).sum(0))
-        q_in = sum(f["q_m3s"] for f in m["fans"] if f["mode"] == "in")
-        q_out = sum(f["q_m3s"] for f in m["fans"] if f["mode"] == "out")
-        out_levels.append({
-            "duty": d,
-            "k_cpu_in": [float(kc[ci].mean()), float(kg[ci].mean())],
-            "k_gpu_in": [float(kc[gi].mean()), float(kg[gi].mean())],
-            "k_air_mean": [float(kc[ins].mean()), float(kg[ins].mean())],
-            "k_air_max": [float(kc[ins].max()), float(kg[ins].max())],
-            "flow_in_m3s": q_in, "flow_out_m3s": q_out, "case_pa": m["case_pa"],
-            "pressure": "positive" if q_in > q_out * 1.05 else ("negative" if q_out > q_in * 1.05 else "balanced"),
-            "dead_air_fraction": float((speed[ins] < 0.05).float().mean()),
-            "fans": [{k2: f[k2] for k2 in ("slot", "q_m3s", "op_frac", "duty", "speed", "rpm")} for f in m["fans"]],
-            "dust": None if not dust else {k2: v for k2, v in dust.items() if k2 != "dep"} | {"by_part": dust_by_part(dust["dep"], m)},
-        })
+        out_levels.append(level_summary(d, m, u_ms, kc, kg, dust))
         fields.append({"u": u_ms.half().cpu().numpy(), "kc": kc.half().cpu().numpy(), "kg": kg.half().cpu().numpy(),
                        "dust_points": np.asarray(deposit_points(dust["dep"], m) if dust else [], np.float32).reshape(-1, 3)})
         cb(0.8 + 0.19 * (k + 1) / len(lv))
@@ -107,6 +124,7 @@ def compute(build: dict, levels=LEVELS, steps: int = 8000, callback=None, with_d
     torch.cuda.empty_cache()
     summary = {"version": BANK_VERSION, "key": bank_key(build, levels, steps, lib), "levels": out_levels,
                "curve_fans": curve_fans(build), "lbm_steps": steps, "thermal_iters": iters,
+               "lbm_limiter_ms": limiter / U_LAT_PER_MS if limiter else None,
                "seconds": time.time() - t0, "geometry": geometry(m0)}
     return {"summary": summary, "fields": fields}
 

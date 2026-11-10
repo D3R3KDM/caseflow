@@ -40,6 +40,7 @@ class LBMConfig:
     smagorinsky: float = 0.1    # Smagorinsky constant (0 disables the LES model)
     sponge: int = 16            # sponge layer thickness at the outlet (cells)
     tau_sponge: float = 1.0     # relaxation time reached at the outlet
+    u_max: float | None = None  # velocity limiter (lattice units): faster cells relax towards u_max (off by default)
     dtype: torch.dtype = torch.float32
 
     @property
@@ -170,9 +171,17 @@ class LBMSolver:
         u = torch.einsum("id,bixyz->bdxyz", self.c, f) / rho.unsqueeze(1)
         return rho, u
 
+    def limit(self, u: torch.Tensor) -> torch.Tensor:
+        """Scale velocities above cfg.u_max down to it. Only for the rare flows that would otherwise leave the
+        lattice's low-Mach range and blow up; below u_max nothing changes."""
+        if not self.cfg.u_max:
+            return u
+        sp = torch.sqrt((u * u).sum(1, keepdim=True))
+        return u * (self.cfg.u_max / sp.clamp(min=self.cfg.u_max))
+
     def collide(self, f: torch.Tensor) -> torch.Tensor:
         rho, u = self.macroscopic(f)
-        feq = self.equilibrium(rho, u)
+        feq = self.equilibrium(rho, self.limit(u))
         fneq = f - feq
         tau0 = self.tau0
         if self.cfg.smagorinsky > 0:
@@ -233,7 +242,7 @@ class LBMSolver:
                 f_in = fs[tuple(si)]                                          # [B, 19, face...]
                 rho = f_in.sum(1)
                 u = torch.einsum("id,bi...->bd...", self.c, f_in) / rho.unsqueeze(1)
-                fs[tuple(sr)] = self.equilibrium(torch.ones_like(rho), u)
+                fs[tuple(sr)] = self.equilibrium(torch.ones_like(rho), self.limit(u))
         return fs
 
     def momentum_exchange(self, fpost: torch.Tensor) -> torch.Tensor:
