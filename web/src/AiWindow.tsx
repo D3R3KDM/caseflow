@@ -18,7 +18,10 @@ const SEEN: Record<Seen, string> = {
   new: 'New layout: the network never trained on it.',
 }
 
-const signed = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : '±'}${Math.abs(v).toFixed(1)}`
+const signed = (v: number) => {
+  const r = Math.round(v * 10) / 10
+  return `${r > 0 ? '+' : r < 0 ? '−' : '±'}${Math.abs(r).toFixed(1)}`
+}
 
 export function ModelCard({ info }: { info: AiInfo | null }) {
   if (!info) return <p className="fine">No trained network found (scripts/train_surrogate.py).</p>
@@ -121,9 +124,9 @@ export function AiAllTab({ space, ranks, codeNow, scenario, fans, setFans, onOpe
         <p className="fine">On screen: #{view.rankNow} of {space.rows.length} · CPU {ranks.cpu[view.iNow].toFixed(1)}, GPU {ranks.gpu[view.iNow].toFixed(1)} °C (AI)
           {codeNow && view.counts[view.iNow] < space.mounts.length && <> · best with {view.counts[view.iNow]} fans: CPU {ranks.cpu[view.best[view.counts[view.iNow]]!].toFixed(1)}, GPU {ranks.gpu[view.best[view.counts[view.iNow]]!].toFixed(1)}</>}</p>
       )}
-      <TrendChart title="Best layout for each number of fans (AI)" xs={xs}
-        series={[{ id: 'cpu', label: 'CPU', color: SERIES.cpu, ys: xs.map((k) => ranks.cpu[view.best[k]!]) },
-          { id: 'gpu', label: 'GPU', color: SERIES.gpu, ys: xs.map((k) => ranks.gpu[view.best[k]!]) }]}
+      <TrendChart title="Best layout per number of fans: °C above the best of all (AI)" xs={xs} rel
+        series={[{ id: 'cpu', label: 'CPU', color: SERIES.cpu, ys: xs.map((k) => ranks.cpu[view.best[k]!] - ranks.cpu[view.order[0]]) },
+          { id: 'gpu', label: 'GPU', color: SERIES.gpu, ys: xs.map((k) => ranks.gpu[view.best[k]!] - ranks.gpu[view.order[0]]) }]}
         xFmt={(x) => `${x}`} xUnit="fans" now={view.iNow >= 0 ? view.counts[view.iNow] : -1} />
       <p className="fine">Ranked in your browser in {Math.round(ranks.ms)} ms. Open a layout to see the AI's 3D fields at once and have the simulation check them (~1.5 min).</p>
     </div>
