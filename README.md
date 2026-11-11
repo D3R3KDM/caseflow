@@ -159,7 +159,7 @@ A simulation takes about 90 s. The 8 fan mounts, each off / in / out, give 3⁸ 
 | **Training** | Squared error on the air in the case, plus the rises at the CPU and GPU intakes (they set the part temperatures). AdamW, one-cycle, bf16, 300 epochs, 35 min on an RTX 5080. `scripts/train_surrogate.py` |
 | **Test** | 16 held-out layouts × 6 scenarios: mean error **CPU 0.44 °C, GPU 0.28 °C** (worst 2.5 / 1.3 °C, on layouts unlike most training layouts, e.g. no front fans). Guessing the training layouts' average gives 1.04 / 0.74 °C. Air speed RMSE 0.20 m/s; intake rise within 10 %. On its 134 training layouts (the 32 searched ones among them) it matches the simulation to 0.01 °C: it has seen them, so they test nothing. |
 | **In the app** | Every layout appears as the AI's prediction (AI tags, a header chip). **Simulation** in the header slides the case left and scans the simulated case in on the right: a cached simulation in a few seconds, a new one following the run (~90 s). Cards between the two show both temperatures and the difference; a fan change ends the comparison while the simulation finishes in the background. A caption under AI PREDICTION says whether the network was trained on the layout, is seeing a held-out test layout, or a new one. The **AI** window compares the numbers and ranks all 6561 predicted layouts (`scripts/ai_space.py`, ~7 min) for the scenario on screen; its **held-out** filter lists the 16 test layouts, whose simulations are cached, so their real error shows in seconds (e.g. `00011021`: CPU 67.1 °C predicted, 68.0 °C simulated). Builds unlike the training data (other parts or fan models) get no prediction and show the simulation. |
-| **Dust** | The network predicts no dust. With the Dust layer on, the simulation's own particle tracking (the same 40 000 particles and seed) runs in the network's airflow (`/api/ai/dust`, ~8 s on the GPU, cached). On the 16 held-out layouts × 3 fan speeds, the share of incoming dust that settles is within 1.9 points on average, the surface that gets the most matches in 47 of 48, and the dust rate in the CPU-heavy game is within 5 % (rank correlation 0.94). `scripts/ai_dust_check.py` |
+| **Dust** | The network predicts no dust. With the Dust layer on, the 3D view runs the engine's dust particles live in the air each case shows (`web/src/dust.ts`, a step-by-step port of `simulate_dust`; `tests/test_dust_web.py` checks it against the engine): dust comes in, drifts and piles up, in slow motion. For the numbers, the simulation's own particle tracking (the same 40 000 particles and seed) runs in the network's airflow (`/api/ai/dust`, ~8 s on the GPU, cached). On the 16 held-out layouts × 3 fan speeds, the share of incoming dust that settles is within 1.9 points on average, the surface that gets the most matches in 47 of 48, and the dust rate in the CPU-heavy game is within 5 % (rank correlation 0.94). `scripts/ai_dust_check.py` |
 
 ![A held-out layout: the network's case and the simulated one side by side](docs/screens/caseflow_compare.png)
 
@@ -207,8 +207,8 @@ scripts/          precompute.py (offline data), scenario_table.py, validate_bank
                   gen_surrogate_data.py, train_surrogate.py, ai_space.py, ai_check.py, ai_dust_check.py (neural surrogate)
 data/             parts library, search result (optimize.json), validation.json; banks/ (cache, not in git);
                   surrogate/ (dataset, trained network, training history, test scores, AI and AI-dust checks)
-web/              Vite + React + three.js app; src/scenario.ts is the browser's solver, src/AiWindow.tsx the AI window
-tests/            engine, bank, scenario and surrogate checks
+web/              Vite + React + three.js app; src/scenario.ts is the browser's solver, src/dust.ts the live dust, src/AiWindow.tsx the AI window
+tests/            engine, bank, scenario and surrogate checks; the browser's dust against the engine's
 docs/             guide, figures, screenshots, video
 ```
 
@@ -218,7 +218,7 @@ The 3D case sits among floating screens, each wired to its part by a thin leader
 
 - **CPU** and **GPU**: temperature gauge, intake air rise, power (and throttling), fan rpm ("off" when the GPU fans idle).
 - **Airflow**: in / out CFM, case pressure, and every fan's flow and speed.
-- **Dust**: how fast outside dust settles, relative to your layout, and where it lands.
+- **Dust** (with the Dust layer): how fast outside dust settles, relative to your layout, and where it lands. In 3D the dust comes in through the openings, drifts with the air and piles up where it touches, as a slow-motion time-lapse: the same particles as the engine, in the air the case shows.
 - **Layout search** and **Verdict**: the 32 layouts ranked for the current scenario, and your layout against the best.
 - **AI Prediction / Simulation** (header): what you see is the network's prediction; Simulation shows the simulated case beside it, with cards comparing the two between them (Back or Esc returns).
 
