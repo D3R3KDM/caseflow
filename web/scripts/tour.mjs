@@ -77,8 +77,8 @@ await wait(1600)
 // ---------- AI: the network answers at once, the simulation then checks it (its wait shown as a time-lapse) ----------
 await dock('AI'); await wait(2400)                                                      // your layout: AI against physics
 await page.locator('.ai-src button', { hasText: 'AI' }).click(); await wait(2600)       // the 3D view shows the network's airflow
-await page.locator('.ai-src button', { hasText: 'Physics' }).click(); await wait(1400)
-await page.locator('.tabs3 button', { hasText: 'layouts' }).click(); await wait(4200)   // all 6561 layouts, ranked for this scenario
+await page.locator('.ai-src button', { hasText: 'Simulation' }).click(); await wait(1400)
+await page.locator('.tabs3 button', { hasText: /^All/ }).click(); await wait(4200)       // all 6561 layouts, ranked for this scenario
 {
   const t = await box(page.locator('.ai-all .tr-plot svg').first())
   for (let i = 0; i <= 16; i++) { await page.mouse.move(t.x + 40 + (i / 16) * (t.width - 110), t.y + t.height / 2); await wait(80) }
@@ -86,8 +86,10 @@ await page.locator('.tabs3 button', { hasText: 'layouts' }).click(); await wait(
 }
 await page.locator('.tabs3 button', { hasText: 'This layout' }).click(); await wait(600)
 await dock('Configure'); await wait(1000)
-await page.locator('.mt', { hasText: 'top-mid' }).locator('.seg3 button', { hasText: 'off' }).click()   // a layout never simulated
+await page.locator('.mt').filter({ has: page.locator('.mt-n', { hasText: /^top-rear$/ }) }).locator('.seg3 button', { hasText: 'off' }).click()   // a layout never simulated
 await wait(3000)                                                                        // the network's answer, at once
+await page.locator('.status .verify').click()                                            // check it with the simulation
+await wait(400)
 const SPEED = 10
 const lapse = [frames.length]
 await page.evaluate((k) => {
@@ -98,7 +100,7 @@ await page.evaluate((k) => {
     letterSpacing: '0.1em', color: '#c3b2ff', border: '1px solid rgba(195,178,255,.6)', background: 'rgba(7,12,19,.75)' })
   document.body.appendChild(d)
 }, SPEED)
-await page.locator('.toast', { hasText: 'SIMULATING' }).waitFor({ state: 'detached', timeout: 300000 })
+await page.locator('.status .sim-now').waitFor({ state: 'detached', timeout: 300000 })
 lapse.push(frames.length)
 await page.evaluate(() => document.getElementById('lapse')?.remove())
 await wait(3500)                                                                        // physics in place, the difference in the window
