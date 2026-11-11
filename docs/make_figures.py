@@ -418,7 +418,7 @@ def fig_dust():
 
 
 # ----------------------------------------------------------------------------- 10. annotated interface
-UI_MARKS = [(1, 374, 88), (2, 392, 168), (3, 402, 520), (4, 1004, 152), (5, 1006, 516), (6, 1284, 330), (7, 556, 28), (8, 200, 860), (9, 742, 380), (10, 104, 402)]
+UI_MARKS = [(1, 374, 88), (2, 392, 168), (3, 402, 520), (4, 1004, 152), (5, 1006, 516), (6, 1284, 330), (7, 584, 28), (8, 266, 862), (9, 742, 380), (10, 104, 402)]
 
 
 def fig_ui():
@@ -428,8 +428,8 @@ def fig_ui():
     dr = ImageDraw.Draw(im, "RGBA")
     font = ImageFont.truetype(matplotlib.font_manager.findfont("DejaVu Sans:bold"), 17)
     for k, x, y in UI_MARKS:
-        dr.ellipse([x - 15, y - 15, x + 15, y + 15], fill=(31, 159, 208, 235), outline=(232, 246, 255, 255), width=2)
-        dr.text((x, y), str(k), font=font, fill=(5, 8, 12, 255), anchor="mm")
+        dr.ellipse([x - 15, y - 15, x + 15, y + 15], fill=(236, 236, 236, 245), outline=(22, 22, 22, 255), width=2)
+        dr.text((x, y), str(k), font=font, fill=(20, 20, 20, 255), anchor="mm")
     im.save(OUT / "ui_tour.png")
     print("wrote ui_tour.png")
 

@@ -208,7 +208,7 @@ docs/             guide, figures, screenshots, video
 
 ## Interface
 
-The 3D case sits in the middle of six floating holographic screens, each wired to its part by a glowing leader line. Drag a screen by its title to move it (the place is remembered); double-click the title to put it back, or ⟲ in the dock for all of them:
+The 3D case sits in the middle of six floating screens, each wired to its part by a thin leader line. The look follows the [Data to Discovery](https://datavis.caltech.edu/projects) projects (ArtCenter / JPL / Caltech): neutral charcoal, flat panels and hairlines, colour only on the data - teal air in, copper air out, a heat ramp that brightens with temperature, violet for the AI. Drag a screen by its title to move it (the place is remembered); double-click the title to put it back, or ⟲ in the dock for all of them:
 
 - **CPU** and **GPU**: temperature gauge, intake air rise, power (and throttling), fan rpm ("off" when the GPU fans idle).
 - **Airflow**: in / out CFM, case pressure, and every fan's flow and speed.
