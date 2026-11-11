@@ -12,6 +12,7 @@ reference: the app shows the network's answer at once and the simulation's, with
 """
 from __future__ import annotations
 
+import contextlib
 import itertools
 import time
 from pathlib import Path
@@ -195,3 +196,22 @@ class Surrogate:
                    "source": "ai", "seen": seen, "seconds": time.time() - t0, "geometry": bk.geometry(models[0]),
                    "model": {k: self.info.get(k) for k in ("name", "params", "config", "trained", "test", "baseline")}}
         return {"summary": summary, "fields": fields}
+
+    def dust(self, build: dict, lock=None, n: int = 40000) -> dict:
+        """Dust in the network's airflow: the simulation's own particle tracking (engine/sim.simulate_dust, the same
+        particles, size and seed) run in the predicted air velocity of every level, a few seconds on the GPU. So the
+        dust differs from the simulation's only through the airflow. lock guards the network (not the tracking)."""
+        from engine import bank as bk
+        from engine.sim import deposit_points, dust_by_part, simulate_dust
+        t0 = time.time()
+        lib = load_library()
+        lv = list(bk.LEVELS) if bk.curve_fans(build) else [None]
+        models = [build_model(build, lib, case_duty=d) for d in lv]
+        with lock or contextlib.nullcontext():
+            flows = self.fields(models)
+        levels = []
+        for m, (u, _, _) in zip(models, flows):
+            d = simulate_dust(u, m, n=n)
+            levels.append({"dust": None if not d else {k: v for k, v in d.items() if k != "dep"} | {"by_part": dust_by_part(d["dep"], m)},
+                           "dust_points": deposit_points(d["dep"], m) if d else []})
+        return {"key": bk.bank_key(build), "levels": levels, "seconds": time.time() - t0}

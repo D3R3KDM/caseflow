@@ -8,6 +8,7 @@ Run from the caseflow folder:
 """
 from __future__ import annotations
 
+import json
 import sys
 import threading
 import traceback
@@ -20,6 +21,7 @@ if str(ROOT) not in sys.path:
 
 from fastapi import FastAPI, HTTPException  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from fastapi.responses import Response  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
 from engine import bank, sim, surrogate  # noqa: E402
@@ -32,6 +34,11 @@ _lock = threading.Lock()          # one GPU simulation at a time
 MAX_JOBS = 24                     # finished jobs kept for polling (each holds a ~6 MB bank package)
 _ai: surrogate.Surrogate | None = None
 _ai_lock = threading.Lock()
+
+
+def _json(obj) -> Response:
+    """Plain json.dumps: FastAPI's own encoder walks every number of the dust point lists and takes seconds."""
+    return Response(json.dumps(obj, separators=(",", ":")), media_type="application/json")
 
 
 @app.get("/api/health")
@@ -99,7 +106,7 @@ def ai_info() -> dict:
 
 
 @app.post("/api/ai")
-def ai_bank(q: SimQuery) -> dict:
+def ai_bank(q: SimQuery) -> Response:
     """The neural surrogate's bank for a build, in the format of /api/bank, in well under a second. The app shows it
     at once and replaces it with the simulation's when that finishes. 422 for builds unlike the training data."""
     why = surrogate.out_of_domain(q.build)
@@ -108,11 +115,32 @@ def ai_bank(q: SimQuery) -> dict:
     net = _surrogate()
     with _ai_lock:
         b = net.predict(q.build)
-    return bank.package(b)
+    # whether the simulation of this build is cached: comparing then takes seconds instead of about 90 s
+    return _json(bank.package(b) | {"simulated": (bank.CACHE / f"{bank.bank_key(q.build)}.json").exists()})
+
+
+_ai_dust: dict[str, dict] = {}
+MAX_AI_DUST = 48
+
+
+@app.post("/api/ai/dust")
+def ai_dust(q: SimQuery) -> Response:
+    """Dust in the network's airflow (the simulation's particle tracking in the predicted air velocity of every level),
+    a few seconds on the GPU; kept per build. The web asks for it only when the dust is shown."""
+    why = surrogate.out_of_domain(q.build)
+    if why:
+        raise HTTPException(422, why)
+    key = bank.bank_key(q.build)
+    if key not in _ai_dust:
+        net = _surrogate()
+        _ai_dust[key] = net.dust(q.build, lock=_ai_lock)
+        while len(_ai_dust) > MAX_AI_DUST:
+            del _ai_dust[next(iter(_ai_dust))]
+    return _json(_ai_dust[key])
 
 
 @app.get("/api/job/{jid}")
-def job(jid: str) -> dict:
+def job(jid: str) -> Response:
     if jid not in _jobs:
         raise HTTPException(404, "no such job")
-    return _jobs[jid]
+    return _json(_jobs[jid])
