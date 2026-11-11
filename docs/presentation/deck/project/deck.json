@@ -1,0 +1,22 @@
+{
+  "v": 4,
+  "createdOnFiles": { "v": 1, "at": "2026-11-11T22:30:00Z" },
+  "lists": "css",
+  "title": "CaseFlow · A02 Presentation",
+  "cover": "cover",
+  "order": ["cover", "intro", "problem", "app", "compare", "system", "simulate", "solve", "network", "training", "accuracy", "learning", "search", "verdict", "ai", "end", "solver", "engineering"],
+  "sections": {
+    "s0": { "description": "Introduction: background, what I built, and the plan of the talk", "start": "cover" },
+    "s1": { "description": "Part 1 · The problem: eight fan mounts, 6,561 layouts", "start": "problem" },
+    "s2": { "description": "Part 2 · The app: the AI’s answer in 3D, checked by the simulation", "start": "app" },
+    "s3": { "description": "Part 3 · How it works: system, simulation, solver, network, training", "start": "system" },
+    "s4": { "description": "Part 4 · Results: accuracy, more data, all 6,561 layouts, my PC", "start": "accuracy" },
+    "s5": { "description": "Part 5 · Process: where AI was used, and takeaways", "start": "ai" },
+    "s6": { "description": "Backup slides for questions", "start": "solver" }
+  },
+  "faces": {
+    "ibm-plex-sans": { "family": "IBM Plex Sans", "href": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" },
+    "ibm-plex-mono": { "family": "IBM Plex Mono", "href": "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" }
+  },
+  "designSystems": []
+}

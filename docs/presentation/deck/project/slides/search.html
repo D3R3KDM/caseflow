@@ -1,0 +1,41 @@
+<section id="search" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="position:absolute;left:64px;top:64px;width:28px;height:28px;border-left:2px solid #131517;border-top:2px solid #131517"></div>
+<div style="position:absolute;right:64px;top:64px;width:28px;height:28px;border-right:2px solid #131517;border-top:2px solid #131517"></div>
+<div style="position:absolute;left:64px;bottom:64px;width:28px;height:28px;border-left:2px solid #131517;border-bottom:2px solid #131517"></div>
+<div style="position:absolute;right:64px;bottom:64px;width:28px;height:28px;border-right:2px solid #131517;border-bottom:2px solid #131517"></div>
+<div style="display:flex;flex-direction:column;gap:12px;padding:0 0 24px;border-bottom:1px solid #C9CEC4">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">Part 4 · Results · All 6,561 layouts</p>
+<h2 style="font-size:56px;font-weight:600;line-height:1.1;letter-spacing:-1px">A week of simulation in 4.5 minutes</h2>
+</div>
+<div style="display:flex;flex-direction:row;gap:56px;align-items:start">
+<div style="width:1080px;display:flex;flex-direction:column;gap:20px">
+<img src="/_blob/18a23a9a7b0fa7a8708050cca4d06904" alt="Left: all 6,561 layouts as predicted, CPU against GPU temperature in the CPU-heavy game at 23 °C, about 5 °C apart from best to worst, my layout in the middle. Right: the best layout for each number of case fans, above the best of all: no fans +2.9 / +2.2 °C, four fans reach the best, eight fans +0.6 °C" style="width:1080px;height:492px;object-fit:contain;border:1px solid #D2D6CE">
+<p style="font-size:26px;line-height:1.4;color:#464B50">Right: four well-placed fans already reach the best; more do not help.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">CPU / GPU °C, RE-SIMULATED</p>
+<div style="display:flex;flex-direction:column;gap:4px;padding:0 0 18px;border-bottom:1px solid #C9CEC4">
+<p style="font-size:56px;font-weight:600;line-height:1.1;color:#6E3CE6">64.6 / 48.2</p>
+<p style="font-size:26px;line-height:1.4;color:#464B50">its best: front fans out, top-front out, top-mid in</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px;padding:0 0 18px;border-bottom:1px solid #C9CEC4">
+<p style="font-size:56px;font-weight:600;line-height:1.1">65.6 / 49.7</p>
+<p style="font-size:26px;line-height:1.4;color:#464B50">my layout (65.4 / 49.1: best of the 32-layout search)</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<p style="font-size:56px;font-weight:600;line-height:1.1">≤ 0.5 °C</p>
+<p style="font-size:26px;line-height:1.4;color:#464B50">off: every pick of the network, checked by simulation</p>
+</div>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1300px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">CPU-heavy game · 23 °C room · scripts/ai_space.py, scripts/ai_check.py</p>
+<p style="position:absolute;right:128px;bottom:64px;width:300px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">13 / 16</p>
+<div style="position:absolute;right:128px;top:128px;width:224px;height:34px;display:flex;flex-direction:row;gap:6px">
+<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">1</p>
+<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">2</p>
+<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">3</p>
+<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;background:#131517;color:#EEF0EB;border:1px solid #131517">4</p>
+<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">5</p>
+</div>
+<aside>Now the payoff. The network predicted all 6,561 layouts in four and a half minutes, instead of a week. Its best layout pulls air out through the front and blows it in from the top. I re-simulated its picks: all within half a degree. It also shows that four well-placed fans already reach the best; more fans do not help.</aside>
+</section>

@@ -1,0 +1,37 @@
+<section id="problem" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="position:absolute;left:64px;top:64px;width:28px;height:28px;border-left:2px solid #131517;border-top:2px solid #131517"></div>
+<div style="position:absolute;right:64px;top:64px;width:28px;height:28px;border-right:2px solid #131517;border-top:2px solid #131517"></div>
+<div style="position:absolute;left:64px;bottom:64px;width:28px;height:28px;border-left:2px solid #131517;border-bottom:2px solid #131517"></div>
+<div style="position:absolute;right:64px;bottom:64px;width:28px;height:28px;border-right:2px solid #131517;border-bottom:2px solid #131517"></div>
+<div style="display:flex;flex-direction:column;gap:12px;padding:0 0 24px;border-bottom:1px solid #C9CEC4">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">Part 1 · The problem · Where should the fans go?</p>
+<h2 style="font-size:56px;font-weight:600;line-height:1.1;letter-spacing:-1px">Eight fan mounts, 6,561 layouts</h2>
+</div>
+<div style="display:flex;flex-direction:row;gap:64px;align-items:start">
+<img src="/_blob/64dad92c1ef33033865f8c6793869193" alt="What the simulator sees: one slice of my case as a grid of 6 mm cells, with air, solid parts, the CPU and GPU fin stacks as heat zones, case fans blowing in (blue) and out (orange), and openings to the room" style="width:690px;height:574px;object-fit:contain;border:1px solid #D2D6CE">
+<div style="flex:1;display:flex;flex-direction:column;gap:28px">
+<div style="display:flex;flex-direction:column;gap:4px;padding:0 0 20px;border-bottom:1px solid #C9CEC4">
+<p style="font-size:56px;font-weight:600;line-height:1.1">6,561</p>
+<p style="font-size:26px;line-height:1.4;color:#464B50">layouts: each of the 8 mounts can be empty, blow in or blow out (3⁸)</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px;padding:0 0 20px;border-bottom:1px solid #C9CEC4">
+<p style="font-size:56px;font-weight:600;line-height:1.1">90 s</p>
+<p style="font-size:26px;line-height:1.4;color:#464B50">to simulate one layout on my RTX 5080</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<p style="font-size:56px;font-weight:600;line-height:1.1;color:#6E3CE6">≈ 7 days</p>
+<p style="font-size:26px;line-height:1.4;color:#464B50">to simulate them all, for one room, one load and one set of fan curves</p>
+</div>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1300px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">The question: can AI make this search interactive?</p>
+<p style="position:absolute;right:128px;bottom:64px;width:300px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">03 / 16</p>
+<div style="position:absolute;right:128px;top:128px;width:224px;height:34px;display:flex;flex-direction:row;gap:6px">
+<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;background:#131517;color:#EEF0EB;border:1px solid #131517">1</p>
+<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">2</p>
+<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">3</p>
+<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">4</p>
+<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">5</p>
+</div>
+<aside>Part one is the problem. Each of the eight mounts can be empty, blow in, or blow out. That is three to the eighth: 6,561 layouts. One simulation of one layout takes 90 seconds on my RTX 5080, so all of them would take about a week, and that is for one room temperature, one load and one set of fan curves. So the question is: can AI make this search fast enough to be interactive?</aside>
+</section>
