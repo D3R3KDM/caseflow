@@ -1,0 +1,1066 @@
+<title>CaseFlow 从零看懂</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column (about 70 characters) inside a 1120px wrap; the five labs break out to the wrap's full
+   width as bordered panels. Light = the slides' paper and ink; dark = the CaseFlow app's charcoal. Data colors only:
+   teal = air in, copper = air out, violet = the neural network, ochre = dust. */
+:root {
+  --bg: #EEF0EB; --surface: #FAFBF8; --sunk: #E2E5DF; --ink: #131517; --ink2: #464B50; --ink3: #696F75; --line: #D2D6CE;
+  --ai: #6E3CE6; --in: #1B8384; --out: #B5591F; --dust: #9A6E28; --solid: #A6ABA5; --air: #F5F6F2; --hot: #D9773A;
+  --cpu: #2F74C9; --gpu: #C9531F;
+  --font: 'IBM Plex Sans', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Consolas, 'Microsoft YaHei', monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161616; --surface: #1E1E1E; --sunk: #111111; --ink: #ECECEC; --ink2: #BDC1BB; --ink3: #8E9398; --line: #303235;
+    --ai: #9A96F2; --in: #2FA8A9; --out: #D9773A; --dust: #C49A5A; --solid: #484C50; --air: #1B1C1D; --hot: #E39552;
+    --cpu: #5B9BEF; --gpu: #E2743F; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161616; --surface: #1E1E1E; --sunk: #111111; --ink: #ECECEC; --ink2: #BDC1BB; --ink3: #8E9398; --line: #303235;
+  --ai: #9A96F2; --in: #2FA8A9; --out: #D9773A; --dust: #C49A5A; --solid: #484C50; --air: #1B1C1D; --hot: #E39552;
+  --cpu: #5B9BEF; --gpu: #E2743F; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font: 16px/1.75 var(--font); -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 96px; display: flex; flex-direction: column; gap: 72px; }
+.prose { max-width: 70ch; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.prose p, .prose li { color: var(--ink2); }
+.prose b, .prose strong { color: var(--ink); font-weight: 600; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 6px; }
+p { margin: 0; }
+h1, h2, h3 { margin: 0; color: var(--ink); text-wrap: balance; line-height: 1.25; }
+h1 { font-size: clamp(34px, 6vw, 56px); font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: clamp(24px, 3.4vw, 32px); font-weight: 600; letter-spacing: -0.01em; }
+h3 { font-size: 19px; font-weight: 600; }
+.eyebrow { font: 500 13px/1.4 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ai); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+code { font-family: var(--mono); font-size: 0.9em; background: var(--sunk); padding: 1px 6px; border-radius: 4px; color: var(--ink); }
+a { color: var(--ai); }
+section { display: flex; flex-direction: column; gap: 22px; scroll-margin-top: 24px; }
+.sec-head { display: flex; flex-direction: column; gap: 8px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+
+/* hero */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 40px; align-items: center; }
+.hero .lead { font-size: 18px; color: var(--ink2); max-width: 46ch; }
+.hero-text { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.shot { width: 100%; border: 1px solid var(--line); border-radius: 6px; display: block; background: #161616; }
+.facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.fact { padding: 16px 18px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fact + .fact { border-left: 1px solid var(--line); }
+.fact b { font: 600 26px/1.2 var(--font); font-variant-numeric: tabular-nums; color: var(--ink); }
+.fact span { font-size: 14px; color: var(--ink3); }
+.fact.ai b { color: var(--ai); }
+.toc { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0; border-top: 1px solid var(--line); }
+.toc a { display: flex; gap: 12px; align-items: baseline; padding: 10px 4px; border-bottom: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+.toc a:hover { color: var(--ai); }
+.toc a span { font: 500 13px var(--mono); color: var(--ink3); }
+
+/* labs */
+.lab { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.lab-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; }
+.lab-head .tag { font: 500 12px var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ai); }
+.lab-head h3 { flex: 1 1 260px; }
+.lab-note { font-size: 14px; color: var(--ink3); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { font: 500 14px var(--font); color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+.btn:hover { border-color: var(--ink3); }
+.btn.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn:focus-visible, [tabindex]:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--ai); outline-offset: 2px; }
+.ctl { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ctl label { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--ink2); }
+.ctl label output { font: 500 14px var(--mono); color: var(--ink); }
+input[type=range] { width: 100%; accent-color: var(--ai); }
+select { font: 14px var(--font); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.readout { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; align-items: baseline; }
+.readout dt { font: 500 12px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink3); }
+.readout dd { margin: 0; color: var(--ink); }
+.big { font: 600 30px/1.15 var(--font); font-variant-numeric: tabular-nums; }
+.pill { display: inline-block; font: 500 13px var(--font); padding: 2px 10px; border-radius: 999px; border: 1px solid currentColor; }
+.pill.train { color: var(--ink3); }
+.pill.test, .pill.new { color: var(--ai); }
+.diff-ok { color: var(--in); } .diff-meh { color: var(--ink); } .diff-bad { color: var(--out); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink3); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+canvas { display: block; width: 100%; height: auto; border-radius: 6px; background: var(--air); touch-action: none; }
+svg text { font-family: var(--mono); }
+.svgbox { width: 100%; overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; min-width: 300px; }
+.code8 { display: flex; gap: 4px; flex-wrap: wrap; }
+.code8 span { display: flex; flex-direction: column; align-items: center; min-width: 46px; padding: 4px 2px; border: 1px solid var(--line); border-radius: 6px; font: 600 18px var(--mono); }
+.code8 small { font: 11px var(--font); color: var(--ink3); white-space: nowrap; }
+.code8 .d1 { color: var(--in); border-color: var(--in); } .code8 .d2 { color: var(--out); border-color: var(--out); } .code8 .d0 { color: var(--ink3); }
+figure { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+figcaption { font-size: 14px; color: var(--ink3); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 12px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink3); }
+td { color: var(--ink2); }
+td b { color: var(--ink); }
+.tablebox { overflow-x: auto; }
+.callout { border-left: 3px solid var(--ai); padding: 4px 0 4px 16px; color: var(--ink2); }
+[hidden] { display: none !important; }
+.fig-narrow { max-width: 760px; }
+@media (max-width: 600px) { #bench-svg text { font-size: 18px; } }
+details { border-bottom: 1px solid var(--line); padding: 10px 0; }
+details summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+details p { margin-top: 8px; color: var(--ink2); }
+.stage-title { font: 600 18px var(--font); }
+footer { color: var(--ink3); font-size: 14px; border-top: 1px solid var(--line); padding-top: 16px; }
+@media (max-width: 860px) {
+  .hero, .grid2 { grid-template-columns: minmax(0, 1fr); }
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fact:nth-child(3) { border-left: none; }
+  .fact:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .lab { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="hero-text">
+    <p class="eyebrow">CSE 3201 · Assignment 02 · 讲解</p>
+    <h1>CaseFlow 从零看懂</h1>
+    <p class="lead">这个项目把我自己的电脑机箱变成一个虚拟风洞：算出风怎么走、热量去哪、灰落在哪；再训练一个三维神经网络，0.1 秒就能预测一种风扇装法的结果。下面从最基础的讲起，每一步都有可以动手试的小实验。</p>
+  </div>
+  <img class="shot" src="img/caseflow_main.png" alt="CaseFlow 网页：机箱的 3D 模型和气流粒子，左边是场景窗口，周围的信息屏用细线连到 CPU、显卡和风扇">
+</header>
+
+<div class="facts" role="list">
+  <div class="fact" role="listitem"><b>6,561</b><span>种风扇装法（8 个位置 × 3 种状态）</span></div>
+  <div class="fact" role="listitem"><b>90 秒</b><span>模拟一种装法（RTX 5080）</span></div>
+  <div class="fact ai" role="listitem"><b>0.1 秒</b><span>神经网络预测一种装法</span></div>
+  <div class="fact ai" role="listitem"><b>0.44 °C</b><span>在没见过的装法上的平均误差（CPU）</span></div>
+</div>
+
+<nav class="toc" aria-label="目录">
+  <a href="#basics"><span>1</span>电脑为什么要风扇</a>
+  <a href="#bench"><span>2</span>装法实验台</a>
+  <a href="#tunnel"><span>3</span>模拟：2D 风洞</a>
+  <a href="#steady"><span>4</span>风扇和温度的“稳态”</a>
+  <a href="#unet"><span>5</span>3D U-Net 逐层看</a>
+  <a href="#exam"><span>6</span>训练、考试和“背题”</a>
+  <a href="#results"><span>7</span>结论：我的电脑怎么装</a>
+  <a href="#app"><span>8</span>网页上每个按钮</a>
+  <a href="#limits"><span>9</span>可信度、局限和术语</a>
+</nav>
+
+<!-- 1 -->
+<section id="basics">
+  <div class="sec-head"><p class="eyebrow">1 · 基础</p><h2>电脑为什么要风扇</h2></div>
+  <div class="prose">
+    <p><b>电脑用的电，最后几乎全部变成热。</b>我的 CPU（锐龙 7 9700X）满载约 88 W，显卡（RTX 5080）最多 360 W，加起来 400 多瓦，相当于一个小电暖器装在盒子里。</p>
+    <p><b>热要一路被带出去：</b>芯片 → 散热器的金属鳍片 → 流过鳍片的空气 → 机箱外面。散热器上的风扇负责第二步；<b>机箱风扇</b>负责第三步：从外面吸进冷空气（进风），把热空气排出去（出风）。</p>
+    <p><b>同样的风扇，装的位置和方向不同，结果就不同。</b>风可能直接吹到散热器上，也可能绕一圈就从旁边溜走；热空气可能被及时抽走，也可能被吸回散热器。这就是这个项目要回答的问题：<b>我的风扇该怎么装？</b></p>
+    <p>我的机箱是联力 LANCOOL 207，有 8 个风扇位：前面 2 个、底部 2 个、顶部 3 个、后部 1 个。原装 4 个风扇（前面 2 个 140 mm、底部 2 个 120 mm，都进风），我自己又加了 3 个 120 mm（顶中、顶后、后部，都出风）。</p>
+    <p class="callout">CaseFlow 只做<b>模拟</b>：配件、风扇、室温、负载都是设定值，不读这台电脑的任何硬件数据。</p>
+  </div>
+</section>
+
+<!-- 2 -->
+<section id="bench">
+  <div class="sec-head"><p class="eyebrow">2 · 问题</p><h2>8 个位置 × 3 种状态 = 6,561 种装法</h2></div>
+  <div class="prose">
+    <p>每个风扇位可以<b>空着、进风或出风</b>，所以一共 3⁸ = 6,561 种装法。模拟一种要 90 秒，全部模拟要一周左右；而且换一个室温、负载或风扇曲线，答案又会变。所以我训练了一个神经网络，把 6,561 种全部预测了一遍。</p>
+    <p>下面的实验台就是这些预测：<b>点机箱上的风扇位</b>（空 → 进风 → 出风 → 空）换装法，右边马上显示网络的预测、它在 6,561 种里排第几、网络训练时见没见过这种装法，以及引擎模拟过的话，模拟的答案和两者的差。</p>
+  </div>
+  <div class="lab" id="lab-bench">
+    <div class="lab-head"><span class="tag">实验 1</span><h3>装法实验台</h3><span class="lab-note">场景固定为：吃 CPU 的游戏，室温 23 °C</span></div>
+    <div class="grid2">
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+        <div class="svgbox"><svg id="bench-svg" viewBox="0 0 10 10" role="group" aria-label="机箱侧视图：前面在右边，点风扇位切换"></svg></div>
+        <div class="legend"><span><i style="background:var(--in)"></i>进风</span><span><i style="background:var(--out)"></i>出风</span><span><i style="border:1px dashed var(--ink3)"></i>空着</span><span>前面在右边，和桌上的电脑一样</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <div class="row" id="bench-presets"></div>
+        <div class="code8" id="bench-code" aria-label="装法代码"></div>
+        <dl class="readout">
+          <dt>AI 预测</dt><dd><span class="big" id="b-ai">–</span></dd>
+          <dt>排名</dt><dd id="b-rank">–</dd>
+          <dt>网络见过吗</dt><dd id="b-seen">–</dd>
+          <dt>模拟</dt><dd id="b-sim">–</dd>
+          <dt>差值</dt><dd id="b-diff">–</dd>
+        </dl>
+        <figure>
+          <div class="svgbox"><svg id="b-hist" viewBox="0 0 420 130" role="img" aria-label="全部 6,561 种装法的 CPU 加显卡温度分布，竖线是当前装法"></svg></div>
+          <figcaption>全部 6,561 种装法的 CPU + 显卡温度（网络预测，越靠左越凉）。竖线是当前装法。</figcaption>
+        </figure>
+        <p class="lab-note" id="b-note"></p>
+      </div>
+    </div>
+  </div>
+  <div class="prose">
+    <p><b>怎么读：</b>温度写成 CPU / 显卡。排名按 CPU + 显卡温度从低到高（会降频的排到最后）。代码的 8 位依次是：前下、前上、底前、底后、顶前、顶中、顶后、后部；0 = 空，1 = 进风，2 = 出风。我的装法是 <code>11110222</code>。</p>
+    <p><b>试试：</b>点“考试装法”，看网络在一种没见过的装法上差多少；再点“我的装法”，训练过的装法两边几乎完全一样。第 6 节会解释为什么后者不算数。</p>
+  </div>
+</section>
+
+<!-- 3 -->
+<section id="tunnel">
+  <div class="sec-head"><p class="eyebrow">3 · 第一步：模拟</p><h2>格子玻尔兹曼：让风自己“流”出来</h2></div>
+  <div class="prose">
+    <p>模拟的第一步是把机箱切成小格子：<b>80 × 40 × 80 个格子，每个 6 mm</b>。实心的地方（电源、显卡、主板、散热片）、空气、风扇格、机箱外面的房间，各自做上标记。</p>
+    <p>然后用<b>格子玻尔兹曼方法（LBM）</b>算风。它不直接解流体方程，而是让每个格子里有一组“空气粒子”：在三维里是 19 群（D3Q19），每群朝一个方向走。每一步分两半：</p>
+    <ol>
+      <li><b>碰撞</b>：同一个格子里的粒子互相碰撞，往平衡状态靠拢；</li>
+      <li><b>迁移</b>：每群粒子走到它方向上的邻居格子。</li>
+    </ol>
+    <p>墙会把粒子弹回去；风扇格的风速是固定的；机箱外面一圈是敞开的房间。走上几千步，格子里的平均速度就是风速。每个格子的规则都一样、互不等待，所以特别适合在显卡上并行。CaseFlow 的三维版本把 3 个风扇转速放在一批里一起算，再算热量和灰尘，一种装法约 90 秒。</p>
+    <p>下面是同样方法的<b>二维版本</b>（每格 9 群粒子，D2Q9），直接在你的浏览器里跑：一个机箱侧面的切片，风扇<b>跟着上面实验台的装法</b>摆放（在实验台上点风扇位，这里会重新开始）。底色越深风越快，小点是跟着风走的示踪粒子；CPU 散热器和显卡的风扇也在转，散热片让风“慢慢穿过”。土黄色的是灰：从进风的地方进来（底部的防尘网挡住 85%），慢慢下沉，碰到表面就粘住。</p>
+  </div>
+  <div class="lab" id="lab-tunnel">
+    <div class="lab-head"><span class="tag">实验 2</span><h3>2D 风洞（D2Q9 格子玻尔兹曼，实时）</h3><span class="lab-note" id="t-layout">装法：11110222</span></div>
+    <div class="grid2">
+      <canvas id="tunnel-cv" width="768" height="768" aria-label="二维风洞：机箱侧面切片里的风速、示踪粒子和灰尘"></canvas>
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <div class="ctl"><label for="t-speed">机箱风扇转速 <output id="t-speed-o">60%</output></label><input id="t-speed" type="range" min="20" max="100" step="5" value="60"></div>
+        <div class="row">
+          <button class="btn" id="t-play" type="button">暂停</button>
+          <button class="btn on" id="t-dust" type="button" aria-pressed="true">灰尘：开</button>
+          <button class="btn" id="t-reset" type="button">重新开始</button>
+        </div>
+        <dl class="readout">
+          <dt>进来的灰</dt><dd class="mono" id="t-in">0</dd>
+          <dt>落下</dt><dd id="t-dep">–</dd>
+          <dt>落在</dt><dd id="t-where">–</dd>
+        </dl>
+        <div class="legend">
+          <span><i style="background:var(--in)"></i>进风扇</span><span><i style="background:var(--out)"></i>出风扇</span><span><i style="background:var(--ink3)"></i>散热器 / 显卡风扇</span>
+          <span><i style="background:var(--solid)"></i>实心</span><span><i style="background:var(--solid);opacity:.45"></i>散热片</span><span><i style="background:var(--dust)"></i>灰尘</span>
+        </div>
+        <p class="lab-note">教学用的二维简化版：只有一个切面（显卡在这里像一堵墙，三维里风能从两侧绕过），没有热量。CaseFlow 的结果以三维模拟为准。</p>
+      </div>
+    </div>
+  </div>
+  <div class="prose">
+    <p>算完风以后还有两步：<b>热量</b>（每瓦 CPU 或显卡功率让每个格子的空气升温多少，沿着算出来的风“带”出去）和<b>灰尘</b>（从进风口放 4 万颗 20 µm 的颗粒，跟着风走、受重力下沉、被湍流打散，碰到表面就粘住；底部防尘网挡住 85%）。三个结果合起来，就是这种装法的 <b>bank</b>，存进缓存，以后不用再算。</p>
+  </div>
+</section>
+
+<!-- 4 -->
+<section id="steady">
+  <div class="sec-head"><p class="eyebrow">4 · 第二步：稳态</p><h2>风扇跟着温度转，温度又看风扇：找两者吻合的点</h2></div>
+  <div class="prose">
+    <p>热和功率成正比：功率翻倍，空气的升温也翻倍。所以 bank 只存“<b>每瓦</b>升温多少”，任何负载都是乘一下的事。</p>
+    <p>麻烦在风扇：它们跟着<b>风扇曲线</b>转，CPU 越热转得越快；转得越快，散热越好，CPU 又会凉下来。所以要找一个<b>自洽的点</b>：假设 CPU 是某个温度 → 算出风扇转速 → 算出这个转速下 CPU 实际会是多少度。两者相等的那个温度，就是稳态。</p>
+    <p>下图的横轴是“假设的 CPU 温度”，蓝线是“风扇按这个温度转时，CPU 实际会是多少度”，灰色对角线是“两者相等”。<b>交点就是答案。</b>拖一下室温和负载试试。这里跑的就是 CaseFlow 网页里同一套求解，用的是我的装法的真实 bank。</p>
+  </div>
+  <div class="lab" id="lab-steady">
+    <div class="lab-head"><span class="tag">实验 3</span><h3>风扇曲线 ⇄ 温度</h3><span class="lab-note">我的装法 · 模拟的 bank</span></div>
+    <div class="row" id="s-presets"></div>
+    <div class="grid2">
+      <div class="svgbox"><svg id="steady-svg" viewBox="0 0 560 380" role="img" aria-label="假设的 CPU 温度和实际温度，交点是稳态"></svg></div>
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <div class="ctl"><label for="s-room">室温 <output id="s-room-o">23.0 °C</output></label><input id="s-room" type="range" min="10" max="40" step="0.5" value="23"></div>
+        <div class="ctl"><label for="s-cpu">CPU 负载 <output id="s-cpu-o">97%</output></label><input id="s-cpu" type="range" min="0" max="100" step="1" value="97"></div>
+        <div class="ctl"><label for="s-gpu">显卡负载 <output id="s-gpu-o">38%</output></label><input id="s-gpu" type="range" min="0" max="100" step="1" value="38"></div>
+        <dl class="readout">
+          <dt>CPU</dt><dd><span class="big" id="s-tc">–</span></dd>
+          <dt>显卡</dt><dd><span class="big" id="s-tg">–</span></dd>
+          <dt>机箱风扇</dt><dd id="s-dcase">–</dd>
+          <dt>CPU 风扇</dt><dd id="s-dcpu">–</dd>
+          <dt>显卡风扇</dt><dd id="s-dgpu">–</dd>
+        </dl>
+      </div>
+    </div>
+    <p class="lab-note">默认（吃 CPU 的游戏、23 °C）应该得到约 65.6 °C；我的电脑在同样情况下实测 65.3 °C。</p>
+  </div>
+  <div class="prose">
+    <p>浏览器做这件事大约 <b>1 毫秒</b>。为了确认这种“查表 + 求稳态”的近似靠得住，我把求出来的风扇转速放回完整模拟重新算了一遍：差别不超过 <b>0.51 °C</b>。</p>
+  </div>
+</section>
+
+<!-- 5 -->
+<section id="unet">
+  <div class="sec-head"><p class="eyebrow">5 · 第三步：神经网络</p><h2>3D U-Net：一个学会了模拟器的函数</h2></div>
+  <div class="prose">
+    <p>神经网络就是一个有很多可调参数的函数。这个网络有 <b>1,350 万</b>个参数：输入是机箱本身，输出是风和热，0.1 秒算完一种装法。</p>
+    <p><b>输入</b>：每个格子 8 个数：是不是实心、是不是机箱外、是不是风扇格、风扇吹出的风速（3 个方向）、是不是 CPU 散热区、是不是显卡散热区；再加上格子的坐标。<b>输出</b>：每个格子 5 个数：风速（3 个方向），以及每瓦 CPU 热量、每瓦显卡热量让这里升温多少。格式和模拟的 bank 完全一样，所以网页可以直接用。</p>
+    <p><b>为什么是 U-Net：</b>气流是全局的，顶上一个风扇会改变前面的风。网络先把格子缩小 4 次，最底层每个特征都“看得到”整个机箱；再放大回来，同时用<b>跳跃连接</b>把缩小前每一层的细节拼回来，保住 6 mm 的风扇边缘和通风口。下面一步步看：拖动滑块，或者点切片换一个关注点，紫框是这一层<b>一个特征能看到的范围</b>。</p>
+  </div>
+  <div class="lab" id="lab-unet">
+    <div class="lab-head"><span class="tag">实验 4</span><h3>逐层看 U-Net（我的机箱，穿过显卡的切片）</h3><span class="lab-note">点切片换关注点</span></div>
+    <div class="grid2">
+      <canvas id="unet-cv" width="640" height="640" aria-label="机箱切片，按网络的层级合并格子"></canvas>
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+        <div class="ctl"><label for="u-stage">步骤 <output id="u-stage-o">1 / 10</output></label><input id="u-stage" type="range" min="0" max="9" step="1" value="0"></div>
+        <p class="stage-title" id="u-title"></p>
+        <dl class="readout">
+          <dt>格子数</dt><dd class="mono" id="u-shape"></dd>
+          <dt>每个格子</dt><dd id="u-cell"></dd>
+          <dt>能看到</dt><dd id="u-rf"></dd>
+        </dl>
+        <p style="color:var(--ink2)" id="u-text"></p>
+        <div class="legend"><span><i style="background:var(--air);border:1px solid var(--line)"></i>空气</span><span><i style="background:var(--solid)"></i>实心</span><span><i style="background:var(--in)"></i>风扇</span><span><i style="background:var(--hot)"></i>发热区</span><span><i style="background:var(--sunk);border:1px solid var(--line)"></i>机箱外</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section id="exam">
+  <div class="sec-head"><p class="eyebrow">6 · 第四步：训练和考试</p><h2>背题和会做题：只有考试题算数</h2></div>
+  <div class="prose">
+    <p><b>训练数据是模拟器自己算的：</b>150 种装法（32 种搜索的 + 一个风扇都没有的 + 117 种随机抽的），每种 3 个风扇转速，约 4 小时显卡时间。其中 <b>16 种留作考试题</b>（每 7 种随机装法留 1 种），训练时网络从来看不到。</p>
+    <p><b>训练</b>就是反复做这件事：让网络预测一种装法，和模拟比，按差距微调 1,350 万个参数，让下次更接近。差距（损失）算的是每个格子的风和热，再加上两个散热器进风口的空气，因为零件温度主要由它决定。300 轮，35 分钟。</p>
+    <p>关键在这里：<b>训练过的装法，网络几乎是背下来的</b>，和模拟差 0.01 °C 左右，这说明不了它会不会做新题。<b>真正的成绩看考试题。</b>下图每个点是一种装法在一个场景里的误差（网络减模拟），默认把 6 个场景都画上。单独看一个场景：日常使用时误差最小，满载、35 °C 时最大。</p>
+  </div>
+  <div class="lab" id="lab-exam">
+    <div class="lab-head"><span class="tag">实验 5</span><h3>每种装法的误差（网络 − 模拟）</h3></div>
+    <div class="row">
+      <select id="e-scen" aria-label="场景"></select>
+      <button class="btn on" id="e-cpu" type="button">CPU</button>
+      <button class="btn" id="e-gpu" type="button">显卡</button>
+    </div>
+    <div class="svgbox"><svg id="exam-svg" viewBox="0 0 900 300" role="img" aria-label="训练装法和考试装法的误差点图"></svg></div>
+    <p class="lab-note" id="e-stats"></p>
+    <div class="row" id="e-pick" hidden><span id="e-pick-t"></span><button class="btn" id="e-open" type="button">在实验台上看</button></div>
+  </div>
+  <div class="grid2">
+    <div class="prose">
+      <h3>数据越多越准</h3>
+      <p>只用 1/4、1/2 和全部训练装法分别重新训练，考同样的 16 道题：误差一路下降。进风口温升的误差从 20% 降到 16%、再到 10%。训练曲线也说明，考试误差在第 60 轮左右就不再下降了：<b>限制准确度的是装法的数量</b>，不是训练时间。多模拟 100 种大约要 2.5 小时显卡。</p>
+    </div>
+    <div class="svgbox"><svg id="learn-svg" viewBox="0 0 480 300" role="img" aria-label="学习曲线：34、67、134 种训练装法的 CPU 和显卡误差"></svg></div>
+  </div>
+  <figure class="fig-narrow">
+    <img class="shot" src="img/fig_ai_fields.png" alt="一种网络没见过的装法：上面是模拟的风速和温度切片，中间是网络的预测，下面是两者的差值，大多在正负 0.3 米每秒和正负 0.5 度以内">
+    <figcaption>一种网络没见过的装法，穿过显卡的切片：模拟（上）、网络（中）、两者的差（下）。两边的 CPU 只差 0.1 °C（65.8 和 65.9 °C）。</figcaption>
+  </figure>
+</section>
+
+<!-- 7 -->
+<section id="results">
+  <div class="sec-head"><p class="eyebrow">7 · 结果</p><h2>结论：我的电脑该怎么装</h2></div>
+  <div class="grid2">
+    <div class="prose">
+      <p><b>保留现在的装法。</b>在默认场景（吃 CPU 的游戏、23 °C）里，它在 32 种“只动我那 3 个风扇”的装法中排第 4，和第 1 名只差 0.9 °C（CPU + 显卡的总分）。</p>
+      <p><b>可选的小改动：</b>把后部风扇挪到顶部最前面的空位，仍然往外吹（3 个都在顶部出风）。6 个场景里有 5 个排第 1，比现在凉 0.3–1.4 °C；35 °C 满载、风扇都已全速时两者打平。</p>
+      <p><b>千万别把后部风扇改成进风：</b>它正好对着 CPU 散热器排出的热风。带后部进风的 12 种，在所有场景里都是最后 12 名。</p>
+      <p><b>轻负载时怎么装都差不多</b>：日常使用时 32 种只差 1.3 °C。积灰几乎不随装法变（×0.75–1.06），因为只有底部有防尘网；想少积灰，前面板加官方的选配防尘网。</p>
+      <p><b>放到全部 6,561 种里看：</b>我的装法排在中间（第 2,727 名），但 80% 的装法都挤在 3 °C 之内，它离第 1 名也只差 2.5 °C（CPU + 显卡的总分）。4 个风扇就够了，再多也不会更凉。</p>
+      <p><b>网络在全部 6,561 种里找到的最好装法</b>是 <code>22002100</code>：前面两个往外抽、顶前往外抽、顶中往里吹。模拟确认 CPU 64.6 °C、显卡 48.2 °C，比我的装法低 1.0 / 1.5 °C。但它要把原装前置风扇反过来装，而且模型里没有热空气上浮，从顶上往下吹的装法在真机上会吃亏，所以不推荐为了 1 度折腾。</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+      <div class="lab">
+        <div class="lab-head"><span class="tag">对照真机</span><h3>吃 CPU 的游戏 · 23 °C</h3></div>
+        <div class="tablebox"><table>
+          <tr><th></th><th>模型</th><th>实测</th></tr>
+          <tr><td>CPU</td><td><b class="mono">65.6 °C</b></td><td class="mono">65.3 °C</td></tr>
+          <tr><td>显卡</td><td><b class="mono">49.7 °C</b></td><td class="mono">49.3 °C</td></tr>
+          <tr><td>显卡风扇</td><td><b class="mono">31 %</b></td><td class="mono">31 %</td></tr>
+        </table></div>
+        <p class="lab-note">一台电脑、一个点：装法之间的差别比绝对温度更可信。</p>
+      </div>
+      <figure>
+        <img class="shot" src="img/caseflow_compare.png" alt="网页的对比视图：左边是 AI 预测的机箱，右边是模拟的机箱，中间的卡片显示 CPU 67.1 对 68.0 度">
+        <figcaption>网页里点 SIMULATION：左边 AI、右边模拟，中间并排对比（这里是考试装法，差 −0.9 °C）。</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section id="app">
+  <div class="sec-head"><p class="eyebrow">8 · 网页</p><h2>网页上每个按钮是干什么的</h2></div>
+  <figure>
+    <img class="shot" src="img/ui_tour.png" alt="CaseFlow 网页，所有信息屏打开，标着 1 到 11 的编号">
+  </figure>
+  <div class="tablebox"><table>
+    <tr><th>#</th><th>位置</th><th>是什么</th></tr>
+    <tr><td class="mono">1</td><td><b>Scenario 窗口</b></td><td>负载预设（Idle 到 Stress）、室温和两个负载滑块；下面是风扇转速和噪音。</td></tr>
+    <tr><td class="mono">2</td><td><b>CPU 屏</b></td><td>CPU 温度仪表、进风温升、功率、风扇转速；撞到上限会写“降频”。</td></tr>
+    <tr><td class="mono">3</td><td><b>GPU 屏</b></td><td>同上；显卡风扇停转时写 off。</td></tr>
+    <tr><td class="mono">4</td><td><b>AIRFLOW 屏</b></td><td>总进风 / 出风量（CFM）、机箱内压力、每个风扇的风量。</td></tr>
+    <tr><td class="mono">5</td><td><b>DUST 屏</b></td><td>积灰速度（以我的装法为 1）和灰落在哪些面上；打开 Dust 图层才有。</td></tr>
+    <tr><td class="mono">6</td><td><b>VERDICT 屏</b></td><td>我的装法和最好（或最差）装法的对比；dock 里的 Ranking 打开。</td></tr>
+    <tr><td class="mono">7</td><td><b>视图切换</b></td><td>Your layout · Recommended · Lowest CPU · Worst，按当前场景排出来的。</td></tr>
+    <tr><td class="mono">8</td><td><b>底部 dock</b></td><td>图层（Screens、Flow、Lines、Dust、Heat）、温度色标、各个窗口和 ⟲ 复位。</td></tr>
+    <tr><td class="mono">9</td><td><b>引线和锚点</b></td><td>部件上的白色圆环，引线上有小点从部件流向屏幕。</td></tr>
+    <tr><td class="mono">10</td><td><b>LAYOUT SEARCH 屏</b></td><td>32 种装法按当前场景的排名，点一行就切过去；dock 里的 Ranking 打开。</td></tr>
+    <tr><td class="mono">11</td><td><b>AI PREDICTION / SIMULATION</b></td><td>平时看到的是网络的预测；点 SIMULATION，模拟的机箱扫描出来放在右边对比，BACK 或 Esc 回来。</td></tr>
+  </table></div>
+  <div class="prose">
+    <p>另外几个窗口：<b>Curves</b> 拖风扇曲线；<b>Trends</b> 看温度随室温、随负载怎么变；<b>Configure</b> 改配件和每个风扇位；<b>AI</b> 窗口里有网络和模拟的对比表、全部 6,561 种的排名和 held-out 筛选；<b>Method</b> 是一页说明。点 3D 里的风扇可以翻转或关掉，点空位可以加风扇。</p>
+  </div>
+</section>
+
+<!-- 9 -->
+<section id="limits">
+  <div class="sec-head"><p class="eyebrow">9 · 收尾</p><h2>可信度、局限和术语</h2></div>
+  <div class="prose">
+    <p><b>算出来的，靠得住的：</b>求解器在风洞问题上验证过（球体阻力、质量守恒）；带走的热量 = 输入的 99.9%；温度收敛到 0.1 °C 以内；浏览器里的求解和 Python 版本一致到 10⁻⁶，积灰动画和引擎落下的比例差不到 1 个百分点（都有自动测试）。</p>
+    <p><b>估计的：</b>风扇位的具体坐标、开孔率、防尘网效率（85%）、散热器参数（用真机的一组实测拟合）。改变这些，绝对温度会变 2–3 °C，但装法的排名基本不变。只对照过真机的一个点：日常轻负载时，CPU 比真机读数低约 6 °C。</p>
+    <p><b>没有的：</b>热空气上浮；风扇吹出的风是均匀的、不旋转；机箱外的空气永远是设定的室温；只有一套配件。网络只认识这套配件，换了别的就只用模拟。</p>
+  </div>
+  <div style="max-width:70ch">
+    <details><summary>bank</summary><p>一种装法算一次存下来的结果：3 个风扇转速下的风、每瓦升温和积灰。有了它，任何室温、负载、风扇曲线都能即时求出来。</p></details>
+    <details><summary>稳态</summary><p>风扇转速和温度互相吻合的状态：风扇按这个温度转，算出来的温度正好就是这个温度。</p></details>
+    <details><summary>格子玻尔兹曼（LBM）</summary><p>每个格子里有一组朝不同方向走的“粒子”，每一步先碰撞、再走到邻居格子；风速和压强从这些粒子算出来。规则简单，适合显卡并行。</p></details>
+    <details><summary>U-Net</summary><p>一种先缩小、再放大、并把同一层的细节拼回来的卷积网络，形状像字母 U。适合“输入是一张图（这里是三维格子），输出也是一张图”的问题。</p></details>
+    <details><summary>考试装法（held-out）</summary><p>训练时故意留出来、网络从来没见过的 16 种装法。只有在它们上面的误差能说明网络会不会“做新题”。</p></details>
+    <details><summary>CFM、正压</summary><p>CFM 是每分钟多少立方英尺的风。进风比出风多叫正压，空气会从缝隙往外跑；出风多叫负压，空气会从缝隙往里钻（不经过防尘网的灰也会跟着进来）。</p></details>
+  </div>
+</section>
+
+<footer>CaseFlow · CSE 3201 Assignment 02 · Derek · 代码：github.com/D3R3KDM/caseflow · 这一页的数据都来自项目自己的预测和模拟（docs/presentation/make_explainer.py）。</footer>
+</div>
+
+<script>
+const CF = __CF_DATA__;
+(() => {
+  'use strict'
+  const $ = (id) => document.getElementById(id)
+  const NS = 'http://www.w3.org/2000/svg'
+  const el = (tag, attrs = {}, parent) => {
+    const e = document.createElementNS(NS, tag)
+    for (const k in attrs) e.setAttribute(k, attrs[k])
+    if (parent) parent.appendChild(e)
+    return e
+  }
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  // colors come from the theme tokens; read again when the theme changes
+  let T = {}
+  const readTokens = () => {
+    const cs = getComputedStyle(document.documentElement)
+    for (const k of ['bg', 'surface', 'sunk', 'ink', 'ink2', 'ink3', 'line', 'ai', 'in', 'out', 'dust', 'solid', 'air', 'hot', 'cpu', 'gpu']) T[k] = cs.getPropertyValue('--' + k).trim()
+  }
+  readTokens()
+  const onTheme = []
+  const themeChanged = () => { readTokens(); onTheme.forEach((f) => f()) }
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', themeChanged)
+  new MutationObserver(themeChanged).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+  const hexRgb = (h) => { const m = h.replace('#', ''); const n = parseInt(m.length === 3 ? m.split('').map((c) => c + c).join('') : m, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255] }
+  const fmt = (v, d = 1) => v.toFixed(d)
+  // charts are drawn at their on-screen width, so their text stays at its real size on a phone
+  const widthOf = (svgEl, min, max) => Math.round(Math.min(max, Math.max(min, svgEl.parentElement.getBoundingClientRect().width || max)))
+  const signed = (v) => (v > 0.05 ? '+' : v < -0.05 ? '−' : '±') + Math.abs(v).toFixed(1)
+
+  // ------------------------------------------------------------------ 1. layout bench
+  const WHERE = { front_low: '前下', front_high: '前上', bottom_front: '底前', bottom_rear: '底后', top_1: '顶前', top_2: '顶中', top_3: '顶后', rear: '后部' }
+  const MOUNTS = CF.mounts
+  const N = CF.ai_cpu10.length
+  const order = Array.from({ length: N }, (_, i) => i)
+  const thr = new Set(CF.throttled)
+  const score = (i) => (CF.ai_cpu10[i] + CF.ai_gpu10[i]) / 10 + (thr.has(i) ? 1000 : 0)
+  order.sort((a, b) => score(a) - score(b))
+  const rank = new Int32Array(N)
+  order.forEach((i, r) => { rank[i] = r + 1 })
+  const train = new Set(CF.split.train), test = new Set(CF.split.test)
+  // every layout's CPU + GPU temperature, binned by 0.25 degC
+  const SC = Array.from({ length: N }, (_, i) => (CF.ai_cpu10[i] + CF.ai_gpu10[i]) / 10)
+  const H0 = Math.floor(Math.min(...SC)), H1 = Math.ceil(Math.max(...SC)), BW = 0.25
+  const bins = new Array(Math.round((H1 - H0) / BW)).fill(0)
+  SC.forEach((v) => { bins[Math.min(bins.length - 1, Math.floor((v - H0) / BW))]++ })
+  const drawHist = (i) => {
+    const hs = $('b-hist')
+    hs.textContent = ''
+    const W = widthOf(hs, 300, 520), Hh = 130, L = 10, R = 10, Tp = 26, B = 24
+    hs.setAttribute('viewBox', `0 0 ${W} ${Hh}`)
+    const xs = (v) => L + ((v - H0) / (H1 - H0)) * (W - L - R), max = Math.max(...bins)
+    el('line', { x1: L, x2: W - R, y1: Hh - B, y2: Hh - B, stroke: T.line }, hs)
+    bins.forEach((n, k) => {
+      if (!n) return
+      const x = xs(H0 + k * BW), w = Math.max(1, xs(H0 + (k + 1) * BW) - x - 2), h = Math.max(1, (n / max) * (Hh - Tp - B))
+      el('rect', { x, y: Hh - B - h, width: w, height: h, fill: T.ink3, 'fill-opacity': 0.5, rx: 1 }, hs)
+    })
+    for (let v = H0; v <= H1; v += 2) { const t = el('text', { x: xs(v), y: Hh - 6, 'text-anchor': 'middle', 'font-size': 11, fill: T.ink3 }, hs); t.textContent = v }
+    const x = xs(SC[i]), anchor = x > W * 0.8 ? 'end' : x < W * 0.2 ? 'start' : 'middle'
+    el('line', { x1: x, x2: x, y1: Tp - 6, y2: Hh - B, stroke: T.ai, 'stroke-width': 2.5 }, hs)
+    const t = el('text', { x, y: Tp - 11, 'text-anchor': anchor, 'font-size': 12, fill: T.ink }, hs)
+    t.textContent = `${fmt(SC[i])} °C`
+  }
+  const bestCode = order[0].toString(3).padStart(8, '0')
+  let code = CF.home.split('').map(Number)
+  const codeStr = () => code.join('')
+  const svg = $('bench-svg')
+  const { D, H } = CF.case
+  const K = 0.8, PAD = 46
+  const VW = D * K + PAD * 2, VH = H * K + PAD * 2
+  svg.setAttribute('viewBox', `0 0 ${VW} ${VH}`)
+  const sx = (x) => PAD + (D - x) * K, sz = (z) => PAD + (H - z) * K
+  const GROUPS = [['电源', ['psu']], ['显卡', ['gpu', 'gpu_hs', 'gpu_fan']], ['CPU 散热器', ['cpu_hs', 'cpu_fan']]]
+  const drawBench = () => {
+    svg.textContent = ''
+    el('rect', { x: PAD, y: PAD, width: D * K, height: H * K, fill: T.air, stroke: T.ink3, 'stroke-width': 2, rx: 4 }, svg)
+    const lab = (x, y, t, anchor = 'middle', col = T.ink3) => { const e = el('text', { x, y, 'text-anchor': anchor, 'font-size': 13, fill: col }, svg); e.textContent = t }
+    for (const p of CF.parts) {
+      const [x0, x1, , , z0, z1] = p.b
+      const r = { x: sx(x1), y: sz(z1), width: Math.max(2, (x1 - x0) * K), height: Math.max(2, (z1 - z0) * K), rx: 2 }
+      if (p.kind === 'board') el('rect', { ...r, fill: 'none', stroke: T.line, 'stroke-dasharray': '5 4' }, svg)
+      else if (p.kind === 'vent') for (let z = z0 + 6; z < z1; z += 12) el('line', { x1: PAD + 2, x2: PAD + 12, y1: sz(z), y2: sz(z), stroke: T.ink3, 'stroke-width': 2 }, svg)
+      else if (p.kind === 'psu' || p.kind === 'gpu') el('rect', { ...r, fill: T.solid }, svg)
+      else if (p.kind === 'gpu_hs' || p.kind === 'cpu_hs') el('rect', { ...r, fill: T.solid, 'fill-opacity': 0.5 }, svg)
+      else el('rect', { ...r, fill: T.ink3, 'fill-opacity': 0.75 }, svg)
+    }
+    for (const [name, kinds] of GROUPS) {
+      const bs = CF.parts.filter((p) => kinds.includes(p.kind)).map((p) => p.b)
+      if (!bs.length) continue
+      const x0 = Math.min(...bs.map((b) => b[0])), x1 = Math.max(...bs.map((b) => b[1])), z1 = Math.max(...bs.map((b) => b[5])), z0 = Math.min(...bs.map((b) => b[4]))
+      lab(sx((x0 + x1) / 2), name === '电源' ? sz((z0 + z1) / 2) + 5 : sz(z1) - 8, name, 'middle', T.ink)
+    }
+    lab(PAD + 6, VH - 14, '← 后', 'start'); lab(VW - PAD - 6, VH - 14, '前 →', 'end')
+    for (const m of CF.mountsGeo) {
+      const i = MOUNTS.indexOf(m.slot)
+      if (i < 0) continue
+      const st = code[i], s = st ? m.size : m.open, t = 26
+      let x, y, w, h, fx, fy, dx = 0, dy = 0
+      if (m.wall === 'front') { x = sx(t); y = sz(m.b + s / 2); w = t * K; h = s * K; dx = -1; fx = x; fy = y + h / 2 }
+      else if (m.wall === 'rear') { x = sx(D); y = sz(m.b + s / 2); w = t * K; h = s * K; dx = 1; fx = x + w; fy = y + h / 2 }
+      else if (m.wall === 'top') { x = sx(m.a + s / 2); y = sz(H); w = s * K; h = t * K; dy = 1; fx = x + w / 2; fy = y + h }
+      else { x = sx(m.a + s / 2); y = sz(t); w = s * K; h = t * K; dy = -1; fx = x + w / 2; fy = y }
+      const g = el('g', { tabindex: 0, role: 'button', 'aria-label': `${WHERE[m.slot]}：${['空着', '进风', '出风'][st]}，点一下切换`, style: 'cursor:pointer' }, svg)
+      const col = st === 1 ? T.in : st === 2 ? T.out : T.ink3
+      el('rect', { x: x - 14, y: y - 14, width: w + 28, height: h + 28, fill: 'transparent' }, g)
+      el('rect', { x, y, width: w, height: h, rx: 3, fill: st ? col : T.air, 'fill-opacity': st ? 0.9 : 1, stroke: col, 'stroke-width': 2, 'stroke-dasharray': st ? '' : '5 4' }, g)
+      if (st) {
+        // arrow inside the case: an intake points away from its fan, an exhaust points into it
+        const L = 30, a = 5, b = a + L
+        const [p0, p1] = st === 1 ? [a, b] : [b, a]
+        el('line', { x1: fx + dx * p0, y1: fy + dy * p0, x2: fx + dx * p1, y2: fy + dy * p1, stroke: col, 'stroke-width': 3, 'marker-end': `url(#ah${st})` }, g)
+      }
+      const t2 = el('text', { x: x + w / 2 + (m.wall === 'front' ? 22 : m.wall === 'rear' ? -22 : 0), y: y + h / 2 + (m.wall === 'top' ? -22 : m.wall === 'bottom' ? 30 : 4), 'text-anchor': m.wall === 'front' ? 'start' : m.wall === 'rear' ? 'end' : 'middle', 'font-size': 13, fill: T.ink2 }, g)
+      t2.textContent = WHERE[m.slot]
+      const cycle = () => { code[i] = (code[i] + 1) % 3; update() }
+      g.addEventListener('click', cycle)
+      g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cycle() } })
+    }
+    const defs = el('defs', {}, svg)
+    for (const [k, c] of [[1, T.in], [2, T.out]]) {
+      const mk = el('marker', { id: 'ah' + k, viewBox: '0 0 10 10', refX: 8, refY: 5, markerWidth: 5, markerHeight: 5, orient: 'auto' }, defs)
+      el('path', { d: 'M0,0 L10,5 L0,10 z', fill: c }, mk)
+    }
+  }
+  const presets = [['我的装法', CF.home], ['AI 找到的最好', bestCode], ['32 种里最差', '11110111'], ['考试装法', '00011021'], ['一个都不装', '00000000'], ['随机', null]]
+  for (const [name, c] of presets) {
+    const b = document.createElement('button')
+    b.className = 'btn'; b.type = 'button'; b.textContent = name; b.dataset.code = c ?? ''
+    b.addEventListener('click', () => {
+      const s = c ?? Math.floor(Math.random() * N).toString(3).padStart(8, '0')
+      code = s.split('').map(Number); update()
+    })
+    $('bench-presets').appendChild(b)
+  }
+  const update = () => {
+    drawBench()
+    const s = codeStr(), i = parseInt(s, 3)
+    for (const b of $('bench-presets').children) b.classList.toggle('on', b.dataset.code === s)
+    $('bench-code').innerHTML = code.map((d, k) => `<span class="d${d}">${d}<small>${WHERE[MOUNTS[k]]}</small></span>`).join('')
+    const ac = CF.ai_cpu10[i] / 10, ag = CF.ai_gpu10[i] / 10
+    $('b-ai').textContent = `${fmt(ac)} / ${fmt(ag)} °C`
+    $('b-rank').innerHTML = `<b class="mono">#${rank[i].toLocaleString('en-US')}</b> / 6,561 · 比第 1 名高 <span class="mono">${fmt(SC[i] - SC[order[0]])}</span> °C${thr.has(i) ? ' · 会降频' : ''}`
+    drawHist(i)
+    const seen = train.has(s) ? ['train', '训练过（背过的题）'] : test.has(s) ? ['test', '考试题（网络没见过）'] : ['new', '全新（网络没见过）']
+    $('b-seen').innerHTML = `<span class="pill ${seen[0]}">${seen[1]}</span>`
+    const sim = CF.sim[s]
+    if (sim) {
+      $('b-sim').textContent = `${fmt(sim[0])} / ${fmt(sim[1])} °C`
+      const d = ac - sim[0], dg = ag - sim[1]
+      const cls = (v) => (Math.abs(v) < 0.5 ? 'diff-ok' : Math.abs(v) < 1.5 ? 'diff-meh' : 'diff-bad')
+      $('b-diff').innerHTML = `CPU <b class="mono ${cls(d)}">${signed(d)}</b> · 显卡 <b class="mono ${cls(dg)}">${signed(dg)}</b> °C`
+    } else {
+      $('b-sim').textContent = '没有模拟过'
+      $('b-diff').textContent = '–'
+    }
+    const fans = code.filter((d) => d).length
+    $('b-note').textContent = sim ? `${fans} 个风扇。引擎缓存里有这种装法的模拟（一共 ${Object.keys(CF.sim).length} 种有）。`
+      : `${fans} 个风扇。这种装法没模拟过：在 CaseFlow 里打开它、点 SIMULATION，显卡要算约 90 秒。`
+    tunnelLayout()
+  }
+  onTheme.push(update)
+
+  // ------------------------------------------------------------------ 2. 2D wind tunnel (D2Q9 lattice Boltzmann)
+  // One x-z slice of the case on a 128 x 128 grid (about 3.6 mm cells). Walls bounce back; fan cells hold a set
+  // velocity; open cells (empty mounts on mesh walls, the rear slot covers, every fan's outer face) are at room
+  // pressure; fin stacks drag the air (a porous block). No heat. Dust enters wherever air comes in, settles
+  // slowly, scatters a little and sticks to the first surface it touches (or, sometimes, inside the fins).
+  const cv = $('tunnel-cv'), ctx = cv.getContext('2d')
+  const NX = 128, NY = 128, NC = NX * NY
+  const EX = [0, 1, 0, -1, 0, 1, -1, -1, 1], EY = [0, 0, 1, 0, -1, 1, 1, -1, -1]
+  const W9 = [4 / 9, 1 / 9, 1 / 9, 1 / 9, 1 / 9, 1 / 36, 1 / 36, 1 / 36, 1 / 36], OPP = [0, 3, 4, 1, 2, 7, 8, 5, 6]
+  const FLUID = 0, SOLID = 1, FAN = 2, OPEN = 3, FINS = 4
+  const TAU = 0.62, FIN_KEEP = 0.82, U_CASE = 0.1, U_COOLER = 0.045, STEPS = 5
+  const SETTLE = 0.012, JITTER = 0.25
+  let f = new Float32Array(9 * NC), f2 = new Float32Array(9 * NC)
+  const type = new Uint8Array(NC), fux = new Float32Array(NC), fuy = new Float32Array(NC), fan = new Uint8Array(NC)
+  const owner = new Uint8Array(NC)   // which surface a solid cell belongs to (for "where the dust lands")
+  const OWNERS = ['机箱底', '机箱壁', '电源', '显卡', 'CPU 散热器']
+  const ux = new Float32Array(NC), uy = new Float32Array(NC)
+  const deposits = new Float32Array(NC), landed = new Float64Array(OWNERS.length)
+  const inlets = []                    // [interior cell, inward nx, inward ny, share that passes the filter]
+  const bars = []                      // the case fans, drawn on top: cells, inward normal, +1 intake / -1 exhaust
+  const OPEN_WALLS = new Set(CF.open_walls)
+  let speed = 0.6, playing = !reduce, dustOn = true, entered = 0
+  let tunnelCode = CF.home.split('').map(Number)
+  // x 0 = rear (left), NX-1 = front (right); y 0 = top: the same view as the bench
+  const gx = (mm) => Math.round(((D - mm) / D) * (NX - 1)), gy = (mm) => Math.round(((H - mm) / H) * (NY - 1))
+  const cellsOf = (b, fn) => {
+    const xa = Math.max(1, gx(b[1])), xb = Math.min(NX - 2, gx(b[0])), ya = Math.max(1, gy(b[5])), yb = Math.min(NY - 2, gy(b[4]))
+    for (let y = ya; y <= yb; y++) for (let x = xa; x <= xb; x++) fn(y * NX + x)
+  }
+  const openCell = (x, y, nx, ny, filt) => {
+    const k = y * NX + x
+    type[k] = OPEN
+    inlets.push([k + ny * NX + nx, nx, ny, filt ? 1 - CF.filter_eff : 1])
+  }
+  const geometry = () => {
+    type.fill(FLUID); fux.fill(0); fuy.fill(0); fan.fill(0); owner.fill(1); inlets.length = 0; bars.length = 0
+    for (let x = 0; x < NX; x++) { type[x] = SOLID; type[(NY - 1) * NX + x] = SOLID; owner[(NY - 1) * NX + x] = 0 }
+    for (let y = 0; y < NY; y++) { type[y * NX] = SOLID; type[y * NX + NX - 1] = SOLID }
+    for (const p of CF.parts) {
+      if (p.kind === 'psu' || p.kind === 'gpu') cellsOf(p.b, (k) => { type[k] = SOLID; owner[k] = p.kind === 'psu' ? 2 : 3 })
+      else if (p.kind === 'gpu_hs' || p.kind === 'cpu_hs') cellsOf(p.b, (k) => { type[k] = FINS; owner[k] = p.kind === 'gpu_hs' ? 3 : 4 })
+    }
+    // the cooler's fans push toward the rear (left); the graphics card's fans push up through its fins
+    for (const p of CF.parts) {
+      if (p.kind === 'cpu_fan') cellsOf(p.b, (k) => { type[k] = FAN; fan[k] = 3; fux[k] = -U_COOLER })
+      if (p.kind === 'gpu_fan') cellsOf(p.b, (k) => { type[k] = FAN; fan[k] = 3; fuy[k] = -U_COOLER })
+    }
+    for (const p of CF.parts) if (p.kind === 'vent') for (let y = gy(p.b[5]); y <= gy(p.b[4]); y++) openCell(0, y, 1, 0, false)
+    const u0 = U_CASE * speed
+    for (const m of CF.mountsGeo) {
+      const st = tunnelCode[MOUNTS.indexOf(m.slot)]
+      if (!st && !OPEN_WALLS.has(m.wall)) continue
+      const h = (st ? m.size : m.open) / 2, filt = !!CF.filters[m.wall], sgn = st === 1 ? 1 : -1
+      if (m.wall === 'front' || m.wall === 'rear') {
+        const bx = m.wall === 'front' ? NX - 1 : 0, n = m.wall === 'front' ? -1 : 1
+        if (st) bars.push({ x: Math.min(bx, bx + n), y: gy(m.b + h), w: 2, h: gy(m.b - h) - gy(m.b + h) + 1, nx: n, ny: 0, dir: sgn })
+        for (let y = gy(m.b + h); y <= gy(m.b - h); y++) {
+          openCell(bx, y, n, 0, filt)
+          if (st) { const k = y * NX + bx + n; type[k] = FAN; fan[k] = st; fux[k] = n * u0 * sgn }
+        }
+      } else {
+        const by = m.wall === 'top' ? 0 : NY - 1, n = m.wall === 'top' ? 1 : -1
+        if (st) bars.push({ x: gx(m.a + h), y: Math.min(by, by + n), w: gx(m.a - h) - gx(m.a + h) + 1, h: 2, nx: 0, ny: n, dir: sgn })
+        for (let x = gx(m.a + h); x <= gx(m.a - h); x++) {
+          openCell(x, by, 0, n, filt)
+          if (st) { const k = (by + n) * NX + x; type[k] = FAN; fan[k] = st; fuy[k] = n * u0 * sgn }
+        }
+      }
+    }
+  }
+  const tracers = [], dust = []
+  const init = () => {
+    for (let i = 0; i < NC; i++) for (let k = 0; k < 9; k++) f[k * NC + i] = W9[k]
+    ux.fill(0); uy.fill(0); deposits.fill(0); landed.fill(0); entered = 0
+    tracers.length = 0; dust.length = 0
+  }
+  const step = () => {
+    for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) {
+      const i = y * NX + x, t = type[i]
+      if (t === SOLID) continue
+      let rho = 0, mx = 0, my = 0
+      for (let k = 0; k < 9; k++) { const v = f[k * NC + i]; rho += v; mx += v * EX[k]; my += v * EY[k] }
+      let vx = mx / rho, vy = my / rho
+      if (t === FAN) { vx = fux[i]; vy = fuy[i] } else if (t === OPEN) rho = 1
+      ux[i] = vx; uy[i] = vy
+      if (t === FINS) { vx *= FIN_KEEP; vy *= FIN_KEEP }
+      const usq = 1.5 * (vx * vx + vy * vy), relax = t === FLUID || t === FINS
+      for (let k = 0; k < 9; k++) {
+        const eu = 3 * (EX[k] * vx + EY[k] * vy)
+        const feq = W9[k] * rho * (1 + eu + 0.5 * eu * eu - usq)
+        const fp = relax ? f[k * NC + i] + (feq - f[k * NC + i]) / TAU : feq
+        const tx = x + EX[k], ty = y + EY[k]
+        if (tx < 0 || ty < 0 || tx >= NX || ty >= NY || type[ty * NX + tx] === SOLID) f2[OPP[k] * NC + i] = fp
+        else f2[k * NC + ty * NX + tx] = fp
+      }
+    }
+    const tmp = f; f = f2; f2 = tmp
+  }
+  const sample = (px, py) => {
+    const x = Math.min(NX - 1.001, Math.max(0, px - 0.5)), y = Math.min(NY - 1.001, Math.max(0, py - 0.5))
+    const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0
+    const a = y0 * NX + x0, b = a + 1, c = a + NX, d = c + 1
+    return [(ux[a] * (1 - fx) + ux[b] * fx) * (1 - fy) + (ux[c] * (1 - fx) + ux[d] * fx) * fy,
+      (uy[a] * (1 - fx) + uy[b] * fx) * (1 - fy) + (uy[c] * (1 - fx) + uy[d] * fx) * fy]
+  }
+  const cellAt = (x, y) => Math.floor(y) * NX + Math.floor(x)
+  const spawnTracer = (p) => {
+    let x, y
+    do { x = 1 + Math.random() * (NX - 2); y = 1 + Math.random() * (NY - 2) } while (type[cellAt(x, y)] !== FLUID)
+    p.x = x; p.y = y; p.age = 0; p.vx = 0; p.vy = 0
+    return p
+  }
+  const moveParticles = () => {
+    while (tracers.length < 700) tracers.push(spawnTracer({}))
+    for (const p of tracers) {
+      const [vx, vy] = sample(p.x, p.y)
+      p.vx = vx; p.vy = vy; p.x += vx * STEPS; p.y += vy * STEPS; p.age++
+      const t = type[cellAt(p.x, p.y)]
+      if (p.x < 1 || p.y < 1 || p.x >= NX - 1 || p.y >= NY - 1 || t === SOLID || t === OPEN || p.age > 260) spawnTracer(p)
+    }
+    if (!dustOn || !inlets.length) return
+    // dust comes in wherever air comes in, in proportion to the inflow (a filter keeps 85 % out)
+    for (let n = 0; n < 24; n++) {
+      const [c, nx, ny, pass] = inlets[Math.floor(Math.random() * inlets.length)]
+      const vin = ux[c] * nx + uy[c] * ny
+      if (vin <= 0 || Math.random() > pass * Math.min(1, vin / U_CASE) * 0.3) continue
+      dust.push({ x: (c % NX) + 0.5 + Math.random() * (ny ? 1 : 0) - (ny ? 0.5 : 0), y: Math.floor(c / NX) + 0.5 + Math.random() * (nx ? 1 : 0) - (nx ? 0.5 : 0), age: 0 })
+      entered++
+    }
+    for (let j = dust.length - 1; j >= 0; j--) {
+      const p = dust[j]
+      const [vx, vy] = sample(p.x, p.y)
+      const nx = p.x + vx * STEPS + (Math.random() - 0.5) * JITTER, ny = p.y + vy * STEPS + SETTLE + (Math.random() - 0.5) * JITTER
+      p.age++
+      const c = nx < 0 || ny < 0 || nx >= NX || ny >= NY ? -1 : cellAt(nx, ny)
+      const t = c < 0 ? SOLID : type[c]
+      if (t === SOLID || (t === FINS && Math.random() < 0.02)) {
+        // stuck: on the surface it hit, or caught in the fins
+        const k = t === FINS ? c : cellAt(p.x, p.y)
+        deposits[k] += 1
+        landed[owner[c < 0 ? cellAt(p.x, p.y) : c]] += 1
+        dust[j] = dust[dust.length - 1]; dust.pop()
+      } else if (t === OPEN || p.age > 3000) { dust[j] = dust[dust.length - 1]; dust.pop() }
+      else { p.x = nx; p.y = ny }
+    }
+  }
+  const off = document.createElement('canvas'); off.width = NX; off.height = NY
+  const octx = off.getContext('2d'), img = octx.createImageData(NX, NY)
+  const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
+  let frame = 0
+  const draw = () => {
+    const air = hexRgb(T.air), sol = hexRgb(T.solid), cin = hexRgb(T.in), cout = hexRgb(T.out), cool = hexRgb(T.ink3), fast = hexRgb(T.in)
+    for (let i = 0; i < NC; i++) {
+      const t = type[i]
+      let c
+      if (t === SOLID) c = sol
+      else if (t === FAN) c = fan[i] === 1 ? cin : fan[i] === 2 ? cout : cool
+      else {
+        const s = Math.min(1, Math.hypot(ux[i], uy[i]) / U_CASE)
+        c = mix(air, fast, s * 0.8)
+        if (t === FINS) c = mix(c, sol, 0.45)
+      }
+      img.data[4 * i] = c[0]; img.data[4 * i + 1] = c[1]; img.data[4 * i + 2] = c[2]; img.data[4 * i + 3] = 255
+    }
+    octx.putImageData(img, 0, 0)
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(off, 0, 0, cv.width, cv.height)
+    const k = cv.width / NX
+    // tracers: short streaks along the air's velocity (where they will be in a few frames)
+    ctx.strokeStyle = T.ink; ctx.globalAlpha = 0.5; ctx.lineWidth = 1.5; ctx.lineCap = 'round'
+    ctx.beginPath()
+    for (const p of tracers) { ctx.moveTo(p.x * k, p.y * k); ctx.lineTo((p.x + p.vx * STEPS * 8) * k, (p.y + p.vy * STEPS * 8) * k) }
+    ctx.stroke()
+    ctx.globalAlpha = 1
+    if (dustOn) {
+      ctx.fillStyle = T.dust
+      for (let i = 0; i < NC; i++) if (deposits[i]) { ctx.globalAlpha = Math.min(1, 0.3 + deposits[i] / 6); ctx.fillRect((i % NX) * k, Math.floor(i / NX) * k, k, k) }
+      ctx.globalAlpha = 1
+      for (const p of dust) ctx.fillRect(p.x * k - 2, p.y * k - 2, 4, 4)
+    }
+    // case fans: a bar on the wall and an arrowhead the way the air goes
+    for (const b of bars) {
+      ctx.fillStyle = b.dir > 0 ? T.in : T.out
+      ctx.fillRect(b.x * k, b.y * k, b.w * k, b.h * k)
+      const mx = b.x + b.w / 2, my = b.y + b.h / 2, tip = b.dir > 0 ? 7 : 3, base = b.dir > 0 ? 3.5 : 6.5
+      const tx = (mx + b.nx * tip) * k, ty = (my + b.ny * tip) * k, bx = (mx + b.nx * base) * k, by = (my + b.ny * base) * k
+      const px = -b.ny * 2.4 * k, py = b.nx * 2.4 * k
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(bx + px, by + py); ctx.lineTo(bx - px, by - py); ctx.closePath(); ctx.fill()
+    }
+    if (frame % 10 === 0) tunnelStats()
+  }
+  const tunnelStats = () => {
+    const n = landed.reduce((a, b) => a + b, 0)
+    $('t-in').textContent = entered.toLocaleString('en-US')
+    $('t-dep').textContent = entered ? `${n.toLocaleString('en-US')}（${Math.round((100 * n) / entered)}%）` : '–'
+    $('t-where').textContent = n ? [...landed].map((v, i) => [v, i]).filter((a) => a[0] > 0).sort((a, b) => b[0] - a[0]).slice(0, 3).map(([v, i]) => `${OWNERS[i]} ${Math.round((100 * v) / n)}%`).join(' · ') : '–'
+  }
+  let visible = false, raf = 0, warm = 0, last = 0
+  new IntersectionObserver((es) => { visible = es[0].isIntersecting; if (visible && playing) loop() }).observe(cv)
+  const loop = (now = performance.now()) => {
+    cancelAnimationFrame(raf)
+    if (!visible || !playing) { draw(); return }
+    // about 60 updates a second, also on a fast monitor
+    if (now - last < 12) { raf = requestAnimationFrame(loop); return }
+    last = now
+    if (warm > 0) {
+      // let the flow develop for a few frames before the particles start
+      for (let s = 0; s < 25; s++) step()
+      warm -= 25
+    } else {
+      for (let s = 0; s < STEPS; s++) step()
+      moveParticles()
+      frame++
+    }
+    draw()
+    raf = requestAnimationFrame(loop)
+  }
+  const restart = () => { geometry(); init(); warm = 250; tunnelStats(); loop() }
+  function tunnelLayout() {
+    if (code.join('') === tunnelCode.join('')) return
+    tunnelCode = code.slice()
+    $('t-layout').textContent = `装法：${tunnelCode.join('')}`
+    restart()
+  }
+  $('t-speed').addEventListener('input', (e) => { speed = +e.target.value / 100; $('t-speed-o').textContent = `${e.target.value}%`; geometry() })
+  $('t-play').addEventListener('click', () => { playing = !playing; $('t-play').textContent = playing ? '暂停' : '继续'; loop() })
+  $('t-dust').addEventListener('click', () => {
+    dustOn = !dustOn
+    $('t-dust').textContent = dustOn ? '灰尘：开' : '灰尘：关'; $('t-dust').classList.toggle('on', dustOn); $('t-dust').setAttribute('aria-pressed', String(dustOn))
+    if (!dustOn) { dust.length = 0; deposits.fill(0); landed.fill(0); entered = 0; tunnelStats() }
+    draw()
+  })
+  $('t-reset').addEventListener('click', restart)
+  if (!playing) $('t-play').textContent = '继续'
+  onTheme.push(draw)
+
+  // ------------------------------------------------------------------ 3. fan curves <-> temperatures (the app's solver)
+  const S = CF.setup, C = CF.consts, LV = CF.bank.levels
+  const curveDuty = (pts, t) => {
+    const p = [...pts].sort((a, b) => a[0] - b[0])
+    if (t <= p[0][0]) return p[0][1] / 100
+    for (let k = 1; k < p.length; k++) if (t <= p[k][0]) { const f0 = p[k][0] > p[k - 1][0] ? (t - p[k - 1][0]) / (p[k][0] - p[k - 1][0]) : 1; return (p[k - 1][1] + f0 * (p[k][1] - p[k - 1][1])) / 100 }
+    return p[p.length - 1][1] / 100
+  }
+  const fanSpeed = (d, smin) => smin + (1 - smin) * Math.min(Math.max(d, 0), 1)
+  const conductance = (rb, ra, s, floor) => 1 / (rb + ra * Math.pow(Math.max(s, floor), -C.H_EXP))
+  const interp = (xs, ys, x) => { if (xs.length === 1) return ys[0]; let i = 0; while (i < xs.length - 2 && x > xs[i + 1]) i++; const t = (x - xs[i]) / (xs[i + 1] - xs[i]); return ys[i] + t * (ys[i + 1] - ys[i]) }
+  const inv = LV.map((L) => 1 / fanSpeed(L.duty, C.S_MIN_REF)).reverse()
+  const bankK = (duty) => {
+    const x = 1 / fanSpeed(duty, C.S_MIN_REF)
+    const pick = (key, j) => Math.max(interp(inv, LV.map((L) => L[key][j]).reverse(), x), 0)
+    return { kc: [pick('k_cpu_in', 0), pick('k_cpu_in', 1)], kg: [pick('k_gpu_in', 0), pick('k_gpu_in', 1)] }
+  }
+  const implied = (amb, pc, pg, tc, tg) => {
+    const cvv = S.curves, src2 = cvv.case.source || 'cpu'
+    const dCase = curveDuty(cvv.case.points, src2 === 'cpu' ? tc : src2 === 'gpu' ? tg : Math.max(tc, tg))
+    const b = bankK(dCase)
+    const dCpu = curveDuty(cvv.cpu.points, tc), dGpu = curveDuty(cvv.gpu.points, tg)
+    const gCpu = conductance(S.cpu.r_base, S.cooler.r_air_full, fanSpeed(dCpu, S.cooler.s_min), C.CPU_FAN_FLOOR)
+    const gGpu = conductance(S.gpu.r_base, S.gpu.r_air_full, Math.min(Math.max(dGpu, 0), 1), S.gpu.floor)
+    return { tc: amb + b.kc[0] * pc + b.kc[1] * pg + pc / gCpu, tg: amb + b.kg[0] * pc + b.kg[1] * pg + pg / gGpu, dCase, dCpu, dGpu }
+  }
+  const bisect = (fn, lo, hi) => { if (fn(lo) <= 0) return lo; if (fn(hi) >= 0) return hi; for (let k = 0; k < 50; k++) { const mid = (lo + hi) / 2; if (fn(mid) > 0) lo = mid; else hi = mid } return (lo + hi) / 2 }
+  const equilibrium = (amb, pc, pg) => {
+    let tc = amb + 20, tg = amb + 20
+    for (let k = 0; k < 60; k++) {
+      const tcn = bisect((t) => implied(amb, pc, pg, t, tg).tc - t, amb, amb + 400)
+      const tgn = bisect((t) => implied(amb, pc, pg, tcn, t).tg - t, amb, amb + 400)
+      const done = Math.abs(tcn - tc) < 1e-5 && Math.abs(tgn - tg) < 1e-5
+      tc = tcn; tg = tgn
+      if (done) break
+    }
+    return [tc, tg]
+  }
+  // a part above its limit throttles: find the power that keeps it at the limit (as the app does)
+  const throttle = (amb, pc, pg, part) => {
+    const idx = part === 'cpu' ? 0 : 1
+    return bisect((p) => S[part].t_max - equilibrium(amb, part === 'cpu' ? p : pc, part === 'gpu' ? p : pg)[idx], 0, part === 'cpu' ? pc : pg)
+  }
+  const solveAll = (amb, pc, pg) => {
+    let [tc, tg] = equilibrium(amb, pc, pg)
+    const thr = { cpu: false, gpu: false }
+    for (let n = 0; n < 3; n++) {
+      let changed = false
+      if (tc > S.cpu.t_max + 1e-3) { pc = throttle(amb, pc, pg, 'cpu'); thr.cpu = changed = true;[tc, tg] = equilibrium(amb, pc, pg) }
+      if (tg > S.gpu.t_max + 1e-3) { pg = throttle(amb, pc, pg, 'gpu'); thr.gpu = changed = true;[tc, tg] = equilibrium(amb, pc, pg) }
+      if (!changed) break
+    }
+    return { tc, tg, pc, pg, thr }
+  }
+  const watts = (frac, part) => part.idle_w + frac * (part.max_w - part.idle_w)
+  const ssvg = $('steady-svg')
+  const solveSteady = () => {
+    const amb = +$('s-room').value, cf = +$('s-cpu').value / 100, gf = +$('s-gpu').value / 100
+    $('s-room-o').textContent = `${fmt(amb)} °C`; $('s-cpu-o').textContent = `${Math.round(cf * 100)}% · ${Math.round(watts(cf, S.cpu))} W`; $('s-gpu-o').textContent = `${Math.round(gf * 100)}% · ${Math.round(watts(gf, S.gpu))} W`
+    const r = solveAll(amb, watts(cf, S.cpu), watts(gf, S.gpu))
+    const { tc, tg, pc, pg } = r
+    const at = implied(amb, pc, pg, tc, tg)
+    $('s-tc').textContent = `${fmt(tc)} °C${r.thr.cpu ? ` · 降频到 ${Math.round(pc)} W` : ''}`
+    $('s-tg').textContent = `${fmt(tg)} °C${r.thr.gpu ? ` · 降频到 ${Math.round(pg)} W` : ''}`
+    $('s-dcase').textContent = `${Math.round(at.dCase * 100)}%`; $('s-dcpu').textContent = `${Math.round(at.dCpu * 100)}%`
+    $('s-dgpu').textContent = at.dGpu <= 0 ? '停转' : `${Math.round(at.dGpu * 100)}%`
+    // plot: x = assumed CPU temperature, y = what the fans at that temperature would give
+    ssvg.textContent = ''
+    const W = widthOf(ssvg, 320, 640), Hh = 380, L = 56, R = 18, Tp = 18, B = 46
+    ssvg.setAttribute('viewBox', `0 0 ${W} ${Hh}`)
+    const x0 = Math.floor(amb / 10) * 10, x1 = Math.max(x0 + 60, Math.ceil((tc + 20) / 10) * 10)
+    const xs = (v) => L + ((v - x0) / (x1 - x0)) * (W - L - R), ys = (v) => Hh - B - ((v - x0) / (x1 - x0)) * (Hh - B - Tp)
+    for (let v = x0; v <= x1; v += 10) {
+      el('line', { x1: xs(v), x2: xs(v), y1: Tp, y2: Hh - B, stroke: T.line }, ssvg)
+      el('line', { x1: L, x2: W - R, y1: ys(v), y2: ys(v), stroke: T.line }, ssvg)
+      const a = el('text', { x: xs(v), y: Hh - B + 18, 'text-anchor': 'middle', 'font-size': 12, fill: T.ink3 }, ssvg); a.textContent = v
+      const b = el('text', { x: L - 8, y: ys(v) + 4, 'text-anchor': 'end', 'font-size': 12, fill: T.ink3 }, ssvg); b.textContent = v
+    }
+    const xl = el('text', { x: (L + W - R) / 2, y: Hh - 8, 'text-anchor': 'middle', 'font-size': 12, fill: T.ink2 }, ssvg); xl.textContent = '假设的 CPU 温度 (°C)'
+    const yl = el('text', { x: 14, y: (Tp + Hh - B) / 2, 'text-anchor': 'middle', 'font-size': 12, fill: T.ink2, transform: `rotate(-90 14 ${(Tp + Hh - B) / 2})` }, ssvg); yl.textContent = '风扇按它转时的实际温度 (°C)'
+    el('line', { x1: xs(x0), y1: ys(x0), x2: xs(x1), y2: ys(x1), stroke: T.ink3, 'stroke-dasharray': '6 5', 'stroke-width': 1.5 }, ssvg)
+    let d = ''
+    for (let k = 0; k <= 120; k++) {
+      const v = x0 + ((x1 - x0) * k) / 120
+      const r = Math.min(x1, Math.max(x0, implied(amb, pc, pg, v, tg).tc))
+      d += `${k ? 'L' : 'M'}${xs(v).toFixed(1)},${ys(r).toFixed(1)}`
+    }
+    el('path', { d, fill: 'none', stroke: T.cpu, 'stroke-width': 2.5 }, ssvg)
+    el('circle', { cx: xs(tc), cy: ys(tc), r: 7, fill: T.surface, stroke: T.ai, 'stroke-width': 3 }, ssvg)
+    const lab = el('text', { x: xs(tc) + 12, y: ys(tc) + 22, 'font-size': 13, fill: T.ink }, ssvg); lab.textContent = `稳态 ${fmt(tc)} °C`
+    const l2 = el('text', { x: xs(x1) - 4, y: ys(x1) + 16, 'text-anchor': 'end', 'font-size': 12, fill: T.ink3 }, ssvg); l2.textContent = '两者相等'
+  }
+  for (const id of ['s-room', 's-cpu', 's-gpu']) $(id).addEventListener('input', solveSteady)
+  for (const pid of ['idle', 'office', 'cpu_game', 'gpu_game', 'stress']) {
+    const p = CF.presets[pid]; if (!p) continue
+    const b = document.createElement('button'); b.className = 'btn'; b.type = 'button'; b.textContent = p.name
+    b.addEventListener('click', () => { $('s-cpu').value = Math.round(p.cpu * 100); $('s-gpu').value = Math.round(p.gpu * 100); solveSteady() })
+    $('s-presets').appendChild(b)
+  }
+  const cg = CF.presets.cpu_game
+  if (cg) { $('s-cpu').value = Math.round(cg.cpu * 100); $('s-gpu').value = Math.round(cg.gpu * 100) }
+  onTheme.push(solveSteady)
+
+  // ------------------------------------------------------------------ 4. the U-Net, level by level
+  const uc = $('unet-cv'), uctx = uc.getContext('2d')
+  const SN = CF.slice.nx, SZ = CF.slice.nz, cells = CF.slice.cells
+  const RF = [5, 14, 32, 68, 140]
+  const STAGES = [
+    ['输入：机箱本身', 0, '80 × 40 × 80 × 8', '每个格子 8 个数（实心、机箱外、风扇、风速 ×3、两个发热区），再加 3 个坐标。网络只看这些。', 1],
+    ['第 1 层：3D 卷积', 0, '80 × 40 × 80 × 24', '两次 3 × 3 × 3 卷积：每个格子看自己和周围一圈，算出 24 个特征。', 0],
+    ['缩小 1 次', 1, '40 × 20 × 40 × 48', '每 2 × 2 × 2 个格子合成 1 个，再卷积：特征数翻倍，视野变大。', 0],
+    ['缩小 2 次', 2, '20 × 10 × 20 × 96', '一个格子已经代表 24 mm。', 0],
+    ['缩小 3 次', 3, '10 × 5 × 10 × 192', '视野已经覆盖大半个机箱。', 0],
+    ['最底层：缩小 4 次', 4, '5 × 3 × 5 × 384', '每个特征都看得到整个机箱：顶上的风扇怎么影响前面的风，就是在这里学到的。', 0],
+    ['放大 1 次 + 跳跃连接', 3, '10 × 5 × 10 × 192', '把粗的结果插值放大，再把缩小时同一层的特征拼进来：全局信息 + 这一层的细节。', 2],
+    ['放大 2 次 + 跳跃连接', 2, '20 × 10 × 20 × 96', '细节一层层回来。', 2],
+    ['放大 3 次 + 跳跃连接', 1, '40 × 20 × 40 × 48', '风扇边缘和通风口的形状回来了。', 2],
+    ['输出：回到 6 mm', 0, '80 × 40 × 80 × 5', '每个格子 5 个数：风速 ×3、每瓦 CPU 升温、每瓦显卡升温。格式和模拟的结果一样。', 3],
+  ]
+  let focus = null
+  {
+    let ax = 0, ay = 0, n = 0
+    for (let k = 0; k < cells.length; k++) if (cells[k] === '4' && Math.floor(k / SN) < SZ / 2) { ax += SN - 1 - (k % SN); ay += Math.floor(k / SN); n++ }
+    if (n) focus = [Math.round(ax / n), Math.round(ay / n)]
+  }
+  const catCol = () => [hexRgb(T.air), hexRgb(T.solid), hexRgb(T.sunk), hexRgb(T.in), hexRgb(T.hot)]
+  const drawUnet = () => {
+    const s = +$('u-stage').value, [title, level, shape, text, kind] = STAGES[s]
+    $('u-stage-o').textContent = `${s + 1} / ${STAGES.length}`
+    $('u-title').textContent = title; $('u-shape').textContent = shape; $('u-text').textContent = text
+    const B = 1 << level
+    $('u-cell').textContent = `${B * 6} mm（${B} × ${B} × ${B} 个原始格子）`
+    const rf = kind >= 2 ? 999 : kind === 1 ? 1 : RF[level]
+    $('u-rf').textContent = kind === 1 ? '只有这个格子' : rf >= 80 ? '整个机箱' : `约 ${rf * 6} mm（${rf} 个格子宽）`
+    const cols = catCol(), k = uc.width / SN
+    uctx.clearRect(0, 0, uc.width, uc.height)
+    for (let by = 0; by < SZ; by += B) for (let bx = 0; bx < SN; bx += B) {
+      const cnt = [0, 0, 0, 0, 0]
+      for (let y = by; y < Math.min(SZ, by + B); y++) for (let x = bx; x < Math.min(SN, bx + B); x++) cnt[+cells[y * SN + (SN - 1 - x)]]++
+      let best = 0
+      for (let c = 1; c < 5; c++) if (cnt[c] > cnt[best] || (c === 3 || c === 4) && cnt[c] > 0 && cnt[c] >= cnt[best] / 3) best = c
+      const c = cols[best]
+      uctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`
+      uctx.fillRect(bx * k, by * k, B * k + 0.5, B * k + 0.5)
+    }
+    if (B > 1) {
+      uctx.strokeStyle = T.line; uctx.lineWidth = 1; uctx.beginPath()
+      for (let v = 0; v <= SN; v += B) { uctx.moveTo(v * k, 0); uctx.lineTo(v * k, uc.height); uctx.moveTo(0, v * k); uctx.lineTo(uc.width, v * k) }
+      uctx.stroke()
+    }
+    const [fx, fy] = focus ?? [SN / 2, SZ / 2]
+    uctx.strokeStyle = T.ai; uctx.lineWidth = 3
+    const half = Math.min(rf, 400) / 2
+    if (rf >= 80) uctx.strokeRect(2, 2, uc.width - 4, uc.height - 4)
+    else uctx.strokeRect((fx + 0.5 - half) * k, (fy + 0.5 - half) * k, half * 2 * k, half * 2 * k)
+    uctx.fillStyle = T.ai
+    uctx.beginPath(); uctx.arc((fx + 0.5) * k, (fy + 0.5) * k, 5, 0, Math.PI * 2); uctx.fill()
+  }
+  $('u-stage').addEventListener('input', drawUnet)
+  uc.addEventListener('click', (e) => {
+    const r = uc.getBoundingClientRect()
+    focus = [Math.floor(((e.clientX - r.left) / r.width) * SN), Math.floor(((e.clientY - r.top) / r.height) * SZ)]
+    drawUnet()
+  })
+  onTheme.push(drawUnet)
+
+  // ------------------------------------------------------------------ 5. training layouts against held-out ones
+  const esvg = $('exam-svg')
+  let part = 0, picked = null
+  for (const [v, name] of [[-1, '全部 6 个场景'], ...CF.err.scenarios.map((n, i) => [i, n])]) {
+    const o = document.createElement('option'); o.value = v; o.textContent = name; $('e-scen').appendChild(o)
+  }
+  const drawExam = () => {
+    const si = +$('e-scen').value, scen = si < 0 ? CF.err.scenarios.map((_, i) => i) : [si]
+    esvg.textContent = ''
+    const W = widthOf(esvg, 320, 900), Hh = 300, L = 16, R = 16, x0 = -3, x1 = 3
+    esvg.setAttribute('viewBox', `0 0 ${W} ${Hh}`)
+    const xs = (v) => L + ((Math.max(x0, Math.min(x1, v)) - x0) / (x1 - x0)) * (W - L - R)
+    for (let v = x0; v <= x1; v += 1) {
+      el('line', { x1: xs(v), x2: xs(v), y1: 50, y2: Hh - 46, stroke: v === 0 ? T.ink3 : T.line, 'stroke-width': v === 0 ? 1.5 : 1 }, esvg)
+      const t = el('text', { x: xs(v), y: Hh - 28, 'text-anchor': 'middle', 'font-size': 12, fill: T.ink3 }, esvg); t.textContent = (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v)
+    }
+    const ax = el('text', { x: W / 2, y: Hh - 8, 'text-anchor': 'middle', 'font-size': 12, fill: T.ink2 }, esvg); ax.textContent = '网络 − 模拟（°C）'
+    const rows = [['训练装法', CF.err.train, T.ink3, 92, '训练过'], ['考试装法', CF.err.test, T.ai, 196, '考试题']]
+    const stats = []
+    for (const [name, list, col, yc, tag] of rows) {
+      const lab = el('text', { x: L, y: yc - 38, 'font-size': 13, fill: T.ink }, esvg); lab.textContent = `${name}（${list.length}）`
+      let sum = 0, cnt = 0
+      list.forEach((r, j) => scen.forEach((sj) => {
+        const v = r.e[sj][part], on = picked && picked.c === r.c
+        sum += Math.abs(v); cnt++
+        const y = yc + (((j * 37 + sj * 11) % 41) / 41 - 0.5) * 52
+        const g = el('g', { style: 'cursor:pointer' }, esvg)
+        el('circle', { cx: xs(v), cy: y, r: 9, fill: 'transparent' }, g)
+        el('circle', { cx: xs(v), cy: y, r: on ? 7 : 4.5, fill: col, 'fill-opacity': on ? 1 : 0.7, stroke: on ? T.ink : T.surface, 'stroke-width': on ? 2 : 1 }, g)
+        el('title', {}, g).textContent = `${r.c} · ${CF.err.scenarios[sj]} · ${signed(v)} °C`
+        g.addEventListener('click', () => { picked = { c: r.c, tag }; drawExam() })
+      }))
+      stats.push(`${name}平均差 ${fmt(sum / cnt, 2)} °C`)
+    }
+    $('e-stats').textContent = stats.join(' · ') + `（${part ? '显卡' : 'CPU'}，${si < 0 ? '全部 6 个场景' : CF.err.scenarios[si]}）。点一个点看是哪种装法。`
+    if (picked) {
+      const r = [...CF.err.train, ...CF.err.test].find((x) => x.c === picked.c)
+      $('e-pick').hidden = false
+      $('e-pick-t').innerHTML = `<b class="mono">${picked.c}</b>（${picked.tag}）：${part ? '显卡' : 'CPU'}误差 ` + scen.map((sj) => `<b class="mono">${signed(r.e[sj][part])}</b>`).join(' / ') + ' °C' + (si < 0 ? '（6 个场景）' : '')
+    }
+  }
+  $('e-open').addEventListener('click', () => {
+    if (!picked) return
+    code = picked.c.split('').map(Number); update()
+    $('lab-bench').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' })
+  })
+  $('e-scen').addEventListener('change', drawExam)
+  $('e-cpu').addEventListener('click', () => { part = 0; $('e-cpu').classList.add('on'); $('e-gpu').classList.remove('on'); drawExam() })
+  $('e-gpu').addEventListener('click', () => { part = 1; $('e-gpu').classList.add('on'); $('e-cpu').classList.remove('on'); drawExam() })
+  onTheme.push(drawExam)
+
+  // learning curve (scripts/train_surrogate.py --frac 0.25 / 0.5 / all)
+  const lsvg = $('learn-svg')
+  const drawLearn = () => {
+    lsvg.textContent = ''
+    const W = widthOf(lsvg, 320, 560), Hh = 300, L = 50, R = 130, Tp = 20, B = 46
+    lsvg.setAttribute('viewBox', `0 0 ${W} ${Hh}`)
+    const xsv = [34, 67, 134], xs = (i) => L + (i / 2) * (W - L - R), ys = (v) => Hh - B - (v / 1.2) * (Hh - B - Tp)
+    for (const v of [0, 0.4, 0.8, 1.2]) {
+      el('line', { x1: L, x2: W - R, y1: ys(v), y2: ys(v), stroke: T.line }, lsvg)
+      const t = el('text', { x: L - 8, y: ys(v) + 4, 'text-anchor': 'end', 'font-size': 12, fill: T.ink3 }, lsvg); t.textContent = v.toFixed(1)
+    }
+    xsv.forEach((n, i) => { const t = el('text', { x: xs(i), y: Hh - B + 18, 'text-anchor': 'middle', 'font-size': 12, fill: T.ink3 }, lsvg); t.textContent = n })
+    const xl = el('text', { x: (L + W - R) / 2, y: Hh - 8, 'text-anchor': 'middle', 'font-size': 12, fill: T.ink2 }, lsvg); xl.textContent = '训练用的装法数'
+    const series = [['CPU', [0.69, 0.68, 0.44], T.cpu, ''], ['显卡', [0.47, 0.42, 0.28], T.gpu, ''], ['CPU 猜平均', [1.04, 1.04, 1.04], T.cpu, '5 5'], ['显卡猜平均', [0.74, 0.74, 0.74], T.gpu, '5 5']]
+    for (const [name, v, col, dash] of series) {
+      el('path', { d: v.map((y, i) => `${i ? 'L' : 'M'}${xs(i)},${ys(y)}`).join(''), fill: 'none', stroke: col, 'stroke-width': 2.5, 'stroke-dasharray': dash }, lsvg)
+      if (!dash) v.forEach((y, i) => el('circle', { cx: xs(i), cy: ys(y), r: 4.5, fill: col }, lsvg))
+      const t = el('text', { x: xs(2) + 8, y: ys(v[2]) + 4, 'font-size': 12, fill: T.ink2 }, lsvg); t.textContent = `${name} ${v[2].toFixed(2)}`
+    }
+    const yl = el('text', { x: 14, y: (Tp + Hh - B) / 2, 'text-anchor': 'middle', 'font-size': 12, fill: T.ink2, transform: `rotate(-90 14 ${(Tp + Hh - B) / 2})` }, lsvg); yl.textContent = '考试装法的平均误差 (°C)'
+  }
+  onTheme.push(drawLearn)
+
+  let rz = 0
+  window.addEventListener('resize', () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(() => { drawHist(parseInt(codeStr(), 3)); solveSteady(); drawExam(); drawLearn() }) })
+
+  // ------------------------------------------------------------------ start
+  update()
+  restart()
+  solveSteady()
+  drawUnet()
+  drawExam()
+  drawLearn()
+})()
+</script>
