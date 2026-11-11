@@ -1,23 +1,27 @@
 import * as THREE from 'three'
 
-/** Interface colours (also used by CSS through the same values). */
+/** Interface colours (the same values as the CSS tokens in styles.css). Air in / out: a categorical pair that passes
+ * the dataviz palette checks on the scene surface #161616 (lightness band, chroma, CVD and normal-vision separation,
+ * contrast). */
 export const C = {
-  bg: 0x05080c,
-  line: 0x8cc8ff,
-  intake: 0x63e0ff,
-  exhaust: 0xffa860,
-  dust: 0xd9b77c,
+  bg: 0x161616,
+  line: 0xcfcfcf,
+  lead: 0xd8d8d8,          // leader lines and anchors of the floating screens
+  intake: 0x2fa8a9,
+  exhaust: 0xd9773a,
+  dust: 0xc9bda8,
 }
-export const CSS_IN = '#63e0ff'
-export const CSS_OUT = '#ffa860'
+export const CSS_IN = '#2fa8a9'
+export const CSS_OUT = '#d9773a'
 
-/** Air temperature above room, t in [0, 1]: blue -> cyan -> near-white -> amber -> red (sRGB stops). */
+/** Air temperature above room, t in [0, 1]: a sequential ramp whose lightness rises with heat - cool air a quiet light
+ * slate that still reads on the dark scene, hot air glowing: slate -> warm grey -> orange -> amber -> pale yellow. */
 const STOPS: [number, string][] = [
-  [0.0, '#2a62ff'],
-  [0.25, '#35d2ff'],
-  [0.5, '#e6f7ff'],
-  [0.74, '#ffc26a'],
-  [1.0, '#ff553d'],
+  [0.0, '#8592a3'],
+  [0.35, '#b7a28e'],
+  [0.6, '#e39552'],
+  [0.82, '#f6bd6c'],
+  [1.0, '#fff3d1'],
 ]
 const LIN = STOPS.map(([t, hex]) => [t, new THREE.Color(hex)] as const)   // THREE.Color parses hex into linear space
 

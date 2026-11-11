@@ -480,9 +480,9 @@ export default function App() {
       <header className="top">
         <div className="brand">
           <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-            <rect x="1.5" y="1.5" width="17" height="17" fill="none" stroke="rgba(140,200,255,.55)" />
-            <path d="M4.5 14 C8.5 14 9 6.5 15.5 6.5" fill="none" stroke="#63e0ff" strokeWidth="1.4" />
-            <circle cx="15.5" cy="6.5" r="1.5" fill="#63e0ff" />
+            <rect x="1.5" y="1.5" width="17" height="17" rx="3" fill="none" stroke="rgba(255,255,255,.45)" />
+            <path d="M4.5 14 C8.5 14 9 6.5 15.5 6.5" fill="none" stroke="#ececec" strokeWidth="1.4" />
+            <circle cx="15.5" cy="6.5" r="1.6" fill="#d9773a" />
           </svg>
           <span className="brand-name">CASEFLOW</span>
         </div>
@@ -572,7 +572,7 @@ export default function App() {
                 </select>
               </label>
             )}
-            <CurveEditor points={curves[curveTab].points} now={curveNow(curveTab)} color={curveTab === 'gpu' ? '#ffa860' : '#63e0ff'}
+            <CurveEditor points={curves[curveTab].points} now={curveNow(curveTab)} color={curveTab === 'gpu' ? '#d9773a' : '#2fa8a9'}
               onChange={(p) => setCurves({ ...curves, [curveTab]: { ...curves[curveTab], points: p } })} />
             {(() => {
               const now = curveNow(curveTab)

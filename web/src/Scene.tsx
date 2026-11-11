@@ -85,8 +85,8 @@ function glowDisc(radius: number): THREE.Mesh {
   c.width = c.height = 256
   const g = c.getContext('2d')!
   const r = g.createRadialGradient(128, 128, 0, 128, 128, 128)
-  r.addColorStop(0, 'rgba(70,150,230,0.22)')
-  r.addColorStop(0.45, 'rgba(40,110,190,0.08)')
+  r.addColorStop(0, 'rgba(255,255,255,0.05)')
+  r.addColorStop(0.45, 'rgba(255,255,255,0.015)')
   r.addColorStop(1, 'rgba(0,0,0,0)')
   g.fillStyle = r
   g.fillRect(0, 0, 256, 256)
@@ -180,7 +180,7 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
     // pick a case fan / empty mount with a click (a drag still orbits)
     const ray = new THREE.Raycaster()
     const ndc = new THREE.Vector2()
-    const hoverRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.03, 8, 72), new THREE.MeshBasicMaterial({ color: 0xe8f8ff, transparent: true, opacity: 0.9, depthTest: false }))
+    const hoverRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.03, 8, 72), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthTest: false }))
     hoverRing.renderOrder = 30
     hoverRing.visible = false
     v.scene.add(hoverRing)
@@ -242,8 +242,8 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
     }
     fit()
     css.current = { ring: ringFrame, gl: holoGL, fit }
-    const grid = new THREE.PolarGridHelper(3.2, 24, 12, 128, 0x2c5f86, 0x16324a)
-    for (const m of [grid.material].flat()) Object.assign(m, { transparent: true, opacity: 0.35 })
+    const grid = new THREE.PolarGridHelper(3.2, 24, 12, 128, 0x3c3c3c, 0x272727)
+    for (const m of [grid.material].flat()) Object.assign(m, { transparent: true, opacity: 0.55 })
     grid.position.y = floorY
     v.scene.add(grid)
     const disc = glowDisc(2.4)
@@ -302,7 +302,7 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
         hobj.line.geometry.computeBoundingSphere()
         hobj.marker.position.copy(anc)
         hobj.marker.quaternion.copy(cam.quaternion)
-        hobj.marker.children[0].scale.setScalar(1 + 0.45 * (0.5 + 0.5 * Math.sin(clock * 3 + hobj.phase)))
+        hobj.marker.children[0].scale.setScalar(1)                     // a still ring: the anchor, no pulse
         // a light packet runs from the part to the screen
         const l1 = anc.distanceTo(qb), l2 = qb.distanceTo(qe)
         const u = ((clock * 0.45 + hobj.phase) % 1) * (l1 + l2)
@@ -378,16 +378,16 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
       const obj = new CSS3DObject(el)
       obj.scale.setScalar(PX)
       k.ring.add(obj)
-      const lineMat = new THREE.LineBasicMaterial({ color: C.intake, transparent: true, opacity: 0.7, depthTest: false })
+      const lineMat = new THREE.LineBasicMaterial({ color: C.lead, transparent: true, opacity: 0.5, depthTest: false })
       const line = new THREE.Line(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(9), 3)), lineMat)
       const flat = (geo: THREE.BufferGeometry, opacity: number) =>
-        new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: C.intake, transparent: true, opacity, depthTest: false, side: THREE.DoubleSide }))
+        new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: C.lead, transparent: true, opacity, depthTest: false, side: THREE.DoubleSide }))
       const marker = new THREE.Group()
       marker.add(flat(new THREE.RingGeometry(0.03, 0.038, 40), 0.85))
       marker.add(flat(new THREE.CircleGeometry(0.011, 20), 1))
       const packet = flat(new THREE.CircleGeometry(0.013, 16), 1)
       const stand = new THREE.Line(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(6), 3)),
-        new THREE.LineDashedMaterial({ color: C.intake, transparent: true, opacity: 0.28, dashSize: 0.04, gapSize: 0.035 }))
+        new THREE.LineDashedMaterial({ color: C.lead, transparent: true, opacity: 0.22, dashSize: 0.04, gapSize: 0.035 }))
       const base = flat(new THREE.RingGeometry(0.05, 0.062, 40), 0.35)
       base.rotation.x = -Math.PI / 2
       for (const o of [line, marker, packet]) o.renderOrder = 20
@@ -556,8 +556,8 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
     panel(W, H, P(0, W / 2, H / 2), [0, Math.PI / 2, 0], meshMat(W, H))
     panel(D, W, P(D / 2, W / 2, H), [-Math.PI / 2, 0, 0], meshMat(D, W))
     panel(D, W, P(D / 2, W / 2, 0), [-Math.PI / 2, 0, 0], meshMat(D, W))
-    panel(D, H, P(D / 2, W, H / 2), [0, 0, 0], new THREE.MeshBasicMaterial({ color: 0x070b11, transparent: true, opacity: 0.72, side: THREE.DoubleSide, depthWrite: false }))
-    panel(D, H, P(D / 2, 0, H / 2), [0, 0, 0], new THREE.MeshPhysicalMaterial({ color: 0xa8dcff, transparent: true, opacity: 0.045, roughness: 0.04, side: THREE.DoubleSide, depthWrite: false }))
+    panel(D, H, P(D / 2, W, H / 2), [0, 0, 0], new THREE.MeshBasicMaterial({ color: 0x121212, transparent: true, opacity: 0.72, side: THREE.DoubleSide, depthWrite: false }))
+    panel(D, H, P(D / 2, 0, H / 2), [0, 0, 0], new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: 0.035, roughness: 0.04, side: THREE.DoubleSide, depthWrite: false }))
     {
       // corner brackets on the glass
       const kk = 34, pts: number[] = []
@@ -568,44 +568,44 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
       corner(8, 8, 1, 1); corner(D - 8, 8, -1, 1); corner(8, H - 8, 1, -1); corner(D - 8, H - 8, -1, -1)
       const g2 = new THREE.BufferGeometry()
       g2.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
-      add(new THREE.LineSegments(g2, lineMat(0.9, C.intake)))
+      add(new THREE.LineSegments(g2, lineMat(0.35, C.line)))
     }
 
     // components
     for (const bx of geo.boxes) {
       const b = bx.b
-      if (bx.kind === 'psu') boxMesh(b, solid(0x0d1218), 0.28)
+      if (bx.kind === 'psu') boxMesh(b, solid(0x1c1c1c), 0.28)
       else if (bx.kind === 'board') {
-        boxMesh(b, solid(0x0c201b, 0.96, 0.2), 0.22)
-        const ram = solid(0x161c24, 1, 0.6)
+        boxMesh(b, solid(0x18201b, 0.96, 0.2), 0.22)
+        const ram = solid(0x232323, 1, 0.6)
         boxMesh([b[1] - 150, b[1] - 143, b[2] - 34, b[2], b[5] - 140, b[5] - 10], ram, 0.3)
         boxMesh([b[1] - 140, b[1] - 133, b[2] - 34, b[2], b[5] - 140, b[5] - 10], ram, 0.3)
-        boxMesh([b[1] - 45, b[1], b[2] - 30, b[2], b[5] - 90, b[5] - 5], solid(0x131820, 1, 0.6), 0.22)
-      } else if (bx.kind === 'gpu') boxMesh(b, solid(0x232932, 1, 0.85), 0.4)
+        boxMesh([b[1] - 45, b[1], b[2] - 30, b[2], b[5] - 90, b[5] - 5], solid(0x1e1e1e, 1, 0.6), 0.22)
+      } else if (bx.kind === 'gpu') boxMesh(b, solid(0x2c2c2c, 1, 0.85), 0.4)
       else if (bx.kind === 'gpu_hs') {
-        const fins = makeFinStack((b[1] - b[0]) * S, (b[5] - b[4]) * S, (b[3] - b[2]) * S, 14, 0x6f7b88)
+        const fins = makeFinStack((b[1] - b[0]) * S, (b[5] - b[4]) * S, (b[3] - b[2]) * S, 14, 0x7d7d7d)
         fins.rotation.z = Math.PI / 2
         fins.scale.set((b[5] - b[4]) / (b[1] - b[0]), (b[1] - b[0]) / (b[5] - b[4]), 1)
         fins.position.copy(centre(b))
         add(fins)
       } else if (bx.kind === 'gpu_fan') {
-        const f = makeFan(Math.min(b[1] - b[0], b[3] - b[2]) * 0.92, S, 0x9fb6cc, 70, 10)
+        const f = makeFan(Math.min(b[1] - b[0], b[3] - b[2]) * 0.92, S, 0xb8b8b8, 70, 10)
         f.rotation.x = Math.PI
         f.position.copy(centre(b))
         f.userData.kind = 'gpu'
         anim.current.fans.push(add(f))
       } else if (bx.kind === 'cpu_hs') {
-        const fins = makeFinStack((b[1] - b[0]) * S, (b[5] - b[4]) * S, (b[3] - b[2]) * S, 22, 0x75808d)
+        const fins = makeFinStack((b[1] - b[0]) * S, (b[5] - b[4]) * S, (b[3] - b[2]) * S, 22, 0x858585)
         fins.position.copy(centre(b))
         add(fins)
-        boxMesh([b[0] + 4, b[1] - 4, b[2] - 6, b[2], b[4], b[5]], solid(0x161b22, 1, 0.6))
+        boxMesh([b[0] + 4, b[1] - 4, b[2] - 6, b[2], b[4], b[5]], solid(0x202020, 1, 0.6))
       } else if (bx.kind === 'cpu_fan') {
-        const f = makeFan(Math.min(b[3] - b[2], b[5] - b[4]), S, 0xd6e6ff, 70, b[1] - b[0])
+        const f = makeFan(Math.min(b[3] - b[2], b[5] - b[4]), S, 0xe2e2e2, 70, b[1] - b[0])
         f.rotation.z = Math.PI / 2                                  // airflow front -> rear = -X
         f.position.copy(centre(b))
         f.userData.kind = 'cpu'
         anim.current.fans.push(add(f))
-      } else if (bx.kind === 'vent') boxMesh(b, new THREE.MeshBasicMaterial({ color: 0x4f7396, transparent: true, opacity: 0.22 }))
+      } else if (bx.kind === 'vent') boxMesh(b, new THREE.MeshBasicMaterial({ color: 0x6e6e6e, transparent: true, opacity: 0.22 }))
     }
 
     // case fans + empty mounts
@@ -614,7 +614,7 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
       const f = sc.fans.find((x) => x.slot === m.slot)
       const pos = mountPos(m)
       if (!f) {
-        const ring = new THREE.Mesh(new THREE.TorusGeometry((Math.max(...m.sizes) / 2) * S * 0.86, 0.0025, 6, 64), new THREE.MeshBasicMaterial({ color: 0x35506b }))
+        const ring = new THREE.Mesh(new THREE.TorusGeometry((Math.max(...m.sizes) / 2) * S * 0.86, 0.0025, 6, 64), new THREE.MeshBasicMaterial({ color: 0x4a4a4a }))
         ring.lookAt(inward[m.wall])
         ring.position.copy(pos)
         add(ring)
@@ -738,7 +738,7 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
       const pg = new THREE.BufferGeometry()
       pg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3))
       pg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(count * 3), 3))
-      const pts = new THREE.Points(pg, new THREE.PointsMaterial({ size: 0.022, map: dot(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }))
+      const pts = new THREE.Points(pg, new THREE.PointsMaterial({ size: 0.027, map: dot(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }))
       pts.name = 'flow'
       pts.frustumCulled = false
       add(pts)

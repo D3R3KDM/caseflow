@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-/** Series colours: the dataviz reference palette's dark slots 1-2, validated on the window surface (#0b1722):
+/** Series colours: the dataviz reference palette's dark slots 1-2, validated on the window surface (#1e1e1e):
  * lightness band, chroma, CVD separation (ΔE 26.8) and contrast all pass. */
 export const SERIES = { cpu: '#3987e5', gpu: '#d95926' }
 
@@ -52,7 +52,7 @@ export default function TrendChart({ title, xs, series, xFmt, xUnit, now, width 
           <span key={s.id}><svg width="16" height="6" aria-hidden="true"><line x1="0" y1="3" x2="16" y2="3" stroke={s.color} strokeWidth="2" strokeLinecap="round" /></svg>{s.label}</span>
         ))}
         {series.some((s) => s.dashed) && (
-          <span><svg width="16" height="6" aria-hidden="true"><line x1="0" y1="3" x2="16" y2="3" stroke="rgba(221,233,243,0.55)" strokeWidth="2" strokeDasharray="4 3" /></svg>fans fixed</span>
+          <span><svg width="16" height="6" aria-hidden="true"><line x1="0" y1="3" x2="16" y2="3" stroke="rgba(236,236,236,0.55)" strokeWidth="2" strokeDasharray="4 3" /></svg>fans fixed</span>
         )}
       </div>
       {table ? (
@@ -70,7 +70,7 @@ export default function TrendChart({ title, xs, series, xFmt, xUnit, now, width 
             <line x1={X(xs[iNow])} x2={X(xs[iNow])} y1={pad.t} y2={pad.t + h} className="tr-now" />
             {series.map((s) => <path key={s.id} d={path(s.ys)} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round"
               strokeDasharray={s.dashed ? '4 3' : undefined} opacity={s.dashed ? 0.75 : 1} />)}
-            {solid.map((s) => <circle key={s.id} cx={X(xs[iNow])} cy={Y(s.ys[iNow])} r={4} fill={s.color} stroke="#0b1722" strokeWidth={2} />)}
+            {solid.map((s) => <circle key={s.id} cx={X(xs[iNow])} cy={Y(s.ys[iNow])} r={4} fill={s.color} stroke="#1e1e1e" strokeWidth={2} />)}
             {!collide && ends.map(({ s, y }) => <text key={s.id} x={pad.l + w + 6} y={y + 3} className="tr-end">{s.label} {fmt(s.ys[s.ys.length - 1], rel ? 1 : 0)}°</text>)}
             {hi_ != null && <line x1={X(xs[hi_])} x2={X(xs[hi_])} y1={pad.t} y2={pad.t + h} className="tr-cross" />}
           </svg>

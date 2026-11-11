@@ -32,12 +32,12 @@ export function Gauge({ value, min = 30, max = 90 }: { value: number; min?: numb
     const [x0, y0] = pt(f0, R), [x1, y1] = pt(f1, R)
     return `M${x0},${y0} A${R},${R} 0 0 1 ${x1},${y1}`   // a fraction of a semicircle: never the large arc
   }
-  const col = mix('#63e0ff', '#ffa860', Math.max(0, Math.min(1, (value - 55) / 25)))
+  const col = mix('#dcdcdc', '#d9773a', Math.max(0, Math.min(1, (value - 55) / 25)))   // neutral, copper when hot
   const ticks = []
   for (let v = Math.ceil(min / 10) * 10; v <= max; v += 10) {
     const f = (v - min) / (max - min)
     const [a, b] = pt(f, R + 6), [c, d] = pt(f, R + (v % 20 === 0 ? 12 : 9))
-    ticks.push(<line key={v} x1={a} y1={b} x2={c} y2={d} stroke="rgba(140,200,255,.45)" strokeWidth={1} />)
+    ticks.push(<line key={v} x1={a} y1={b} x2={c} y2={d} stroke="rgba(255,255,255,.3)" strokeWidth={1} />)
     if (v % 20 === 0) {
       const [tx, ty] = pt(f, R + 21)
       ticks.push(<text key={'t' + v} x={tx} y={ty + 3} textAnchor="middle" className="g-tick">{v}</text>)
@@ -45,8 +45,8 @@ export function Gauge({ value, min = 30, max = 90 }: { value: number; min?: numb
   }
   return (
     <svg width={132} height={84} viewBox="0 -10 132 84" className="gauge" aria-label={`${value.toFixed(1)} °C`}>
-      <path d={arc(0, 1)} stroke="rgba(140,200,255,.14)" strokeWidth={7} fill="none" />
-      <path d={arc(0, Math.max(t, 0.001))} stroke={col} strokeWidth={7} fill="none" style={{ filter: `drop-shadow(0 0 6px ${col})` }} />
+      <path d={arc(0, 1)} stroke="rgba(255,255,255,.1)" strokeWidth={6} fill="none" />
+      <path d={arc(0, Math.max(t, 0.001))} stroke={col} strokeWidth={6} fill="none" />
       {ticks}
       <text x={cx} y={cy - 8} textAnchor="middle" className="g-val" fill={col}>{value.toFixed(1)}</text>
       <text x={cx} y={cy + 7} textAnchor="middle" className="g-unit">°C</text>

@@ -6,7 +6,7 @@ export function makeFan(sizeMm: number, S: number, color: number, pct = 80, thic
   const g = new THREE.Group()
   const s = sizeMm * S
   const t = thicknessMm * S
-  const frameMat = new THREE.MeshStandardMaterial({ color: 0x10151c, roughness: 0.5, metalness: 0.35 })
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x1b1b1b, roughness: 0.5, metalness: 0.35 })
   const bar = (w: number, d: number, x: number, z: number) => {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, t, d), frameMat)
     m.position.set(x, 0, z)
@@ -27,9 +27,9 @@ export function makeFan(sizeMm: number, S: number, color: number, pct = 80, thic
   g.add(ring)
   // rotor
   const rotor = new THREE.Group()
-  const hub = new THREE.Mesh(new THREE.CylinderGeometry(s * 0.14, s * 0.14, t * 0.8, 24), new THREE.MeshStandardMaterial({ color: 0x2a2f37, roughness: 0.4, metalness: 0.3 }))
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(s * 0.14, s * 0.14, t * 0.8, 24), new THREE.MeshStandardMaterial({ color: 0x2f2f2f, roughness: 0.4, metalness: 0.3 }))
   rotor.add(hub)
-  const bladeMat = new THREE.MeshStandardMaterial({ color: 0xdfe6ee, roughness: 0.35, metalness: 0.05, transparent: true, opacity: 0.88, side: THREE.DoubleSide })
+  const bladeMat = new THREE.MeshStandardMaterial({ color: 0xe4e4e4, roughness: 0.35, metalness: 0.05, transparent: true, opacity: 0.88, side: THREE.DoubleSide })
   const nb = 7
   for (let i = 0; i < nb; i++) {
     const shape = new THREE.Shape()
@@ -51,7 +51,7 @@ export function makeFan(sizeMm: number, S: number, color: number, pct = 80, thic
 }
 
 /** A stack of thin fins (plates in the x-z plane... caller rotates) filling a box. */
-export function makeFinStack(w: number, h: number, d: number, plates: number, color = 0xb9c2cc): THREE.Group {
+export function makeFinStack(w: number, h: number, d: number, plates: number, color = 0xbdbdbd): THREE.Group {
   const g = new THREE.Group()
   const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.75 })
   const gap = h / plates
@@ -70,7 +70,7 @@ export function meshTexture(): THREE.Texture {
   const c = document.createElement('canvas')
   c.width = c.height = 64
   const ctx = c.getContext('2d')!
-  ctx.fillStyle = 'rgba(120,190,255,0.16)'
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'
   ctx.fillRect(0, 0, 64, 64)
   ctx.globalCompositeOperation = 'destination-out'
   for (let y = 0; y < 4; y++)

@@ -28,11 +28,11 @@ export function createViewer(container: HTMLElement, bg: number): Viewer {
   controls.minDistance = 1.6
   controls.maxDistance = 9
 
-  scene.add(new THREE.HemisphereLight(0xcfe6ff, 0x0a0f16, 0.55))
+  scene.add(new THREE.HemisphereLight(0xf2f2f2, 0x121212, 0.55))
   const key = new THREE.DirectionalLight(0xffffff, 1.2)
   key.position.set(3, 5, 4)
   scene.add(key)
-  const rim = new THREE.DirectionalLight(0x5fc8ff, 0.55)
+  const rim = new THREE.DirectionalLight(0xffffff, 0.35)
   rim.position.set(-3, 2.5, -4)
   scene.add(rim)
 

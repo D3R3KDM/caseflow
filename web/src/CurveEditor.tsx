@@ -3,7 +3,7 @@ import type { Pt } from './scenario'
 
 /** A fan curve in the style of ASUS Fan Xpert: temperature (°C, x) against duty (%, y). Drag a point to change
  * the curve; points keep their order. The ring shows where the fan runs now (current temperature, duty). */
-export default function CurveEditor({ points, onChange, now, color = '#63e0ff', width = 316, height = 176, xMin = 20, xMax = 100 }: {
+export default function CurveEditor({ points, onChange, now, color = '#2fa8a9', width = 316, height = 176, xMin = 20, xMax = 100 }: {
   points: Pt[]; onChange: (p: Pt[]) => void; now?: { t: number; d: number } | null; color?: string
   width?: number; height?: number; xMin?: number; xMax?: number
 }) {
