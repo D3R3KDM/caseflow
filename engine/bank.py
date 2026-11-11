@@ -21,7 +21,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from engine.sim import (DX, U_LAT_PER_MS, build_model, deposit_points, dust_by_part, find, load_library,
+from engine.sim import (DX, FILTER_EFF, U_LAT_PER_MS, build_model, deposit_points, dust_by_part, find, load_library,
                         run_airflow_batch, simulate_dust)
 from engine.thermal import solve_unit_fields
 
@@ -167,6 +167,22 @@ def quantize(a: np.ndarray, signed: bool) -> dict:
     scale = float(np.abs(a).max()) or 1.0
     q = np.round(a / scale * 127.0) + 128.0 if signed else np.round(np.clip(a, 0, None) / scale * 255.0)
     return {"b64": base64.b64encode(q.astype(np.uint8).tobytes()).decode("ascii"), "scale": scale, "signed": signed}
+
+
+def voxels(build: dict) -> dict:
+    """What the web's dust animation needs besides the air velocity: which cells are solid and which are the room around
+    the case (bit-packed, [X, Y, Z] in C order like the fields, most significant bit first), and the openings the dust
+    comes in through (cell boxes, half-open; the wall; behind a dust filter or not). It depends on the build only, so the
+    simulation and the network share it, and it needs no simulation: the voxel model takes a few tens of ms. The web runs
+    engine.sim.simulate_dust's particles (release, drift, settling, mixing, sticking) on it in the air velocity it shows."""
+    lv = list(LEVELS) if curve_fans(build) else [None]
+    m = build_model(build, load_library(), case_duty=lv[0])
+
+    def pack(a: np.ndarray) -> str:
+        return base64.b64encode(np.packbits(a.astype(bool).ravel()).tobytes()).decode("ascii")
+    return {"shape": [int(n) for n in m["shape"]], "solid": pack(m["solid"]), "outside": pack(m["reservoir"]),
+            "openings": [{"box": [int(v) for v in o["box"]], "wall": o["wall"], "filtered": bool(o["filtered"])} for o in m["openings"]],
+            "filter_eff": FILTER_EFF}
 
 
 def package(bank: dict) -> dict:

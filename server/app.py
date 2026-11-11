@@ -61,6 +61,19 @@ class SimQuery(BaseModel):
     simulate: bool = True        # False: only a cached bank; nothing runs on the GPU for a layout never simulated
 
 
+_voxels: dict[str, dict] = {}
+
+
+def voxels(build: dict) -> dict:
+    """bank.voxels, kept per build (the same for the network's bank and the simulation's)."""
+    key = bank.bank_key(build)
+    if key not in _voxels:
+        _voxels[key] = bank.voxels(build)
+        while len(_voxels) > 64:
+            del _voxels[next(iter(_voxels))]
+    return _voxels[key]
+
+
 def _run_bank(jid: str, q: SimQuery) -> None:
     job = _jobs[jid]
     try:
@@ -68,7 +81,7 @@ def _run_bank(jid: str, q: SimQuery) -> None:
         if b is None:
             with _lock:
                 b = bank.get(q.build, callback=lambda p: job.__setitem__("progress", p))
-        job.update(result=bank.package(b), status="done", progress=1.0)
+        job.update(result=bank.package(b) | {"voxels": voxels(q.build)}, status="done", progress=1.0)
     except Exception as exc:  # pragma: no cover - reported to the client
         job.update(status="error", error=f"{exc!r} {traceback.format_exc()[-400:]}")
 
@@ -116,7 +129,7 @@ def ai_bank(q: SimQuery) -> Response:
     with _ai_lock:
         b = net.predict(q.build)
     # whether the simulation of this build is cached: comparing then takes seconds instead of about 90 s
-    return _json(bank.package(b) | {"simulated": (bank.CACHE / f"{bank.bank_key(q.build)}.json").exists()})
+    return _json(bank.package(b) | {"simulated": (bank.CACHE / f"{bank.bank_key(q.build)}.json").exists(), "voxels": voxels(q.build)})
 
 
 _ai_dust: dict[str, dict] = {}

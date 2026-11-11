@@ -2,8 +2,8 @@
 
 - library.json        the parts library
 - default_build.json  the reference PC (the user's layout)
-- bank_current.json   its bank with the 3D fields (airflow, per-watt heat, dust at three case-fan duties), so the
-                      room, load and curve sliders work offline in 3D
+- bank_current.json   its bank with the 3D fields (airflow, per-watt heat, dust at three case-fan duties) and its
+                      voxels (for the dust animation), so the room, load and curve sliders work offline in 3D
 - optimize.json       the 32-layout search: every layout's bank summary, so the ranking is redone in the browser
                       for any scenario (other layouts open in 3D when the engine is running; it has them cached)
 
@@ -27,7 +27,7 @@ for old in ("current", "best", "cpu", "worst", "coolest", "cleanest"):     # fix
 home = default_build()
 (OUT / "default_build.json").write_text(json.dumps(home, indent=1))
 b = bk.get(home, callback=lambda f: print(f"\r  bank {f * 100:5.1f} %", end="", flush=True))
-(OUT / "bank_current.json").write_text(json.dumps(bk.package(b)))
+(OUT / "bank_current.json").write_text(json.dumps(bk.package(b) | {"voxels": bk.voxels(home)}))
 print(f"\rbank_current.json: {(OUT / 'bank_current.json').stat().st_size / 1e6:.1f} MB")
 opt = ROOT / "data" / "optimize.json"
 if opt.exists() and json.loads(opt.read_text()).get("version", 0) >= 7:
