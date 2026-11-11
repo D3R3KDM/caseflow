@@ -4,12 +4,16 @@ of GPU time.
 
 Writes web/public/data/ai_space.json: per layout, at each case-fan duty, the per-watt rises at the CPU and GPU intakes
 and in the case air, the flows and each fan's flow - what the browser's scenario solver (web/src/scenario.ts) needs to
-rank every layout for any room temperature, load and fan curves. Dust is left out (it needs particle tracking).
+rank every layout for any room temperature, load and fan curves. Dust is left out (it needs particle tracking). Also
+lists the layouts the network was trained on and the held-out test layouts (data/surrogate/dataset.json), so the app
+can say whether the network has seen a layout and offer the test layouts.
 
     python scripts/ai_space.py
+    python scripts/ai_space.py --splits-only     # only refresh the training / test lists in the existing file
 """
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import time
@@ -32,7 +36,20 @@ def sig(x: float, n: int = 4) -> float:
     return float(f"{x:.{n}g}")
 
 
+def splits() -> dict:
+    """Codes of the layouts the network was trained on and of the held-out test layouts."""
+    ds = json.loads((ROOT / "data" / "surrogate" / "dataset.json").read_text())
+    return {k: sorted("".join(map(str, r["code"])) for r in ds["rows"] if r["split"] == k) for k in ("train", "test")}
+
+
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--splits-only", action="store_true", help="only refresh the training / test lists in the existing file")
+    if ap.parse_args().splits_only:
+        out = json.loads(OUT.read_text())
+        out.update(splits())
+        OUT.write_text(json.dumps(out, separators=(",", ":")))
+        return print(f"wrote the training / test lists ({len(out['train'])} / {len(out['test'])}) into {OUT.name}")
     t0 = time.time()
     net = Surrogate()
     lib = load_library()
@@ -58,7 +75,7 @@ def main() -> None:
     out = {"version": 1, "model": info, "mounts": MOUNTS, "mount_fan": MOUNT_FAN, "levels": list(bk.LEVELS),
            "row": "per level: k_cpu_in[2], k_gpu_in[2], k_air_mean[2], k_air_max[2] (K/W; CPU heat, GPU heat), "
                   "flow_in_m3s, flow_out_m3s, case_pa, [q_m3s of each fan in mount order]; code digit per mount: 0 off, 1 in, 2 out",
-           "seconds": round(time.time() - t0, 1), "rows": rows}
+           "seconds": round(time.time() - t0, 1), **splits(), "rows": rows}
     OUT.write_text(json.dumps(out, separators=(",", ":")))
     print(f"AI SPACE DONE: {len(codes)} layouts, {len(jobs)} network samples in {time.time() - t0:.0f} s, "
           f"{OUT.stat().st_size / 1e6:.1f} MB", flush=True)

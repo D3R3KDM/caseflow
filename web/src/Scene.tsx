@@ -27,6 +27,7 @@ export interface TwinData {
   progress: number                // 0..1, how far the simulation is: the scan has drawn the twin that far
   ready: boolean                  // its fields are in: airflow, heat and dust appear once the scan is complete
   labels: [string, string]        // captions above the build and above the twin
+  subs?: [string, string]         // a smaller second line under each (whether the network has seen the layout)
 }
 const LABEL_INK = ['#9a96f2', '#e8e8e8']     // the build (the AI's answer) in violet, the simulation in light ink
 /** Everything the 3D view draws. Each part is rebuilt only when its key changes: the case and parts (geoKey), the
@@ -519,28 +520,35 @@ function scanBeam(geo: Geometry): THREE.Group {
 function caseLabel(geo: Geometry): THREE.Sprite {
   const c = document.createElement('canvas')
   c.width = 1024
-  c.height = 96
+  c.height = 160
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.SRGBColorSpace
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false }))
-  s.scale.set(2.4, 0.225, 1)
-  s.position.set(0, (geo.case.H / 2) * SCALE + 0.2, 0)
+  s.scale.set(2.4, 0.375, 1)
+  s.position.set(0, (geo.case.H / 2) * SCALE + 0.27, 0)
   s.renderOrder = 25
   return s
 }
-function setCaseLabel(s: THREE.Sprite, text: string, ink: string) {
-  if (s.userData.text === text + ink) return
-  s.userData.text = text + ink
+function setCaseLabel(s: THREE.Sprite, text: string, sub: string, ink: string) {
+  const key = `${text}|${sub}|${ink}`
+  if (s.userData.text === key) return
+  s.userData.text = key
   const tex = (s.material as THREE.SpriteMaterial).map as THREE.CanvasTexture
   const c = tex.image as HTMLCanvasElement
-  const g = c.getContext('2d')!
+  const g = c.getContext('2d')! as CanvasRenderingContext2D & { letterSpacing?: string }
   g.clearRect(0, 0, c.width, c.height)
-  g.font = '600 40px "IBM Plex Sans", system-ui, sans-serif'
-  ;(g as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = '6px'
   g.textAlign = 'center'
   g.textBaseline = 'middle'
+  g.font = '600 40px "IBM Plex Sans", system-ui, sans-serif'
+  g.letterSpacing = '6px'
   g.fillStyle = ink
-  g.fillText(text, c.width / 2, c.height / 2)
+  g.fillText(text, c.width / 2, 52)
+  if (sub) {
+    g.font = '500 25px "IBM Plex Sans", system-ui, sans-serif'
+    g.letterSpacing = '4px'
+    g.fillStyle = 'rgba(232, 232, 232, 0.62)'
+    g.fillText(sub, c.width / 2, 112)
+  }
   tex.needsUpdate = true
 }
 
@@ -1034,7 +1042,7 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
     for (const b of [tv.beam, mv.beam]) b.visible = false
     ;[mv, tv].forEach((w, i) => {
       w.label = caseLabel(sc.geometry)
-      setCaseLabel(w.label, sc.twin?.labels[i] ?? '', LABEL_INK[i])
+      setCaseLabel(w.label, sc.twin?.labels[i] ?? '', sc.twin?.subs?.[i] ?? '', LABEL_INK[i])
       w.root.add(w.label)
     })
     setSpin(tv, sc)
@@ -1043,11 +1051,11 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
   }, [twinOn, geoKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // the captions follow the simulation's progress
-  const labelKey = scene?.twin?.labels.join('|') ?? ''
+  const labelKey = [...(scene?.twin?.labels ?? []), ...(scene?.twin?.subs ?? [])].join('|')
   useEffect(() => {
-    const ls = sceneRef.current?.twin?.labels
-    if (!ls) return
-    ;[main.current, twin.current].forEach((w, i) => { if (w?.label) setCaseLabel(w.label, ls[i], LABEL_INK[i]) })
+    const t = sceneRef.current?.twin
+    if (!t) return
+    ;[main.current, twin.current].forEach((w, i) => { if (w?.label) setCaseLabel(w.label, t.labels[i], t.subs?.[i] ?? '', LABEL_INK[i]) })
   }, [labelKey, twinOn])
 
   // the twin's fields change with the scenario (the fan speed level) once it is complete

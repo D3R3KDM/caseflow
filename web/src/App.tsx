@@ -1,6 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { buildOfCode, codeOf, type AiDust, type AiInfo, type AiSpace } from './ai'
-import { AiAllTab, AiHereTab, ModelCard, type AiHere } from './AiWindow'
+import { AiAllTab, AiHereTab, ModelCard, SEEN, type AiHere } from './AiWindow'
 import type { RankJob, RankOut } from './aiWorker'
 import { getJSON, pingServer, postJSON } from './api'
 import CurveEditor from './CurveEditor'
@@ -161,6 +161,7 @@ export default function App() {
   const [ranks, setRanks] = useState<RankOut | null>(null)
   const [aiTab, setAiTab] = useState<'here' | 'all'>('here')
   const [aiFans, setAiFans] = useState<number | null>(null)
+  const [aiHeld, setAiHeld] = useState(false)                                        // the AI list shows only the held-out layouts
   const [missing, setMissing] = useState<Record<string, true>>({})                  // layouts the engine has never simulated
   const worker = useRef<Worker | null>(null)
   const rankId = useRef(0)
@@ -415,6 +416,8 @@ export default function App() {
     // the scan follows the simulation; a cached one is drawn in a few seconds
     progress: twinPkg ? 1 : runP ?? (simReady ? 0.6 : 0), ready: !!twinPkg && !!twinFields,
     labels: ['AI PREDICTION', runP != null ? `SIMULATING ${Math.round(runP * 100)}%` : 'SIMULATION'],
+    // whether the network has seen this layout: on one it was trained on, the two agree almost exactly
+    subs: [aiPkg?.seen ? SEEN[aiPkg.seen].toUpperCase() : '', ''],
   } : null
   const sceneData: SceneData | null = useMemo(() => {
     if (!geo || !viewBuild || !lib) return null
@@ -432,7 +435,7 @@ export default function App() {
     else if (aiPending) flow = held.current.flow                  // the last airflow stays until the network answers
     return { geoKey: partsKey(viewBuild) + '#' + fanKey(viewBuild.fans), geometry: geo, fans, flowKey: flow?.flowKey ?? null, u: flow?.u ?? null,
       T: flow?.T ?? null, dust: flow?.dust ?? null, cpuFan: resShow?.cpu.fan_speed ?? 0.7, gpuFan: resShow?.gpu.fan_speed ?? 0.4, twin }
-  }, [geo, viewBuild, lib, resShow, fields, pkg, lvl, T, dustPts, aiPending, twin?.flowKey, twin?.T, twin?.dust, twin?.progress, twin?.ready, twin?.labels[1], comparing]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [geo, viewBuild, lib, resShow, fields, pkg, lvl, T, dustPts, aiPending, twin?.flowKey, twin?.T, twin?.dust, twin?.progress, twin?.ready, twin?.labels[1], twin?.subs?.[0], comparing]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------- actions ----------
   const cs = lib && viewBuild ? lib.cases.find((c) => c.id === viewBuild.case) ?? null : null
@@ -800,7 +803,7 @@ export default function App() {
             </div>
             {aiTab === 'here'
               ? <><AiHereTab here={aiHere} onCompare={startCompare} /><ModelCard info={aiInfo} /></>
-              : <AiAllTab space={space} ranks={ranks} codeNow={codeNow} scenario={scnName} fans={aiFans} setFans={setAiFans} onOpen={openCode} />}
+              : <AiAllTab space={space} ranks={ranks} codeNow={codeNow} scenario={scnName} fans={aiFans} setFans={setAiFans} heldOut={aiHeld} setHeldOut={setAiHeld} onOpen={openCode} />}
           </HudWindow>
         )}
 

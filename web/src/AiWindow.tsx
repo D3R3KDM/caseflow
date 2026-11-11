@@ -13,7 +13,9 @@ export interface AiHere {
   comparing: boolean                       // the 3D view shows the AI's case and the simulation's side by side
 }
 
-const SEEN: Record<Seen, string> = { train: 'In the training set', test: 'Held-out test layout', new: 'New to the network' }
+/** Whether the network has seen a layout: on one it was trained on it matches the simulation almost exactly, which says
+ * nothing about new layouts; the held-out test layouts and new ones are the real test. */
+export const SEEN: Record<Seen, string> = { train: 'Trained on this layout', test: 'Held-out test layout', new: 'New to the network' }
 
 const signed = (v: number) => {
   const r = Math.round(v * 10) / 10
@@ -58,11 +60,13 @@ export function AiHereTab({ here, onCompare }: { here: AiHere; onCompare: () => 
   )
 }
 
-/** All 3^8 layouts as the network predicts them, ranked for the scenario on screen. */
-export function AiAllTab({ space, ranks, codeNow, scenario, fans, setFans, onOpen }: {
+/** All 3^8 layouts as the network predicts them, ranked for the scenario on screen. heldOut: only the layouts kept out of
+ * training (the simulation has them, so comparing one takes seconds and shows the network's real error). */
+export function AiAllTab({ space, ranks, codeNow, scenario, fans, setFans, heldOut, setHeldOut, onOpen }: {
   space: AiSpace | null; ranks: RankOut | null; codeNow: string | null; scenario: string
-  fans: number | null; setFans: (n: number | null) => void; onOpen: (code: string) => void
+  fans: number | null; setFans: (n: number | null) => void; heldOut: boolean; setHeldOut: (v: boolean) => void; onOpen: (code: string) => void
 }) {
+  const tests = useMemo(() => new Set(space?.test ?? []), [space])
   const view = useMemo(() => {
     if (!space || !ranks || ranks.cpu.length !== space.rows.length) return null
     const n = space.rows.length
@@ -76,19 +80,30 @@ export function AiAllTab({ space, ranks, codeNow, scenario, fans, setFans, onOpe
   }, [space, ranks, codeNow])
   if (!space) return <p className="fine">Loading the predicted design space…</p>
   if (!view || !ranks) return <p className="fine">Ranking {space.rows.length} layouts…</p>
-  const list = view.order.filter((i) => fans == null || view.counts[i] === fans).slice(0, 8)
+  const held = heldOut && tests.size > 0
+  const list = held ? view.order.filter((i) => tests.has(space.rows[i].c)) : view.order.filter((i) => fans == null || view.counts[i] === fans).slice(0, 8)
   const xs = view.best.map((_, k) => k).filter((k) => view.best[k] != null)
   const days = (space.rows.length * 90) / 86400
   return (
     <div className="ai-all">
-      <p className="sp-lede">{space.rows.length} layouts · predicted in {space.seconds.toFixed(0)} s · ranked for {scenario}</p>
+      <p className="sp-lede">{held ? `${tests.size} held-out layouts · never trained on · ${scenario}`
+        : `${space.rows.length} layouts · predicted in ${space.seconds.toFixed(0)} s · ranked for ${scenario}`}</p>
       <div className="ai-filter">
         <span className="lbl">fans</span>
         <span className="seg3">
-          <button className={fans == null ? 'on' : ''} onClick={() => setFans(null)}>any</button>
-          {[3, 4, 5, 6, 7, 8].map((k) => <button key={k} className={fans === k ? 'on' : ''} onClick={() => setFans(k)}>{k}</button>)}
+          <button className={!held && fans == null ? 'on' : ''} onClick={() => { setHeldOut(false); setFans(null) }}>any</button>
+          {[3, 4, 5, 6, 7, 8].map((k) => <button key={k} className={!held && fans === k ? 'on' : ''} onClick={() => { setHeldOut(false); setFans(k) }}>{k}</button>)}
         </span>
       </div>
+      {tests.size > 0 && (
+        <div className="ai-filter">
+          <span className="lbl">test</span>
+          <span className="seg3">
+            <button className={held ? 'on' : ''} title="The layouts kept out of training: open one and compare it with the simulation to see the network's real error"
+              onClick={() => setHeldOut(!held)}>held-out {tests.size}</button>
+          </span>
+        </div>
+      )}
       <div className="rk-h ai-h"><span>#</span><span>Layout</span><span>CPU</span><span>GPU</span><span>dBA</span></div>
       <div className="ai-list">
         {list.map((i) => {

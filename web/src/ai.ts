@@ -20,6 +20,7 @@ export interface AiInfo {
 export interface AiRow { c: string; L: (number | number[])[][] }
 export interface AiSpace {
   version: number; model: AiInfo; mounts: string[]; mount_fan: Record<string, string>; levels: number[]; seconds: number; rows: AiRow[]
+  train?: string[]; test?: string[]          // codes the network was trained on, and the held-out test layouts
 }
 /** Where a predicted bank's layout stands for the network. */
 export type Seen = 'train' | 'test' | 'new'
