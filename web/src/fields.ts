@@ -20,15 +20,17 @@ export function decodeQ8(q: Q8): Float32Array {
 }
 
 const cache = new Map<string, Fields>()
-/** Decoded fields of a bank (decoded once per bank; the network's and the simulation's bank of a layout apart). */
+const MAX_DECODED = 16              // ~15 MB each: the last few layouts, simulated and predicted
+/** Decoded fields of a bank (decoded once per bank; the network's and the simulation's bank of a layout apart).
+ * Only the most recently used ones are kept, so browsing many layouts does not fill the page's memory. */
 export function bankFields(b: BankPkg | null | undefined): Fields | null {
   if (!b?.fields) return null
   const id = `${b.key}:${b.source ?? 'sim'}`
   let f = cache.get(id)
-  if (!f) {
-    f = { u: b.fields.map((x) => decodeQ8(x.u)), kc: b.fields.map((x) => decodeQ8(x.kc)), kg: b.fields.map((x) => decodeQ8(x.kg)), dust: b.fields.map((x) => x.dust_points) }
-    cache.set(id, f)
-  }
+  if (f) cache.delete(id)                                       // re-inserted below as the most recent
+  else f = { u: b.fields.map((x) => decodeQ8(x.u)), kc: b.fields.map((x) => decodeQ8(x.kc)), kg: b.fields.map((x) => decodeQ8(x.kg)), dust: b.fields.map((x) => x.dust_points) }
+  cache.set(id, f)
+  while (cache.size > MAX_DECODED) cache.delete(cache.keys().next().value as string)
   return f
 }
 

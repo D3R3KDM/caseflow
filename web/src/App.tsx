@@ -23,6 +23,19 @@ const asLib = (lib: Lib) => lib as unknown as ScenarioLib
 /** Preset buttons, short enough for one row (the full name is the tooltip). */
 const SHORT: Record<string, string> = { idle: 'Idle', office: 'Everyday', cpu_game: 'CPU game', gpu_game: 'GPU game', stress: 'Stress' }
 const pct = (x: number) => `${Math.round(x * 100)}%`
+/** Layouts whose full banks (3D fields, ~30-40 MB each in the page) stay in memory; older ones are dropped and
+ * fetched again from the engine's cache if opened again, so browsing many layouts cannot exhaust the page's memory. */
+const KEEP = 8
+function keepRecent<T>(m: Record<string, T>, id: string, v: T, pinned: string | null): Record<string, T> {
+  const entries = Object.entries(m).filter(([k]) => k !== id)
+  entries.push([id, v])
+  while (entries.length > KEEP) {
+    const i = entries.findIndex(([k]) => k !== pinned && k !== id)
+    if (i < 0) break
+    entries.splice(i, 1)
+  }
+  return Object.fromEntries(entries)
+}
 /** The engine's reason for not predicting a build (FastAPI puts it in "detail"). */
 const aiWhy = (e: unknown) => {
   const s = String(e)
@@ -221,10 +234,11 @@ export default function App() {
     }
   }
   const viewId = viewBuild ? layoutId(viewBuild) : null
+  const homeId = homeBuild ? layoutId(homeBuild) : null
   useEffect(() => {
     if (!viewBuild || !viewId || banks[viewId]) return
     let alive = true
-    const store = (pkg: BankPkg | null) => { if (alive && pkg) setBanks((m) => ({ ...m, [viewId]: pkg })) }
+    const store = (pkg: BankPkg | null) => { if (alive && pkg) setBanks((m) => keepRecent(m, viewId, pkg, homeId)) }
     if (online) fetchBank(viewBuild, view === 'custom' ? 'your edited layout' : 'layout').then(store).catch((e) => setMsg(String(e).slice(0, 220)))
     else if (viewBuild === homeBuild) getJSON<BankPkg>('/data/bank_current.json').then(store).catch(() => {})
     return () => { alive = false }
@@ -236,8 +250,8 @@ export default function App() {
     if (!online || !viewBuild || !viewId || (had && (!('error' in had) || had.final))) return
     const id = viewId
     postJSON<BankPkg>('/api/ai', { build: { ...viewBuild, cpu: cpuId } })
-      .then((p) => setAi((m) => ({ ...m, [id]: p })))
-      .catch((e) => setAi((m) => ({ ...m, [id]: { error: aiWhy(e), final: String(e).includes(': 422') } })))   // only a refusal is final
+      .then((p) => setAi((m) => keepRecent(m, id, p, homeId)))
+      .catch((e) => setAi((m) => keepRecent(m, id, { error: aiWhy(e), final: String(e).includes(': 422') }, homeId)))   // only a refusal is final
   }, [viewId, online]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------- the steady state of the viewed build ----------
@@ -622,7 +636,7 @@ export default function App() {
               })}
             </div>
             {view === 'custom' && custom && !banks[layoutId(custom)] && (
-              <button className="run" disabled={!online || !!job} onClick={() => fetchBank(custom, 'your edited layout').then((p) => p && setBanks((m) => ({ ...m, [layoutId(custom)]: p })))}>
+              <button className="run" disabled={!online || !!job} onClick={() => fetchBank(custom, 'your edited layout').then((p) => p && setBanks((m) => keepRecent(m, layoutId(custom), p, homeId)))}>
                 {online ? 'Simulate this layout' : 'Engine offline'}</button>
             )}
             <p className="fine">Changing parts or fans changes the airflow: CaseFlow simulates it at 3 case-fan speeds (about 1.5 min on the GPU), then room, load and curves update instantly. "curve" fans follow the case-fan curve; "fixed" fans hold their duty.</p>
