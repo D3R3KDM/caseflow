@@ -52,7 +52,7 @@ export default function TrendChart({ title, xs, series, xFmt, xUnit, now, width 
           <span key={s.id}><svg width="16" height="6" aria-hidden="true"><line x1="0" y1="3" x2="16" y2="3" stroke={s.color} strokeWidth="2" strokeLinecap="round" /></svg>{s.label}</span>
         ))}
         {series.some((s) => s.dashed) && (
-          <span><svg width="16" height="6" aria-hidden="true"><line x1="0" y1="3" x2="16" y2="3" stroke="rgba(221,233,243,0.55)" strokeWidth="2" strokeDasharray="4 3" /></svg>fans held at today's speed</span>
+          <span><svg width="16" height="6" aria-hidden="true"><line x1="0" y1="3" x2="16" y2="3" stroke="rgba(221,233,243,0.55)" strokeWidth="2" strokeDasharray="4 3" /></svg>fans fixed</span>
         )}
       </div>
       {table ? (

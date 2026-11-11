@@ -13,7 +13,6 @@ import TrendChart, { SERIES } from './TrendChart'
 import { loadWatts, setupFor, solve, type Bank, type Curves, type ScenarioBuild, type ScenarioLib, type ScenarioResult, type Setup, type Source } from './scenario'
 import { WHERE, type BankPkg, type Build, type Control, type FanSlot, type Geometry, type Lib, type Mode, type Opt, type RankRow, type Scenario, type ViewKey } from './types'
 
-const amazon = (q: string) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}`
 const fanKey = (fs: FanSlot[]) => fs.filter((f) => f.mode !== 'off').map((f) => `${f.slot}:${f.fan}:${f.mode}`).sort().join('|')
 const partsKey = (b: Build) => `${b.case}|${b.gpu}|${b.cooler}`
 /** Everything that shapes a build's airflow (and so its bank): parts, fans, and which fans follow the curve. */
@@ -23,6 +22,12 @@ const asLib = (lib: Lib) => lib as unknown as ScenarioLib
 /** Preset buttons, short enough for one row (the full name is the tooltip). */
 const SHORT: Record<string, string> = { idle: 'Idle', office: 'Everyday', cpu_game: 'CPU game', gpu_game: 'GPU game', stress: 'Stress' }
 const pct = (x: number) => `${Math.round(x * 100)}%`
+/** Short part names for the selects: "Stock 140 mm", "Generic 120 mm", "RTX 5080 Founders Edition". */
+const fanName = (name: string) => name
+  .replace(/^Lian Li LANCOOL 207 (front|bottom) fan \((\d+) mm.*\)$/, (_m, w: string, mm: string) => `Stock ${mm} mm${w === 'bottom' ? ' rev' : ''}`)
+  .replace(/^(\d+) mm fan, model unknown.*$/, 'Generic $1 mm')
+  .replace(/ \(\d+ mm\)$/, '')
+const partName = (name: string) => name.replace(/^NVIDIA GeForce /, '').replace(/ ARGB$/, '')
 /** Layouts whose full banks (3D fields, ~30-40 MB each in the page) stay in memory; older ones are dropped and
  * fetched again from the engine's cache if opened again, so browsing many layouts cannot exhaust the page's memory. */
 const KEEP = 8
@@ -132,7 +137,7 @@ export default function App() {
   const [sweep, setSweep] = useState<'gpu' | 'cpu'>('gpu')
   const [curveTab, setCurveTab] = useState<'case' | 'cpu' | 'gpu'>('case')
   const [allRows, setAllRows] = useState(false)
-  const [job, setJob] = useState<{ p: number; label: string } | null>(null)
+  const [job, setJob] = useState<{ p: number; id: string } | null>(null)           // the simulation running, and for which layout
   const [msg, setMsg] = useState<string | null>(null)
   const [layoutKey, setLayoutKey] = useState(0)
   const [menu, setMenu] = useState<Pick | null>(null)
@@ -143,6 +148,7 @@ export default function App() {
   const [ranks, setRanks] = useState<RankOut | null>(null)
   const [aiTab, setAiTab] = useState<'here' | 'all'>('here')
   const [aiFans, setAiFans] = useState<number | null>(null)
+  const [missing, setMissing] = useState<Record<string, true>>({})                  // layouts the engine has never simulated
   const worker = useRef<Worker | null>(null)
   const rankId = useRef(0)
   const narrow = useNarrow()
@@ -217,16 +223,19 @@ export default function App() {
     worker.current.postMessage(job)
   }, [win.ai, aiTab, space, lib, curvesD, scnD, cpuId, homeBuild])
 
-  // ---------- banks: the engine's cache (or a fresh run), or the stored one for your layout offline ----------
-  const fetchBank = async (b: Build, label: string): Promise<BankPkg | null> => {
-    const { job: id, cached } = await postJSON<{ job: string; cached: boolean }>('/api/bank', { build: { ...b, cpu: cpuId } })
-    if (!cached) setJob({ p: 0, label })
+  // ---------- banks: from the engine's cache; a layout never simulated shows the network's prediction until you ask for the
+  // simulation (verify). Offline, the stored bank of your layout. ----------
+  const fetchBank = async (b: Build, simulate: boolean): Promise<BankPkg | null> => {
+    const { job: id, cached } = await postJSON<{ job: string | null; cached: boolean }>('/api/bank', { build: { ...b, cpu: cpuId }, simulate })
+    if (!id) return null                                         // never simulated, and not asked to
+    const lid = layoutId(b)
+    if (!cached) setJob({ p: 0, id: lid })
     try {
       for (;;) {
         await new Promise((r) => setTimeout(r, cached ? 250 : 800))
         const j = await getJSON<{ status: string; progress: number; error?: string; result?: BankPkg }>(`/api/job/${id}`)
         if (j.status === 'error') throw new Error(j.error)
-        if (!cached) setJob({ p: j.progress, label })
+        if (!cached) setJob({ p: j.progress, id: lid })
         if (j.status === 'done' && j.result) return j.result
       }
     } finally {
@@ -238,11 +247,24 @@ export default function App() {
   useEffect(() => {
     if (!viewBuild || !viewId || banks[viewId]) return
     let alive = true
-    const store = (pkg: BankPkg | null) => { if (alive && pkg) setBanks((m) => keepRecent(m, viewId, pkg, homeId)) }
-    if (online) fetchBank(viewBuild, view === 'custom' ? 'your edited layout' : 'layout').then(store).catch((e) => setMsg(String(e).slice(0, 220)))
+    const store = (pkg: BankPkg | null) => {
+      if (pkg) { if (alive) setBanks((m) => keepRecent(m, viewId, pkg, homeId)) }
+      else setMissing((m) => ({ ...m, [viewId]: true }))
+    }
+    if (online) fetchBank(viewBuild, false).then(store).catch((e) => setMsg(String(e).slice(0, 160)))
     else if (viewBuild === homeBuild) getJSON<BankPkg>('/data/bank_current.json').then(store).catch(() => {})
     return () => { alive = false }
   }, [viewId, online]) // eslint-disable-line react-hooks/exhaustive-deps
+  /** Simulate the layout on screen (about 90 s on the GPU) to check the network's prediction and add the dust. */
+  const verify = () => {
+    if (!viewBuild || !viewId || job || !online) return
+    const id = viewId
+    fetchBank(viewBuild, true).then((p) => {
+      if (!p) return
+      setBanks((m) => keepRecent(m, id, p, homeId))
+      setMissing((m) => { const r = { ...m }; delete r[id]; return r })
+    }).catch((e) => setMsg(String(e).slice(0, 160)))
+  }
 
   // ---------- the network's prediction of the viewed build: instant, shown until the simulation is there ----------
   useEffect(() => {
@@ -341,7 +363,6 @@ export default function App() {
   const editFan = (slot: string, action: 'flip' | 'off' | 'in' | 'out') => {
     setMenu(null)
     if (!viewBuild) return
-    if (job) return setMsg('A simulation is still running - wait for it to finish.')
     const b: Build = { ...viewBuild, fans: viewBuild.fans.map((f) => ({ ...f })) }
     const i = b.fans.findIndex((f) => f.slot === slot)
     if (action === 'flip' && i >= 0) b.fans[i].mode = b.fans[i].mode === 'in' ? 'out' : 'in'
@@ -351,7 +372,7 @@ export default function App() {
       b.fans.push({ slot, fan: stockFan(slot) ?? (m && !m.sizes.includes(120) ? 'generic-140' : 'generic-120'), mode: action, control: 'curve', pct: 80 })
     } else return
     const row = rows.find((r) => layoutId(r.build) === layoutId(b))
-    if (!row && !online) return setMsg('Not one of the searched layouts: start the engine (start.bat) to simulate it.')
+    if (!row && !online) return setMsg('Start the engine to open new layouts.')
     openBuild(b)
   }
   const setFan = (slot: string, patch: Partial<FanSlot>) => {
@@ -372,14 +393,14 @@ export default function App() {
   const codeNow = space && viewBuild ? codeOf(space, viewBuild) : null
   const openCode = (code: string) => {
     if (!space || !homeBuild) return
-    if (job) return setMsg('A simulation is still running - wait for it to finish.')
     openBuild(buildOfCode(space, homeBuild, code))
   }
+  const simNow = !!job && job.id === viewId                     // the layout on screen is being simulated
+  const canVerify = online && !physSummary && !job && !!viewId && !!missing[viewId]
   const aiHere: AiHere = {
-    ai: resAi, phys: resPhys, seen: aiPkg?.seen ?? null, ms: aiPkg?.seconds != null ? aiPkg.seconds * 1000 : null,
-    why: !online ? 'start the engine (start.bat) to ask the network' : aiEntry && 'error' in aiEntry ? aiEntry.error : null,
-    progress: !physSummary && job ? job.p : null,
-    physLabel: phys?.seconds && phys.seconds > 1 ? `simulated in ${Math.round(phys.seconds)} s on the GPU` : physSummary ? 'simulated' : job ? 'simulating' : 'not simulated yet',
+    ai: resAi, phys: resPhys, seen: aiPkg?.seen ?? null,
+    why: !online ? 'start the engine' : aiEntry && 'error' in aiEntry ? aiEntry.error : null,
+    progress: simNow && job ? job.p : null, canVerify,
   }
   const aiTag = showAi ? <b className="ai-tag">AI</b> : null
   const steps = homeBuild && recRow && !bestIsCur ? changes(homeBuild.fans, recRow.build.fans) : []
@@ -387,19 +408,15 @@ export default function App() {
   const menuMount = menu && cs ? cs.mounts.find((m) => m.slot === menu.slot) : undefined
   const menuQ = menu && res ? res.fans.find((f) => f.slot === menu.slot) : undefined
   const preset = lib?.defaults.scenarios.find((p) => p.id === scn.preset)
-  const scnName = `${preset?.name ?? 'custom load'}, ${scn.ambient_c.toFixed(scn.ambient_c % 1 ? 1 : 0)} °C room`
+  const scnName = `${SHORT[scn.preset ?? ''] ?? 'custom load'}, ${scn.ambient_c.toFixed(scn.ambient_c % 1 ? 1 : 0)} °C`
   const isBankless = !!viewBuild && !pkg && !summary
 
   // ---------- tabs ----------
   const tabs = (['current', 'best', 'cpu', 'worst', 'custom'] as ViewKey[]).filter((k) =>
     k === 'current' || (k === 'custom' ? !!custom : !!buildOf(k) && !(k === 'best' && bestIsCur) && !(k === 'cpu' && cpuRow && (cpuRow.current || cpuRow.name === recRow?.name))))
-  const tabLabel: Record<ViewKey, [string, string]> = {
-    current: ['Your layout', curRow ? (curRow.tied && n > 1 && topRow && !topRow.current ? 'tied #1' : `#${rankOf(curRow.name)}/${n}`) : ''],
-    best: ['Recommended', `#1/${n}`], cpu: ['Lowest CPU', `#${rankOf(cpuRow?.name)}/${n}`], worst: ['Worst', `#${n}/${n}`], custom: ['Custom', ''],
-  }
+  const tabLabel: Record<ViewKey, string> = { current: 'Your layout', best: 'Recommended', cpu: 'Lowest CPU', worst: 'Worst', custom: 'Custom' }
   const tagOf = (r: RankRow) => [
-    r.current && 'YOURS', r.tied && rows.filter((x) => x.tied).length > 1 && 'TIED #1', r.name === recRow?.name && !r.current && 'RECOMMENDED',
-    r.name === cpuRow?.name && 'LOWEST CPU', r.name === worstRow?.name && 'WORST', r.throttled && 'THROTTLES',
+    r.current && 'YOURS', r.name === recRow?.name && !r.current && 'BEST', r.name === worstRow?.name && 'WORST', r.throttled && 'THROTTLES',
   ].filter(Boolean) as string[]
   const shown = rows.map((r, i) => ({ r, i })).filter(({ r, i }) => allRows || i < 6 || tagOf(r).length > 0)
   const [lo, hi] = rows.length ? [rows[0].score, rows[n - 1].score] : [0, 1]
@@ -414,32 +431,32 @@ export default function App() {
     const dustRel = res.dust_rate != null && (refRes?.dust_rate ?? res.dust_rate) ? res.dust_rate / (refRes?.dust_rate ?? res.dust_rate) : null
     screens.push(
       { id: 'search', title: 'Layout search', pos: [-3.35, -0.7, -0.12], yaw: 0.2, content: (
-        <Holo tag="LAYOUT SEARCH" sub={`${n} layouts · live`} width={300} flashKey="search">
+        <Holo tag="LAYOUT SEARCH" width={300} flashKey="search">
           <SearchPanel rows={rows} shown={shown} tagOf={tagOf} onOpen={(r) => openBuild(r.build)} allRows={allRows} setAllRows={setAllRows} lo={lo} hi={hi}
-            isOn={(r) => !!viewBuild && layoutId(r.build) === layoutId(viewBuild)} scenario={scnName} dustWeight={opt?.dust_weight ?? 2} />
+            isOn={(r) => !!viewBuild && layoutId(r.build) === layoutId(viewBuild)} />
         </Holo>) },
       { id: 'cpu', title: 'CPU', pos: [-1.6, 1.08, 0.5], yaw: 0.06, anchor: 'cpu', content: (
         <Holo tag="CPU" badge={aiTag} sub={cpu?.name.replace('AMD ', '').replace('Intel ', '') ?? 'CPU'} width={250} flashKey={'cpu' + flash}>
-          <PartPanel part="cpu" st={res.cpu} refSt={compare ? refRes?.cpu ?? null : null} name={cooler?.name.replace('Thermalright ', '').replace(' ARGB', '') ?? ''} />
+          <PartPanel part="cpu" st={res.cpu} refSt={compare ? refRes?.cpu ?? null : null} />
         </Holo>) },
       { id: 'gpu', title: 'GPU', pos: [-1.6, -0.78, 0.6], yaw: 0.06, anchor: 'gpu', content: (
-        <Holo tag="GPU" badge={aiTag} sub={gpu?.name.replace('NVIDIA GeForce ', '') ?? 'GPU'} width={250} flashKey={'gpu' + flash}>
-          <PartPanel part="gpu" st={res.gpu} refSt={compare ? refRes?.gpu ?? null : null} name={gpu?.cooler.replace(/_/g, '-') ?? ''} />
+        <Holo tag="GPU" badge={aiTag} sub={gpu?.name.replace('NVIDIA GeForce ', '').replace(' Founders Edition', ' FE') ?? 'GPU'} width={250} flashKey={'gpu' + flash}>
+          <PartPanel part="gpu" st={res.gpu} refSt={compare ? refRes?.gpu ?? null : null} />
         </Holo>) },
       { id: 'air', title: 'Airflow', pos: [1.6, 1.08, 0.5], yaw: -0.06, anchor: 'intake', content: (
-        <Holo tag="AIRFLOW" badge={aiTag} sub={view === 'custom' ? 'custom layout' : (rows.find((r) => layoutId(r.build) === viewId)?.name ?? '')} width={268} flashKey={'air' + flash}>
+        <Holo tag="AIRFLOW" badge={aiTag} width={268} flashKey={'air' + flash}>
           <AirPanel res={res} fans={caseFans} refRes={compare ? refRes : null} />
         </Holo>) },
       { id: 'dust', title: 'Dust', pos: [1.6, -0.78, 0.6], yaw: -0.06, anchor: 'glass', content: (
-        <Holo tag="DUST" sub="20 µm particles" width={250} flashKey={'dust' + flash}>
+        <Holo tag="DUST" width={250} flashKey={'dust' + flash}>
           <DustPanel rel={dustRel} stats={lv?.dust ?? summary?.levels[0]?.dust} compare={compare}
-            note={showAi ? 'The network does not predict dust; the simulation adds it when it finishes.' : undefined} />
+            note={showAi ? 'Not in the AI prediction. Verify to simulate it.' : undefined} />
         </Holo>) },
     )
     const other = bestIsCur ? worstRow : recRow
     if (curRow && other)
       screens.push({ id: 'verdict', title: 'Verdict', pos: [3.35, -0.04, -0.12], yaw: -0.2, content: (
-        <Holo tag="VERDICT" sub={bestIsCur ? 'yours vs worst' : 'yours vs best'} width={290} flashKey="verdict">
+        <Holo tag="VERDICT" width={290} flashKey="verdict">
           <VerdictPanel cur={curRow} other={other} bestIsCur={bestIsCur} n={n} rankCur={rankOf(curRow.name)} rankOther={rankOf(other.name)} geo={geo} steps={steps}
             onOpen={(k) => setView(k === 'current' ? 'current' : bestIsCur ? 'worst' : 'best')}
             tie={bestIsCur && topRow && !topRow.current ? { name: topRow.name, delta: curRow.score - topRow.score, margin: opt?.tie_margin ?? 0.5 } : null} />
@@ -467,22 +484,20 @@ export default function App() {
             <path d="M4.5 14 C8.5 14 9 6.5 15.5 6.5" fill="none" stroke="#63e0ff" strokeWidth="1.4" />
             <circle cx="15.5" cy="6.5" r="1.5" fill="#63e0ff" />
           </svg>
-          <div className="brand-txt">
-            <span className="brand-name">CASEFLOW</span>
-            <span className="brand-sub">{cs ? `${cs.name.replace('Lian Li ', '')} · ${scnName}` : 'airflow · heat · dust'}
-              {gpu && <> · <a href={amazon(gpu.amazon_query ?? gpu.name)} target="_blank" rel="noreferrer">parts ↗</a></>}</span>
-          </div>
+          <span className="brand-name">CASEFLOW</span>
         </div>
         <nav className="views">
           {tabs.map((k) => (
             <button key={k} className={view === k ? 'on' : ''} onClick={() => setView(k)}>
-              {tabLabel[k][0]}{tabLabel[k][1] && <span className="v-sub">{tabLabel[k][1]}</span>}
+              {tabLabel[k]}
             </button>
           ))}
         </nav>
         <div className="status">
-          {showAi && <button className="mono ai-chip" title="The 3D view and the screens show the neural network's prediction" onClick={() => setWin({ ...win, ai: true })}>AI PREDICTION</button>}
-          <span className="mono"><i className={'led' + (online ? ' on' : '')} />{online ? 'ENGINE ONLINE' : 'OFFLINE · PRECOMPUTED'}</span>
+          {showAi && <button className="mono ai-chip" title="Showing the neural network's prediction" onClick={() => setWin({ ...win, ai: true })}>AI PREDICTION</button>}
+          {canVerify && <button className="mono verify" title="Simulate this layout (about 90 s on the GPU) to check the AI and add the dust" onClick={verify}>VERIFY</button>}
+          {job && <span className="mono sim-now">SIMULATING {Math.round(job.p * 100)}%</span>}
+          <span className="mono"><i className={'led' + (online ? ' on' : '')} />{online ? 'ONLINE' : 'OFFLINE'}</span>
         </div>
       </header>
 
@@ -496,7 +511,7 @@ export default function App() {
             <button className="win-btn" title="Close" onClick={() => setMenu(null)}>×</button>
           </div>
           <div className="fm-sub">{menuFan
-            ? `${lib?.fans.find((x) => x.id === menuFan.fan)?.name.replace(/^Lian Li LANCOOL 207 /, 'Stock ').replace(/, model unknown.*$/, '') ?? menuFan.fan}${menuQ ? ` · ${(menuQ.q_m3s * 2119).toFixed(0)} CFM · ${Math.round(menuQ.rpm)} rpm now` : ''}`
+            ? `${lib?.fans.find((x) => x.id === menuFan.fan)?.size_mm ?? ''} mm${menuQ ? ` · ${(menuQ.q_m3s * 2119).toFixed(0)} CFM` : ''}`
             : `empty ${menuMount?.sizes.join('/') ?? ''} mm mount`}</div>
           {menuFan ? (
             <div className="fm-acts">
@@ -509,15 +524,10 @@ export default function App() {
               <button onClick={() => editFan(menu.slot, 'out')}>Add fan · blow out</button>
             </div>
           )}
-          <div className="fm-note">{online ? 'A stored layout opens at once; a new one is predicted by the AI at once and simulated to check (~1.5 min).' : 'Engine offline: only the searched layouts.'}</div>
         </div>
       )}
 
-      {(job || msg) && (
-        <div className="toast">
-          {job ? <><span>{showAi ? 'AI PREDICTION SHOWN · SIMULATING TO CHECK' : 'SIMULATING'} · {job.label} · 3 fan speeds</span><span className="mono">{Math.round(job.p * 100)}%</span><i style={{ width: `${job.p * 100}%` }} /></> : <span>{msg}</span>}
-        </div>
-      )}
+      {msg && <div className="toast"><span>{msg}</span></div>}
 
       {narrow && layers.panels && (
         <div className="holo-column">{screens.map((s) => <div key={s.id}>{s.content as ReactNode}</div>)}</div>
@@ -525,8 +535,7 @@ export default function App() {
 
       <div className="hud">
         {win.scn && lib && setup && (
-          <HudWindow id="scenario" code="01" title="Scenario" side="left" x={20} y={72} w={340} layoutKey={layoutKey} onClose={() => setWin({ ...win, scn: false })}
-            meta={res ? `${res.noise_dba.toFixed(0)} dBA` : ''}>
+          <HudWindow id="scenario" code="01" title="Scenario" side="left" x={20} y={72} w={340} layoutKey={layoutKey} onClose={() => setWin({ ...win, scn: false })}>
             <div className="presets">
               {lib.defaults.scenarios.map((p) => (
                 <button key={p.id} className={scn.preset === p.id ? 'on' : ''} title={p.name + (p.note ? ` - ${p.note}` : '')}
@@ -546,8 +555,6 @@ export default function App() {
                 <div><span className="lbl">noise</span><b>{res.noise_dba.toFixed(0)}<u>dBA</u></b></div>
               </div>
             )}
-            <p className="fine" title={`Load runs from idle (${setup.cpu.idle_w} W / ${setup.gpu.idle_w} W) to the power limit (${setup.cpu.max_w} W / ${setup.gpu.max_w} W).`}>
-              Fans follow their <button className="linkbtn" onClick={() => setWin({ ...win, curve: true })}>curves</button>: a warmer room or heavier load spins them up (<button className="linkbtn" onClick={() => setWin({ ...win, trend: true })}>trends</button>).</p>
           </HudWindow>
         )}
 
@@ -572,38 +579,34 @@ export default function App() {
               return now && <div className="cv-foot mono">now {now.t.toFixed(1)} °C → {pct(now.d)}{curveTab === 'gpu' && res?.gpu.fan_speed === 0 ? ' (stopped)' : ''}</div>
             })()}
             <button className="textbtn" onClick={() => lib && viewBuild && setCurves({ ...curves, [curveTab]: defaultCurves(lib, viewBuild.gpu)[curveTab] })}>Reset this curve</button>
-            <p className="fine">{curveTab === 'gpu'
-              ? 'The card\'s own curve: below about 40 °C the fans stop (zero-RPM idle).'
-              : 'The board\'s curve, as ASUS Fan Xpert sets it (the reference PC\'s smart mode). Drag the points.'} Curves change instantly; no new simulation is needed.</p>
           </HudWindow>
         )}
 
         {win.trend && trends && (
           <HudWindow id="trends" code="03" title="Trends" side="right" x={win.curve ? 384 : 20} y={72} w={340} layoutKey={layoutKey} onClose={() => setWin({ ...win, trend: false })}>
-            <TrendChart title="Temperature against room temperature" xs={trends.rooms} series={trends.room} xFmt={(x) => `${x}`} xUnit="room °C" now={scn.ambient_c} />
+            <TrendChart title="vs room temperature" xs={trends.rooms} series={trends.room} xFmt={(x) => `${x}`} xUnit="room °C" now={scn.ambient_c} />
             <div className="tr-sw">
               <span className="lbl">sweep</span>
               <span className="seg3">{(['gpu', 'cpu'] as const).map((k) => <button key={k} className={sweep === k ? 'on' : ''} onClick={() => setSweep(k)}>{k} load</button>)}</span>
             </div>
-            <TrendChart title={`Temperature against ${sweep.toUpperCase()} load (the other at ${pct(sweep === 'gpu' ? scn.cpu : scn.gpu)})`} xs={trends.loads} series={trends.load}
+            <TrendChart title={`vs ${sweep.toUpperCase()} load`} xs={trends.loads} series={trends.load}
               xFmt={(x) => `${x}%`} xUnit={`${sweep} load`} now={(sweep === 'gpu' ? scn.gpu : scn.cpu) * 100} />
-            <p className="fine">Solid: the fans follow their curves. Dashed: the same fans held at the speed they run at now. With fans that do not react, a room 5 °C warmer makes everything exactly 5 °C hotter.</p>
           </HudWindow>
         )}
 
         {win.cfg && viewBuild && cs && lib && (
-          <HudWindow id="configure" code="05" title="Configure" side="left" x={win.scn ? 374 : 20} y={72} w={330} layoutKey={layoutKey} onClose={() => setWin({ ...win, cfg: false })} meta={online ? 'LIVE' : 'ENGINE OFF'}>
+          <HudWindow id="configure" code="05" title="Configure" side="left" x={win.scn ? 374 : 20} y={72} w={330} layoutKey={layoutKey} onClose={() => setWin({ ...win, cfg: false })}>
             <div className="cfg-parts">
               {([['Case', 'case', lib.cases], ['GPU', 'gpu', lib.gpus], ['Cooler', 'cooler', lib.coolers]] as const).map(([l, k, list]) => (
                 <label key={k}><span className="lbl">{l}</span>
                   <select className="field" value={viewBuild[k]} onChange={(e) => setPart(k, e.target.value)}>
-                    {(list as { id: string; name: string }[]).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    {(list as { id: string; name: string }[]).map((p) => <option key={p.id} value={p.id}>{partName(p.name)}</option>)}
                   </select>
                 </label>
               ))}
-              <label><span className="lbl">CPU · no new simulation needed</span>
+              <label><span className="lbl">CPU</span>
                 <select className="field" value={cpuId} onChange={(e) => setCpuId(e.target.value)}>
-                  {lib.cpus.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.max_w} W, Tj {c.t_max_c} °C</option>)}
+                  {lib.cpus.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </label>
             </div>
@@ -616,13 +619,13 @@ export default function App() {
                 return (
                   <div key={m.slot} className="mt">
                     <div className="mt-1">
-                      <span className="mt-n">{WHERE[m.slot] ?? m.slot}<small>{m.sizes.join('/')}</small></span>
+                      <span className="mt-n">{WHERE[m.slot] ?? m.slot}</span>
                       <span className="seg3">{(['in', 'off', 'out'] as Mode[]).map((md) => <button key={md} className={mode === md ? 'on ' + md : ''} onClick={() => setFan(m.slot, { mode: md })}>{md}</button>)}</span>
                     </div>
                     {f && (
                       <div className="mt-2">
                         <select className="field sm" value={f.fan} onChange={(e) => setFan(m.slot, { fan: e.target.value })}>
-                          {lib.fans.filter((x) => m.sizes.includes(x.size_mm)).map((x) => <option key={x.id} value={x.id}>{x.name.replace(/^Lian Li LANCOOL 207 /, 'Stock ')} · {x.cfm} CFM</option>)}
+                          {lib.fans.filter((x) => m.sizes.includes(x.size_mm)).map((x) => <option key={x.id} value={x.id}>{fanName(x.name)}</option>)}
                         </select>
                         <span className="seg3 ctl">{(['curve', 'fixed'] as Control[]).map((c) => <button key={c} className={(f.control ?? 'curve') === c ? 'on' : ''} onClick={() => setFan(m.slot, { control: c })}>{c}</button>)}</span>
                         <span className="mono pct">{live ? `${Math.round(live.rpm)}` : '—'}<small>rpm</small></span>
@@ -635,24 +638,22 @@ export default function App() {
                 )
               })}
             </div>
-            {view === 'custom' && custom && !banks[layoutId(custom)] && (
-              <button className="run" disabled={!online || !!job} onClick={() => fetchBank(custom, 'your edited layout').then((p) => p && setBanks((m) => keepRecent(m, layoutId(custom), p, homeId)))}>
-                {online ? 'Simulate this layout' : 'Engine offline'}</button>
+            {(canVerify || simNow) && (
+              <button className="run" disabled={!canVerify} onClick={verify}>{simNow && job ? `Simulating ${Math.round(job.p * 100)}%` : aiPkg ? 'Verify · simulate ~90 s' : 'Simulate · ~90 s'}</button>
             )}
-            <p className="fine">Changing parts or fans changes the airflow: CaseFlow simulates it at 3 case-fan speeds (about 1.5 min on the GPU), then room, load and curves update instantly. "curve" fans follow the case-fan curve; "fixed" fans hold their duty.</p>
           </HudWindow>
         )}
 
         {win.ai && (
-          <HudWindow id="ai" code="07" title="AI surrogate" side="left" x={20 + (win.scn ? 354 : 0) + (win.cfg ? 344 : 0)} y={72} w={384} layoutKey={layoutKey}
-            onClose={() => setWin({ ...win, ai: false })} meta={aiInfo ? `3D U-NET · ${(aiInfo.params / 1e6).toFixed(1)} M` : ''}>
+          <HudWindow id="ai" code="07" title="AI" side="left" x={20 + (win.scn ? 354 : 0) + (win.cfg ? 344 : 0)} y={72} w={372} layoutKey={layoutKey}
+            onClose={() => setWin({ ...win, ai: false })} meta="3D U-NET">
             <div className="seg3 tabs3">
-              {([['here', 'This layout'], ['all', `All ${space?.rows.length ?? 6561} layouts`]] as const).map(([k, l]) => (
+              {([['here', 'This layout'], ['all', `All ${space?.rows.length ?? 6561}`]] as const).map(([k, l]) => (
                 <button key={k} className={aiTab === k ? 'on' : ''} onClick={() => setAiTab(k)}>{l}</button>
               ))}
             </div>
             {aiTab === 'here'
-              ? <><AiHereTab here={aiHere} src={src} setSrc={setSrc} /><ModelCard info={aiInfo} /></>
+              ? <><AiHereTab here={aiHere} src={src} setSrc={setSrc} onVerify={verify} /><ModelCard info={aiInfo} /></>
               : <AiAllTab space={space} ranks={ranks} codeNow={codeNow} scenario={scnName} fans={aiFans} setFans={setAiFans} onOpen={openCode} />}
           </HudWindow>
         )}
@@ -660,21 +661,21 @@ export default function App() {
         {win.info && (
           <HudWindow id="method" code="06" title="Method" side="right" x={win.curve ? 384 : 20} y={72} w={380} layoutKey={layoutKey} onClose={() => setWin({ ...win, info: false })}>
             <div className="method">
-              <p><span className="lbl">Airflow</span>Our own D3Q19 lattice-Boltzmann solver (PyTorch, GPU, Smagorinsky turbulence) on a 6 mm grid of the case. Walls, PSU, board, GPU and cooler are solid; case fans and the GPU / CPU cooler fans are cells with a set air velocity; empty mesh mounts and slot covers are open to the room.</p>
-              <p><span className="lbl">Fans</span>Each case fan runs at its operating point: a linear fan curve (rated flow and static pressure, scaled by the fan laws) against one case pressure, balanced by the passive openings. Its speed comes from its temperature curve: speed = s_min + (1 − s_min) × duty.</p>
-              <p><span className="lbl">Bank</span>Each layout is simulated at three case-fan duties (12, 45, 100 %), all in one GPU batch. For a fixed airflow the air's temperature rise is proportional to power, so the bank keeps the rise per watt of CPU and of GPU power; any load is a weighted sum.</p>
-              <p><span className="lbl">Steady state</span>Part temperature = room + intake air rise + P / G, with the cooler conductance G = 1 / (r_base + r_air × speed^-0.7) rising with its own fans. The solver finds where temperatures and fan speeds agree (milliseconds, in your browser); a part past its limit is throttled. Checked against full simulations at the solved speeds: within 0.5 °C.</p>
-              <p><span className="lbl">Dust</span>40 000 particles of 20 µm enter where air comes in (the bottom filter stops 85%), drift with the flow plus turbulent diffusion and settling, and stick where they touch. Faster fans pull in more.</p>
-              <p><span className="lbl">Inputs</span>CaseFlow is a simulator: room, load, curves and parts are settings. Defaults are the reference PC: its Fan Xpert curves, a 23 °C room, and its CPU-heavy game (86 W CPU, 146 W GPU) - the model gives CPU 65.6 / GPU 49.7 °C there; the PC measured 65.3 / 49.3 °C.</p>
-              <p><span className="lbl">AI</span>A 3D U-Net (a convolutional neural network, PyTorch) trained on CaseFlow's own simulations reads the case as 80 × 40 × 80 voxels (walls, openings, fans, heat zones) and predicts the airflow and the heat fields in about 0.1 s instead of 1.5 min. A new layout appears at once as the network's prediction; the simulation then replaces it and the AI window shows the difference. The network also ranks all 6561 ways to fill the 8 mounts.{aiInfo?.test ? ` On ${aiInfo.test.layouts} held-out layouts it is within ${aiInfo.test.cpu_mae_c.toFixed(1)} °C (CPU) and ${aiInfo.test.gpu_mae_c.toFixed(1)} °C (GPU) on average.` : ''}</p>
-              <p><span className="lbl">Search</span>Every placement and direction of your three fans (4 mounts × in / out = {n || 32} layouts) has its own bank; the ranking is redone for whatever scenario you set.</p>
-              <p><span className="lbl">Limits</span>Mount positions, opening porosity and cooler conductance are estimates; the cooler and GPU fans stir the case air at one representative speed; no buoyancy. Light loads read a few °C low on the CPU (boost spikes). Trust differences more than absolute °C.</p>
+              <p><span className="lbl">Airflow</span>Our own lattice-Boltzmann solver (PyTorch, GPU) on a 6 mm grid of the case, at three case-fan speeds.</p>
+              <p><span className="lbl">Heat</span>CPU and GPU heat carried by that air: the rise per watt, so any load is instant.</p>
+              <p><span className="lbl">Fans</span>Each fan at its operating point against the case pressure; its speed follows its curve.</p>
+              <p><span className="lbl">Steady state</span>Part = room + intake air rise + power ÷ cooler conductance, solved in your browser; a part past its limit throttles.</p>
+              <p><span className="lbl">Dust</span>40 000 particles of 20 µm drift with the air and stick where they land.</p>
+              <p><span className="lbl">AI</span>A 3D U-Net trained on 150 simulated layouts predicts a new layout in 0.1 s{aiInfo?.test ? ` (held-out layouts: ${aiInfo.test.cpu_mae_c.toFixed(1)} / ${aiInfo.test.gpu_mae_c.toFixed(1)} °C mean error)` : ''}. Verify runs the simulation.</p>
+              <p><span className="lbl">Check</span>The reference PC measured CPU 65.3 / GPU 49.3 °C; the model gives 65.6 / 49.7. Trust differences more than absolute °C.</p>
             </div>
           </HudWindow>
         )}
       </div>
 
-      {isBankless && <div className="toast"><span>No simulation of this layout yet{online ? '' : ' - start the engine to simulate it'}.</span></div>}
+      {isBankless && !job && (
+        <div className="toast"><span>{online ? 'Not simulated yet' : 'Start the engine to see this layout'}</span>{canVerify && <button className="textbtn" onClick={verify}>Simulate · 90 s</button>}</div>
+      )}
 
       <nav className="dock">
         {([['panels', 'Screens'], ['flow', 'Flow'], ['lines', 'Lines'], ['dust', 'Dust'], ['heat', 'Heat']] as const).map(([k, l]) => (

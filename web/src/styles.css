@@ -366,3 +366,14 @@ input[type='range'] { accent-color: var(--cyan); width: 100%; }
 .ai-rk .nm em { display: inline; margin: 0 0 0 6px; }
 .ai-key { margin-top: 4px; }
 .ai-rk .nm { font-size: 11px; letter-spacing: 0.06em; }
+
+/* ---------- manual verify, simpler panels ---------- */
+.verify { background: rgba(195, 178, 255, 0.06); border: 1px solid rgba(195, 178, 255, 0.55); color: #c3b2ff; font-size: 10px; letter-spacing: 0.14em; padding: 2px 8px; cursor: pointer; }
+.verify:hover { background: rgba(195, 178, 255, 0.16); box-shadow: 0 0 10px rgba(195, 178, 255, 0.3); }
+.sim-now { color: var(--cyan); }
+.af { grid-template-columns: 92px 44px 30px 1fr; }
+.toast .textbtn { padding: 0; }
+.ai-here .run { margin-top: 10px; }
+.ai-cmp thead th:first-child { text-align: left; letter-spacing: 0.06em; text-transform: none; }
+.pp-kv dt, .pp-kv dd { white-space: nowrap; }
+.pp-kv dd { font-size: 11.5px; }

@@ -65,8 +65,8 @@ export function Delta({ v, unit = '°', better = 'lower' }: { v: number | null; 
 const pctOf = (x: number) => `${Math.round(x * 100)}%`
 const rpm = (x: number) => `${Math.round(x / 10) * 10}`
 
-/** CPU or GPU: temperature gauge, intake air, power (and throttling), its own fans, cooler conductance. */
-export function PartPanel({ part, st, refSt, name }: { part: 'cpu' | 'gpu'; st: PartState; refSt: PartState | null; name: string }) {
+/** CPU or GPU: temperature gauge, intake air, power (and throttling), its own fans. */
+export function PartPanel({ part, st, refSt }: { part: 'cpu' | 'gpu'; st: PartState; refSt: PartState | null }) {
   const stopped = part === 'gpu' && st.fan_speed === 0
   return (
     <div className="pp">
@@ -74,16 +74,15 @@ export function PartPanel({ part, st, refSt, name }: { part: 'cpu' | 'gpu'; st: 
         <Gauge value={st.temp_c} min={part === 'cpu' ? 30 : 20} max={part === 'cpu' ? 100 : 90} />
         <dl className="pp-kv">
           <dt>air in</dt><dd>+{st.intake_rise_c.toFixed(1)}°</dd>
-          <dt>power</dt><dd className={st.throttled ? 'warnline' : ''}>{st.watts.toFixed(0)} W{st.throttled && <small> of {st.watts_set.toFixed(0)}</small>}</dd>
-          <dt>fans</dt><dd>{stopped ? 'stopped' : <>{rpm(st.fan_rpm)} <small>rpm · {pctOf(st.fan_duty)}</small></>}</dd>
-          <dt>cooler</dt><dd>{st.g_w_per_k.toFixed(1)} W/K</dd>
+          <dt>power</dt><dd className={st.throttled ? 'warnline' : ''}>{st.watts.toFixed(0)} W</dd>
+          <dt>fans</dt><dd>{stopped ? 'stopped' : `${rpm(st.fan_rpm)} rpm`}</dd>
         </dl>
       </div>
-      <div className="pp-foot">
-        <span>{name}</span>
-        {st.throttled ? <span className="warnline">throttled at {st.t_max_c} °C</span>
-          : refSt && <span>vs yours <Delta v={st.temp_c - refSt.temp_c} /></span>}
-      </div>
+      {(st.throttled || refSt) && (
+        <div className="pp-foot">
+          {st.throttled ? <span className="warnline">throttled at {st.t_max_c} °C</span> : refSt && <span>vs yours <Delta v={st.temp_c - refSt.temp_c} /></span>}
+        </div>
+      )}
     </div>
   )
 }
@@ -102,7 +101,7 @@ export function AirPanel({ res, fans, refRes }: { res: ScenarioResult; fans: { s
         <div><span className="lbl">out</span><b>{cfm(res.flow_out_m3s).toFixed(0)}</b></div>
         <div><span className="lbl">case</span><b>{pa >= 0 ? '+' : '−'}{Math.abs(pa).toFixed(1)}<u>Pa</u></b></div>
       </div>
-      <div className="ap-unit">CFM · {pressure} · case fans at {pctOf(res.case_duty)}{refRes && <> · in <Delta v={cfm(res.flow_in_m3s) - cfm(refRes.flow_in_m3s)} unit="" better="higher" /></>}</div>
+      <div className="ap-unit">CFM · {pressure} pressure{refRes && <> · in <Delta v={cfm(res.flow_in_m3s) - cfm(refRes.flow_in_m3s)} unit="" better="higher" /></>}</div>
       <div className="ap-fans">
         {rows.map((f: CaseFanState) => {
           const m = mode.get(f.slot) ?? 'in'
@@ -111,13 +110,11 @@ export function AirPanel({ res, fans, refRes }: { res: ScenarioResult; fans: { s
               <span className="af-n">{WHERE[f.slot] ?? f.slot}{!f.curve && <small> fixed</small>}</span>
               <span className="af-d">{m === 'in' ? '▸ in' : '◂ out'}</span>
               <span className="af-q">{cfm(f.q_m3s).toFixed(0)}</span>
-              <span className="af-r">{rpm(f.rpm)}</span>
               <i className="af-bar"><b style={{ width: `${Math.min(100, f.speed * 100)}%` }} /></i>
             </div>
           )
         })}
       </div>
-      <div className="ap-note">CFM · rpm · bar = fan speed · all fans ≈ {res.noise_dba.toFixed(0)} dBA (rough)</div>
     </div>
   )
 }
@@ -128,9 +125,8 @@ export function DustPanel({ rel, stats, compare, note }: { rel: number | null; s
   if (!stats || rel == null) return <div className="fine">No dust run for this layout.</div>
   return (
     <div className="dp">
-      <div className="dp-big"><b>×{rel.toFixed(2)}</b><span>dust settling{compare ? ' vs your layout' : ' (your layout = 1)'}</span></div>
-      <div className="dp-sub">{(stats.dust_entering_rel * 100).toFixed(0)}% of the intake air is unfiltered (only the bottom has a filter) · {(stats.deposited_frac * 100).toFixed(0)}% of what enters settles</div>
-      {stats.by_part.slice(0, 4).map((p) => (
+      <div className="dp-big"><b>×{rel.toFixed(2)}</b><span>dust{compare ? ' vs your layout' : ''}</span></div>
+      {stats.by_part.slice(0, 3).map((p) => (
         <div key={p.name} className="dp-r"><span>{p.name}</span><i><b style={{ width: `${Math.min(100, p.share * 250)}%` }} /></i><span className="mono">{(p.share * 100).toFixed(0)}%</span></div>
       ))}
     </div>
@@ -147,11 +143,7 @@ export function VerdictPanel({ cur, other, rankCur, rankOther, n, bestIsCur, tie
   return (
     <div className="vp">
       <div className="vp-head">{bestIsCur ? 'Keep your layout' : 'One change helps'}</div>
-      <p className="vp-text">{bestIsCur
-        ? <>{tie
-            ? <>It ties for <b>first of {n}</b>: #1 ({tie.name}) scores only {tie.delta.toFixed(2)} °C better, inside the model's ±{tie.margin} °C.</>
-            : <>It ranks <b>#{rankCur} of {n}</b>.</>} The worst layout runs the CPU {dC.toFixed(1)}° and the GPU {dG.toFixed(1)}° hotter.</>
-        : <>The recommended layout ranks <b>#1 of {n}</b> in this scenario.</>}</p>
+      <p className="vp-text">{bestIsCur ? <>{tie ? 'Tied for best' : `#${rankCur}`} of {n} · worst <b>+{dC.toFixed(1)}°</b> CPU</> : <>Best of {n}</>}</p>
       <div className="vp-cmp">
         {([['current', cur, `Yours · #${rankCur}`], ['other', other, `${bestIsCur ? 'Worst' : 'Best'} · #${rankOther}`]] as const).map(([k, r, t]) => (
           <button key={k} className={'vp-c ' + k} onClick={() => onOpen(k)}>
@@ -169,9 +161,9 @@ export function VerdictPanel({ cur, other, rankCur, rankOther, n, bestIsCur, tie
 }
 
 /** All 32 layouts ranked for the current scenario (recomputed in the browser whenever it changes). */
-export function SearchPanel({ rows, shown, tagOf, isOn, onOpen, allRows, setAllRows, lo, hi, scenario, dustWeight }: {
+export function SearchPanel({ rows, shown, tagOf, isOn, onOpen, allRows, setAllRows, lo, hi }: {
   rows: RankRow[]; shown: { r: RankRow; i: number }[]; tagOf: (r: RankRow) => string[]; isOn: (r: RankRow) => boolean
-  onOpen: (r: RankRow) => void; allRows: boolean; setAllRows: (v: boolean) => void; lo: number; hi: number; scenario: string; dustWeight: number
+  onOpen: (r: RankRow) => void; allRows: boolean; setAllRows: (v: boolean) => void; lo: number; hi: number
 }) {
   const list = useRef<HTMLDivElement>(null)
   const onName = shown.find(({ r }) => isOn(r))?.r.name
@@ -182,7 +174,6 @@ export function SearchPanel({ rows, shown, tagOf, isOn, onOpen, allRows, setAllR
   }, [onName, allRows])
   return (
     <div className="sp">
-      <p className="sp-lede">Your three 120 mm fans on every free mount, each in or out, ranked for <b>{scenario}</b>. The four stock fans stay put.</p>
       <div className="rk-h"><span>#</span><span>Layout</span><span>CPU</span><span>GPU</span><span>Dust ×</span></div>
       <div className="rk-list" ref={list}>
         {shown.map(({ r, i }, k) => (
@@ -199,7 +190,6 @@ export function SearchPanel({ rows, shown, tagOf, isOn, onOpen, allRows, setAllR
         ))}
       </div>
       {rows.length > 0 && <button className="textbtn" onClick={() => setAllRows(!allRows)}>{allRows ? 'Show fewer' : `Show all ${rows.length}`}</button>}
-      <p className="fine">Fans follow their curves · Dust × = settling rate vs your layout · score = CPU + GPU + {dustWeight} °C × Dust ×</p>
     </div>
   )
 }

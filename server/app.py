@@ -51,6 +51,7 @@ def default_build() -> dict:
 
 class SimQuery(BaseModel):
     build: dict
+    simulate: bool = True        # False: only a cached bank; nothing runs on the GPU for a layout never simulated
 
 
 def _run_bank(jid: str, q: SimQuery) -> None:
@@ -68,9 +69,12 @@ def _run_bank(jid: str, q: SimQuery) -> None:
 @app.post("/api/bank")
 def make_bank(q: SimQuery) -> dict:
     """A build's bank (airflow, heat and dust at three case-fan duties): from the cache in data/banks, or computed on
-    the GPU (about 1.5 min). The browser then solves any room temperature, load and fan curve itself."""
+    the GPU (about 1.5 min). The browser then solves any room temperature, load and fan curve itself. With simulate
+    false a build that was never simulated returns no job: the web shows the network's prediction until asked."""
     jid = uuid.uuid4().hex[:10]
     cached = (bank.CACHE / f"{bank.bank_key(q.build)}.json").exists()      # the .json is written last
+    if not cached and not q.simulate:
+        return {"job": None, "cached": False}
     for old in [k for k, v in _jobs.items() if v["status"] != "running"][:max(0, len(_jobs) - MAX_JOBS)]:
         del _jobs[old]                                                       # oldest finished jobs first
     _jobs[jid] = {"status": "running", "progress": 0.0, "cached": cached}
