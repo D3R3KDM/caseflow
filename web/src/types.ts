@@ -1,3 +1,4 @@
+import type { VoxelPkg } from './dust'
 import type { Bank, BankLevel, Curve, Curves, Pt } from './scenario'
 
 export type Mode = 'off' | 'in' | 'out'
@@ -46,6 +47,7 @@ export interface BankPkg extends Bank {
   /** "ai": predicted by the neural surrogate (its dust comes apart, from /api/ai/dust); seen: whether the network trained on
    * this layout; simulated: whether the engine has this layout's simulation cached (comparing then takes seconds) */
   source?: 'ai'; seen?: 'train' | 'test' | 'new'; simulated?: boolean; lbm_limiter_ms?: number | null
+  voxels?: VoxelPkg                // the build's solid / outside cells and openings, for the live dust (engine/bank.voxels)
 }
 
 export interface Layout { name: string; build: Build; current: boolean; bank: Bank & { key: string; curve_fans: string[] } }

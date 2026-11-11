@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import * as THREE from 'three'
 import { CSS3DObject, CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js'
+import { DUST_TIME, DustSim, type Voxels } from './dust'
 import { makeFan, makeFinStack, meshTexture } from './models'
 import { C, thermal } from './palette'
 import { traceStreamlines, type Field } from './streamlines'
@@ -23,7 +24,7 @@ export interface TwinData {
   flowKey: string | null
   u: Float32Array | null
   T: Float32Array | null
-  dust: number[][] | null
+  dust: number[][] | null         // the engine's deposit points (shown only without voxels)
   progress: number                // 0..1, how far the simulation is: the scan has drawn the twin that far
   ready: boolean                  // its fields are in: airflow, heat and dust appear once the scan is complete
   labels: [string, string]        // captions above the build and above the twin
@@ -39,7 +40,8 @@ export interface SceneData {
   flowKey: string | null
   u: Float32Array | null          // air velocity, m/s, [3, X, Y, Z]
   T: Float32Array | null          // air temperature above the room, K, [X, Y, Z]
-  dust: number[][] | null         // deposit points, mm
+  dust: number[][] | null         // the engine's deposit points, mm: shown only when there are no voxels
+  voxels?: Voxels | null          // solid / outside cells and openings: the dust runs live in each case's air
   cpuFan: number                  // CPU cooler fan speed 0..1
   gpuFan: number                  // GPU fan speed 0..1 (0 = stopped)
   twin?: TwinData | null          // comparing: the simulated twin, drawn on the right
@@ -151,6 +153,8 @@ interface Paint {
 interface View {
   root: THREE.Group
   kase: THREE.Group; flow: THREE.Group; dust: THREE.Group; wire: THREE.Group
+  dustStatic: THREE.Group; dustLive: THREE.Group      // inside dust: the engine's points, or the live dust
+  dustSim: DustSim | null; dustKey: string; dustFly: THREE.Points | null; dustDep: THREE.Points | null; depDrawn: number
   fans: THREE.Object3D[]
   parts: Parts | null
   paint: Paint
@@ -162,12 +166,17 @@ interface View {
 function makeView(): View {
   const root = new THREE.Group()
   const kase = new THREE.Group(), flow = new THREE.Group(), dust = new THREE.Group(), wire = new THREE.Group()
+  const dustStatic = new THREE.Group(), dustLive = new THREE.Group()
+  dust.name = 'dust'                                  // the Dust layer shows / hides it
+  dust.add(dustStatic, dustLive)
   root.add(kase, flow, dust, wire)
-  return { root, kase, flow, dust, wire, fans: [], parts: null, paint: { lineCol: null, linePos: null, heat: null }, anchors: {}, span: [-1, 1], beam: null, label: null }
+  return { root, kase, flow, dust, wire, dustStatic, dustLive, dustSim: null, dustKey: '', dustFly: null, dustDep: null, depDrawn: 0,
+    fans: [], parts: null, paint: { lineCol: null, linePos: null, heat: null }, anchors: {}, span: [-1, 1], beam: null, label: null }
 }
 function clearGroup(g: THREE.Object3D) { g.children.forEach(disposeObject); g.clear() }
 function clearView(v: View) {
-  for (const g of [v.kase, v.flow, v.dust, v.wire]) clearGroup(g)
+  for (const g of [v.kase, v.flow, v.dustStatic, v.wire]) clearGroup(g)
+  stopDust(v)
   v.fans = []; v.parts = null; v.paint = { lineCol: null, linePos: null, heat: null }; v.anchors = {}
 }
 const SPIN = 18                      // rad/s at full speed
@@ -472,9 +481,9 @@ function recolor(v: View, geo: Geometry, T: Float32Array | null) {
   }
 }
 
-/** Dust deposits into a view. */
+/** The engine's dust deposits into a view (without voxels; with them the dust runs live, below). */
 function buildDust(v: View, geo: Geometry, dust: number[][] | null) {
-  clearGroup(v.dust)
+  clearGroup(v.dustStatic)
   if (!dust?.length) return
   const { P } = frame(geo)
   const dp = new Float32Array(dust.length * 3)
@@ -482,8 +491,82 @@ function buildDust(v: View, geo: Geometry, dust: number[][] | null) {
   const dg = new THREE.BufferGeometry()
   dg.setAttribute('position', new THREE.BufferAttribute(dp, 3))
   const pts = new THREE.Points(dg, new THREE.PointsMaterial({ color: C.dust, size: 0.024, map: dot(), transparent: true, opacity: 1, depthWrite: false }))
-  pts.name = 'dust'
-  v.dust.add(pts)
+  v.dustStatic.add(pts)
+}
+
+// ---------- live dust: src/dust.ts in the air the case shows; it comes in, drifts, and settles where it touches ----------
+const MAX_FLY = 12000, MAX_DEP = 120000
+const DUST_RGB = new THREE.Color(C.dust)
+/** Points for dust; perPoint: an RGBA colour per point, so each settled particle has its own opacity (DustSim.depW). */
+function dustPoints(n: number, size: number, opacity: number, perPoint = false): THREE.Points {
+  const g = new THREE.BufferGeometry()
+  const a = new THREE.BufferAttribute(new Float32Array(n * 3), 3)
+  a.setUsage(THREE.DynamicDrawUsage)
+  g.setAttribute('position', a)
+  if (perPoint) {
+    const c = new THREE.BufferAttribute(new Float32Array(n * 4), 4)
+    c.setUsage(THREE.DynamicDrawUsage)
+    g.setAttribute('color', c)
+  }
+  g.setDrawRange(0, 0)
+  const p = new THREE.Points(g, new THREE.PointsMaterial({ color: perPoint ? 0xffffff : C.dust, vertexColors: perPoint, size, map: dot(),
+    transparent: true, opacity, depthWrite: false }))
+  p.frustumCulled = false
+  return p
+}
+function stopDust(v: View) {
+  clearGroup(v.dustLive)
+  v.dustSim = null; v.dustFly = v.dustDep = null; v.dustKey = ''; v.depDrawn = 0
+}
+/** From nothing: a new air field, layout or comparison starts the dust over. */
+function startDust(v: View, u: Float32Array, vox: Voxels, dxMm: number, key: string) {
+  stopDust(v)
+  let seed = 7
+  for (let i = 0; i < key.length; i++) seed = (Math.imul(seed, 31) + key.charCodeAt(i)) | 0
+  v.dustSim = new DustSim(u, vox, dxMm, { seed, maxFly: MAX_FLY, maxDep: MAX_DEP })
+  v.dustFly = dustPoints(MAX_FLY, 0.014, 0.7)          // in the air: small, faint
+  v.dustDep = dustPoints(MAX_DEP, 0.022, 1, true)      // settled: where it piles up, it thickens into an opaque coat
+  v.dustLive.add(v.dustFly, v.dustDep)
+  v.dustKey = key
+}
+/** Move the dust on by a frame (slow motion, with the air particles) and draw it in the view's frame. */
+function stepDust(v: View, geo: Geometry, dt: number) {
+  const sim = v.dustSim, fly = v.dustFly, dep = v.dustDep
+  if (!sim || !fly || !dep) return
+  sim.advance(Math.min(dt, 0.05) * DUST_TIME)
+  // cell -> view: x_mm = (c - off) dx; view = ((D/2 - x_mm) S, (z_mm - H/2) S, (W/2 - y_mm) S)
+  const { D, W, H } = geo.case, k = geo.dx_mm * SCALE, o = geo.off * geo.dx_mm
+  const ax = (D / 2 + o) * SCALE, ay = -(o + H / 2) * SCALE, az = (W / 2 + o) * SCALE
+  const put = (src: Float32Array, dst: Float32Array, from: number, to: number) => {
+    for (let i = from * 3; i < to * 3; i += 3) {
+      dst[i] = ax - src[i] * k
+      dst[i + 1] = src[i + 2] * k + ay
+      dst[i + 2] = az - src[i + 1] * k
+    }
+  }
+  const fa = fly.geometry.attributes.position as THREE.BufferAttribute
+  put(sim.fly, fa.array as Float32Array, 0, sim.nFly)
+  fa.clearUpdateRanges()
+  fa.addUpdateRange(0, sim.nFly * 3)
+  fa.needsUpdate = true
+  fly.geometry.setDrawRange(0, sim.nFly)
+  if (sim.nDep > v.depDrawn) {
+    const da = dep.geometry.attributes.position as THREE.BufferAttribute
+    put(sim.dep, da.array as Float32Array, v.depDrawn, sim.nDep)
+    da.clearUpdateRanges()
+    da.addUpdateRange(v.depDrawn * 3, (sim.nDep - v.depDrawn) * 3)
+    da.needsUpdate = true
+    const ca = dep.geometry.attributes.color as THREE.BufferAttribute
+    const cc = ca.array as Float32Array
+    for (let i = v.depDrawn; i < sim.nDep; i++) {
+      cc[4 * i] = DUST_RGB.r; cc[4 * i + 1] = DUST_RGB.g; cc[4 * i + 2] = DUST_RGB.b; cc[4 * i + 3] = sim.depW[i]
+    }
+    ca.clearUpdateRanges()
+    ca.addUpdateRange(v.depDrawn * 4, (sim.nDep - v.depDrawn) * 4)
+    ca.needsUpdate = true
+    dep.geometry.setDrawRange(0, sim.nDep)
+    v.depDrawn = sim.nDep
+  }
 }
 
 function setSpin(v: View, sc: SceneData) {
@@ -500,6 +583,8 @@ function applyLayers(v: View, layers: Layers) {
     const o = v.root.getObjectByName(name)
     if (o) o.visible = on
   }
+  // with the dust shown, the air particles step back (still there: they show why the dust goes where it goes)
+  if (v.parts) (v.parts.pts.material as THREE.PointsMaterial).opacity = layers.dust ? 0.4 : 1
 }
 
 /** A scan bar across a case: a faint sheet through the case at the scan line, with an outline. */
@@ -586,6 +671,7 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
   const onPickRef = useRef(onPick)
   onPickRef.current = onPick
   const onScannedRef = useRef(onScanned)
+  const dustEpoch = useRef(0)                        // bumped when a comparison is drawn: both cases' dust starts over
   onScannedRef.current = onScanned
   const selectedRef = useRef(selected)
   selectedRef.current = selected
@@ -604,7 +690,7 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
     const tv = twin.current, sc = sceneRef.current, td = sc?.twin
     if (!tv || !sc || !td) return
     buildFlow(tv, sc.geometry, sc.fans, td.u)
-    buildDust(tv, sc.geometry, td.dust)
+    buildDust(tv, sc.geometry, sc.voxels ? null : td.dust)
     recolor(tv, sc.geometry, td.T)
     applyLayers(tv, layersRef.current)
   }
@@ -823,6 +909,7 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
           k.planes[0].constant = k.planes[1].constant = 1e6
           for (const b of [tv.beam, mvw.beam]) if (b) b.visible = false
           fillTwin()
+          dustEpoch.current++                                          // both cases gather dust from the same moment
           onScannedRef.current?.()
         }
       } else if (k.wireFade < 1) {
@@ -849,6 +936,16 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
       fog.near = dist + 2.5
       fog.far = dist + 10
       for (const view of [main.current, twin.current]) if (view) animateParts(view, dt)
+      // live dust while the Dust layer is on: each case in its own air (the twin once its scan is done)
+      const sc = sceneRef.current, vox = sc?.voxels, on = layersRef.current.dust
+      const runDust = (view: View | null, u: Float32Array | null | undefined, key: string) => {
+        if (!view) return
+        if (!on || !sc || !vox || !u) { if (view.dustSim) stopDust(view); return }
+        if (view.dustKey !== key) startDust(view, u, vox, sc.geometry.dx_mm, key)
+        stepDust(view, sc.geometry, dt)
+      }
+      runDust(main.current, sc?.u, `${sc?.geoKey}|${sc?.flowKey}|${dustEpoch.current}`)
+      runDust(twin.current, cmp.current.done ? sc?.twin?.u : null, `${sc?.geoKey}|${sc?.twin?.flowKey}|${dustEpoch.current}`)
     })
     return () => {
       off()
@@ -997,8 +1094,8 @@ export default function CaseScene({ scene, layers, panels, resetKey, onPick, sel
 
   useEffect(() => {
     const mv = main.current, sc = sceneRef.current
-    if (mv && sc) buildDust(mv, sc.geometry, sc.dust)
-  }, [scene?.dust, geoKey]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (mv && sc) buildDust(mv, sc.geometry, sc.voxels ? null : sc.dust)
+  }, [scene?.dust, scene?.voxels, geoKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------- comparing: the simulated twin on the right ----------
   const twinOn = !!scene?.twin

@@ -4,6 +4,7 @@ import { AiAllTab, AiHereTab, ModelCard, SEEN, type AiHere } from './AiWindow'
 import type { RankJob, RankOut } from './aiWorker'
 import { getJSON, pingServer, postJSON } from './api'
 import CurveEditor from './CurveEditor'
+import { voxelsOf } from './dust'
 import { bankFields, composeT, nearestLevel } from './fields'
 import { AirPanel, CompareCard, DustPanel, Holo, PartPanel, SearchPanel, VerdictPanel, type CmpRow } from './Holo'
 import HudWindow, { resetWindows } from './HudWindow'
@@ -410,6 +411,9 @@ export default function App() {
   const T = useMemo(() => (fields && pkg && resD ? composeT(fields, pkg.levels, resD.case_duty, resD.cpu.watts, resD.gpu.watts) : null), [fields, pkg, resD])
   const lvl = pkg && res ? nearestLevel(pkg.levels, res.case_duty) : 0
   const dustPts = showAi ? dustOk(viewId)?.levels[lvl]?.dust_points ?? null : fields?.dust[lvl] ?? null
+  // the build's voxels (the network's bank and the simulation's carry the same): the dust then runs live in 3D
+  const voxPkg = pkg?.voxels ? pkg : phys?.voxels ? phys : undefined
+  const voxels = voxPkg ? voxelsOf(voxPkg.key, voxPkg.voxels) : null
   const twin: TwinData | null = comparing ? {
     flowKey: twinPkg && twinFields ? `${twinPkg.key}:sim:${lvlTwin}` : null,
     u: twinFields?.u[lvlTwin] ?? null, T: Ttwin, dust: twinFields?.dust[lvlTwin] ?? null,
@@ -434,8 +438,8 @@ export default function App() {
     if (flow) held.current.flow = flow
     else if (aiPending) flow = held.current.flow                  // the last airflow stays until the network answers
     return { geoKey: partsKey(viewBuild) + '#' + fanKey(viewBuild.fans), geometry: geo, fans, flowKey: flow?.flowKey ?? null, u: flow?.u ?? null,
-      T: flow?.T ?? null, dust: flow?.dust ?? null, cpuFan: resShow?.cpu.fan_speed ?? 0.7, gpuFan: resShow?.gpu.fan_speed ?? 0.4, twin }
-  }, [geo, viewBuild, lib, resShow, fields, pkg, lvl, T, dustPts, aiPending, twin?.flowKey, twin?.T, twin?.dust, twin?.progress, twin?.ready, twin?.labels[1], twin?.subs?.[0], comparing]) // eslint-disable-line react-hooks/exhaustive-deps
+      T: flow?.T ?? null, dust: flow?.dust ?? null, voxels, cpuFan: resShow?.cpu.fan_speed ?? 0.7, gpuFan: resShow?.gpu.fan_speed ?? 0.4, twin }
+  }, [geo, viewBuild, lib, resShow, fields, pkg, lvl, T, dustPts, voxels, aiPending, twin?.flowKey, twin?.T, twin?.dust, twin?.progress, twin?.ready, twin?.labels[1], twin?.subs?.[0], comparing]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------- actions ----------
   const cs = lib && viewBuild ? lib.cases.find((c) => c.id === viewBuild.case) ?? null : null
@@ -537,7 +541,7 @@ export default function App() {
       ]
       const cmpCard = (k: 'cpu' | 'gpu', y: number) => ({ id: 'cmp-' + k, title: k.toUpperCase(), pos: [CMP_SHIFT, y, 0.5] as [number, number, number], yaw: 0,
         anchor: k, to: 'both' as const, scale: 1.35, content: (
-          <Holo tag={k.toUpperCase()} sub={k === 'cpu' ? cpu?.name.replace('AMD ', '').replace('Intel ', '') : gpu?.name.replace('NVIDIA GeForce ', '').replace(' Founders Edition', ' FE')} width={210}>
+          <Holo tag={k.toUpperCase()} sub={k === 'cpu' ? cpu?.name.replace('AMD ', '').replace('Intel ', '') : gpu?.name.replace('NVIDIA GeForce ', '').replace(' Founders Edition', ' FE')} width={226}>
             <CompareCard rows={part(k)} progress={twinPkg ? null : runP} diff={tempDiff(r0[k].temp_c, simRes?.[k].temp_c)} />
           </Holo>) })
       screens.push(cmpCard('cpu', 0.8), cmpCard('gpu', -0.2))
@@ -551,7 +555,7 @@ export default function App() {
         ]
         const dd = dA && dS ? (dA.deposited_frac - dS.deposited_frac) * 100 : null
         screens.push({ id: 'cmp-dust', title: 'Dust', pos: [CMP_SHIFT, -1.2, 0.5], yaw: 0, anchor: 'glass', to: 'both', scale: 1.35, content: (
-          <Holo tag="DUST" width={210}>
+          <Holo tag="DUST" width={226}>
             <CompareCard rows={rowsD} progress={twinPkg ? null : runP} diff={dd != null ? { text: `${signed(dd)} pts`, cls: 'meh' } : null} />
           </Holo>) })
       }
@@ -815,7 +819,7 @@ export default function App() {
               <p><span className="lbl">Heat</span>CPU and GPU heat carried by that air: the rise per watt, so any load is instant.</p>
               <p><span className="lbl">Fans</span>Each fan at its operating point against the case pressure; its speed follows its curve.</p>
               <p><span className="lbl">Steady state</span>Part = room + intake air rise + power ÷ cooler conductance, solved in your browser; a part past its limit throttles.</p>
-              <p><span className="lbl">Dust</span>40 000 particles of 20 µm drift with the air and stick where they land (in the AI's airflow or the simulation's).</p>
+              <p><span className="lbl">Dust</span>40 000 particles of 20 µm drift with the air and stick where they land (in the AI's airflow or the simulation's). The 3D view runs the same particles live, in slow motion: dust comes in, drifts and piles up.</p>
               <p><span className="lbl">Check</span>The reference PC measured CPU 65.3 / GPU 49.3 °C; the model gives 65.6 / 49.7. Trust differences more than absolute °C.</p>
             </div>
           </HudWindow>
