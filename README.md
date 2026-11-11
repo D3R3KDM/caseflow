@@ -19,7 +19,7 @@ That is the build's **bank** (about 90 s on an RTX 5080, cached). From it, CaseF
 
 It then tries **every** way to place your spare fans and ranks them for the scenario you set.
 
-A **3D U-Net** trained on CaseFlow's own simulations predicts a layout's 3D airflow and heat in about **0.1 s** instead of 90 s. The app shows a new layout's prediction at once (**Verify** runs the simulation to check it), and the network ranks all **6561** ways to fill the case's 8 fan mounts ([Neural surrogate](#neural-surrogate-ai)).
+A **3D U-Net** trained on CaseFlow's own simulations predicts a layout's 3D airflow and heat in about **0.1 s** instead of 90 s. What the app shows is the network's prediction; **Simulation** in the header scans the simulated case in beside it and compares the two. The network also ranks all **6561** ways to fill the case's 8 fan mounts ([Neural surrogate](#neural-surrogate-ai)).
 
 ## Result for the reference build
 
@@ -100,7 +100,7 @@ python -m uvicorn server.app:app --host 127.0.0.1 --port 8600     # or: bash scr
 cd web && npm install && npm run dev                              # http://localhost:5190
 ```
 
-With the engine running, any of the 32 layouts opens in 3D at once (their banks are cached), and an edited layout shows the network's prediction at once; Verify simulates it in about 90 s.
+With the engine running, every layout opens at once as the network's prediction; **Simulation** puts the simulation beside it (a few seconds when cached, as for the 32 searched layouts; about 90 s otherwise).
 
 ```bash
 python engine/optimize.py          # a bank for all 32 layouts (~50 min on an RTX 5080, resumable)
@@ -114,6 +114,7 @@ python scripts/gen_surrogate_data.py --target 150   # training data: 150 layouts
 python scripts/train_surrogate.py                   # train and score on the held-out layouts (~35 min)
 python scripts/ai_space.py                          # predict all 6561 layouts for the web app (~7 min)
 python scripts/ai_check.py                          # simulate the layouts the network picks
+python scripts/ai_dust_check.py                     # dust in the network's airflow vs the simulation's (~2.5 min)
 python scripts/train_surrogate.py --frac 0.5 --tag half   # learning curve: fewer training layouts, same test
 ```
 
@@ -147,7 +148,7 @@ python scripts/train_surrogate.py --frac 0.5 --tag half   # learning curve: fewe
 
 ## Neural surrogate (AI)
 
-A simulation takes about 90 s. The 8 fan mounts, each off / in / out, give 3⁸ = **6561 layouts**, about a week of GPU time. So CaseFlow trains a **3D U-Net** on its own simulations to predict a layout's 3D fields in about **0.1 s**. The simulation stays the reference: the app shows the network's answer at once, and Verify runs the simulation and shows the difference.
+A simulation takes about 90 s. The 8 fan mounts, each off / in / out, give 3⁸ = **6561 layouts**, about a week of GPU time. So CaseFlow trains a **3D U-Net** on its own simulations to predict a layout's 3D fields in about **0.1 s**. The simulation stays the reference: the app shows the network's answer, and Simulation puts the simulated case beside it with the difference.
 
 ![The 3D U-Net](docs/media/unet.svg)
 
@@ -157,11 +158,16 @@ A simulation takes about 90 s. The 8 fan mounts, each off / in / out, give 3⁸ 
 | **Network** | `engine/surrogate.py`. Input: 80 × 40 × 80 voxels × 8 channels (solid, outside air, fan cells, the fans' air velocity, CPU / GPU heat zones) + coordinates. 3D U-Net: residual 3×3×3 conv blocks with group norm and GELU, four halvings to 5 × 3 × 5 (the deepest features see the whole case) and back with skip connections; 13.5 M weights. Output: air velocity and the rise per watt of CPU and GPU power as log1p(k / 5 mK/W). The fans' operating points stay analytical. |
 | **Training** | Squared error on the air in the case, plus the rises at the CPU and GPU intakes (they set the part temperatures). AdamW, one-cycle, bf16, 300 epochs, 35 min on an RTX 5080. `scripts/train_surrogate.py` |
 | **Test** | 16 held-out layouts × 6 scenarios: mean error **CPU 0.44 °C, GPU 0.28 °C** (worst 2.5 / 1.3 °C, on layouts unlike most training layouts, e.g. no front fans). Guessing the training layouts' average gives 1.04 / 0.74 °C. Air speed RMSE 0.20 m/s; intake rise within 10 %. |
-| **In the app** | A new layout appears at once as the AI's prediction (AI tags, a header chip); **Verify** runs the simulation (~90 s), which replaces it and adds the dust. The **AI** window compares the two, switches the 3D view between them, and ranks all 6561 predicted layouts (`scripts/ai_space.py`, ~7 min) for the scenario on screen. Builds unlike the training data (other parts or fan models) get no prediction. |
+| **In the app** | Every layout appears as the AI's prediction (AI tags, a header chip). **Simulation** in the header slides the case left and scans the simulated case in on the right: a cached simulation in a few seconds, a new one following the run (~90 s). Cards between the two show both temperatures and the difference; a fan change ends the comparison while the simulation finishes in the background. The **AI** window compares the numbers and ranks all 6561 predicted layouts (`scripts/ai_space.py`, ~7 min) for the scenario on screen. Builds unlike the training data (other parts or fan models) get no prediction and show the simulation. |
+| **Dust** | The network predicts no dust. With the Dust layer on, the simulation's own particle tracking (the same 40 000 particles and seed) runs in the network's airflow (`/api/ai/dust`, ~8 s on the GPU, cached). On the 16 held-out layouts × 3 fan speeds, the share of incoming dust that settles is within 1.9 points on average, the surface that gets the most matches in 47 of 48, and the dust rate in the CPU-heavy game is within 5 % (rank correlation 0.94). `scripts/ai_dust_check.py` |
+
+![The network's case and the simulated one side by side](docs/screens/caseflow_compare.png)
 
 ![Network against simulation on held-out layouts](docs/media/fig_ai_parity.png)
 
 ![A held-out layout: simulation, network, difference](docs/media/fig_ai_fields.png)
+
+![Dust in the network's airflow against the simulation's](docs/media/fig_ai_dust.png)
 
 **Search.** The network ranks all 6561 layouts in the browser in seconds; `scripts/ai_check.py` simulates what it picks. In the CPU-heavy game at 23 °C, its top layouts and its best layout for each fan count are within 0.5 °C of the simulation, including the ones it never trained on.
 
@@ -195,12 +201,12 @@ engine/
   scenario.py     fan curves, cooler conductance and the steady state of a bank in a scenario
   optimize.py     32-layout search: a bank each, ranked per scenario
   surrogate.py    neural surrogate: 3D U-Net, encoding, its design space (6561 layouts), bank prediction
-server/app.py     FastAPI: /api/health, /library, /default_build, /bank, /job/{id}, /ai, /ai/info
+server/app.py     FastAPI: /api/health, /library, /default_build, /bank, /job/{id}, /ai, /ai/info, /ai/dust
 scripts/          precompute.py (offline data), scenario_table.py, validate_bank.py, serve.sh,
                   check_convergence.py, sanity_check.py, sensitivity.py (checks),
-                  gen_surrogate_data.py, train_surrogate.py, ai_space.py, ai_check.py (neural surrogate)
+                  gen_surrogate_data.py, train_surrogate.py, ai_space.py, ai_check.py, ai_dust_check.py (neural surrogate)
 data/             parts library, search result (optimize.json), validation.json; banks/ (cache, not in git);
-                  surrogate/ (dataset, trained network, training history, test scores, AI check)
+                  surrogate/ (dataset, trained network, training history, test scores, AI and AI-dust checks)
 web/              Vite + React + three.js app; src/scenario.ts is the browser's solver, src/AiWindow.tsx the AI window
 tests/            engine, bank, scenario and surrogate checks
 docs/             guide, figures, screenshots, video
@@ -208,19 +214,20 @@ docs/             guide, figures, screenshots, video
 
 ## Interface
 
-The 3D case sits in the middle of six floating screens, each wired to its part by a thin leader line. The look follows the [Data to Discovery](https://datavis.caltech.edu/projects) projects (ArtCenter / JPL / Caltech): neutral charcoal, flat panels and hairlines, colour only on the data - teal air in, copper air out, a heat ramp that brightens with temperature, violet for the AI. Drag a screen by its title to move it (the place is remembered); double-click the title to put it back, or ⟲ in the dock for all of them:
+The 3D case sits among floating screens, each wired to its part by a thin leader line: CPU, GPU and Airflow by default, Dust with the Dust layer (off by default), Layout search and Verdict with Ranking in the dock. The look follows the [Data to Discovery](https://datavis.caltech.edu/projects) projects (ArtCenter / JPL / Caltech): neutral charcoal, flat panels and hairlines, colour only on the data - teal air in, copper air out, a heat ramp that brightens with temperature, violet for the AI. Drag a screen by its title to move it (the place is remembered); double-click the title to put it back, or ⟲ in the dock for all of them:
 
 - **CPU** and **GPU**: temperature gauge, intake air rise, power (and throttling), fan rpm ("off" when the GPU fans idle).
 - **Airflow**: in / out CFM, case pressure, and every fan's flow and speed.
 - **Dust**: how fast outside dust settles, relative to your layout, and where it lands.
 - **Layout search** and **Verdict**: the 32 layouts ranked for the current scenario, and your layout against the best.
+- **AI Prediction / Simulation** (header): what you see is the network's prediction; Simulation shows the simulated case beside it, with cards comparing the two between them (Back or Esc returns).
 
-Glass windows, from the dock at the bottom:
+Windows, from the dock at the bottom:
 
 - **Scenario**: load presets, room / CPU-load / GPU-load sliders; the resulting fan duties and noise.
 - **Fan curves**: drag the points of the case, CPU and GPU curves; a ring shows where each fan runs now.
 - **Trends**: temperature against room temperature and against load, with the curves and with the fans held.
 - **Configure**: parts, and every fan: direction, model, curve or fixed duty. **Method**: how it is computed.
-- **AI**: the network against the simulation for the layout on screen (Verify for a layout never simulated), which one the 3D view shows, and the model card; and all 6561 predicted layouts ranked for the scenario on screen.
+- **AI**: the network against the simulation for the layout on screen (Compare in 3D opens the side-by-side view) and the model card; and all 6561 predicted layouts ranked for the scenario on screen.
 
-**Click any case fan** in 3D to flip it or turn it off, or click an empty mount to add a fan (the case's stock fan for that mount). A searched layout opens at once; a new one shows the network's prediction (marked AI), and **Verify** in the header simulates it (about 90 s). The view is through the glass, front on the right, as the PC stands on a desk.
+**Click any case fan** in 3D to flip it or turn it off, or click an empty mount to add a fan (the case's stock fan for that mount). Any layout opens at once as the network's prediction (marked AI); **Simulation** in the header compares it with the simulation (about 90 s for a layout never simulated). The view is through the glass, front on the right, as the PC stands on a desk.

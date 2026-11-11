@@ -1,5 +1,6 @@
 """Figures of the neural surrogate for docs/GUIDE.md: training, accuracy on held-out layouts, learning curve, the
-predicted fields next to the simulated ones, and what the network finds over all 6561 layouts.
+predicted fields next to the simulated ones, what the network finds over all 6561 layouts, and the dust tracked in its
+airflow against the simulation's (after scripts/ai_dust_check.py).
 
     python docs/make_ai_figures.py        # from the caseflow folder, after scripts/train_surrogate.py and scripts/ai_space.py
 
@@ -301,7 +302,40 @@ def fig_space():
         print(f"best with {k} fans: {out[i]}")
 
 
+# ----------------------------------------------------------------------------- 6. dust in the network's airflow
+def fig_dust():
+    d = load("ai_dust_check.json")
+    if not d:
+        return print("skip fig_ai_dust (run scripts/ai_dust_check.py)")
+    s, rows = d["summary"], d["rows"]
+    fig, (a, b) = plt.subplots(1, 2, figsize=(12, 5))
+    fig.subplots_adjust(wspace=0.32)
+    L = [x for r in rows for x in r["levels"]]
+    xs, ys = [x["settles_sim"] * 100 for x in L], [x["settles_ai"] * 100 for x in L]
+    lo, hi = min(xs + ys) - 2, max(xs + ys) + 2
+    a.plot([lo, hi], [lo, hi], color=MUTED, lw=1, ls=":", zorder=1)
+    a.scatter(xs, ys, s=34, color=TEST_C, edgecolor=BG, linewidth=1.2, zorder=3)
+    a.set_xlim(lo, hi)
+    a.set_ylim(lo, hi)
+    a.set_aspect("equal")
+    a.set_xlabel("simulation (%)")
+    a.set_ylabel("tracked in the network's airflow (%)")
+    a.set_title(f"Share of the dust that settles\n{s['samples']} held-out cases, mean |diff| {s['settles_mae_pts']:.1f} pts")
+    rs, ra = np.array([r["rate_sim"] for r in rows]), np.array([r["rate_ai"] for r in rows])
+    ref = rs.mean()
+    lo, hi = min(rs.min(), ra.min()) / ref - 0.1, max(rs.max(), ra.max()) / ref + 0.1
+    b.plot([lo, hi], [lo, hi], color=MUTED, lw=1, ls=":", zorder=1)
+    b.scatter(rs / ref, ra / ref, s=40, color=TEST_C, edgecolor=BG, linewidth=1.2, zorder=3)
+    b.set_xlim(lo, hi)
+    b.set_ylim(lo, hi)
+    b.set_aspect("equal")
+    b.set_xlabel("simulation (× the average layout)")
+    b.set_ylabel("network's airflow (× the average layout)")
+    b.set_title(f"Dust rate, CPU-heavy game, 23 °C\nmean |diff| {s['rate_rel_err_mean_pct']:.0f}%, rank corr. {s['rate_rank_spearman']:.2f}")
+    save(fig, "fig_ai_dust.png")
+
+
 if __name__ == "__main__":
-    which = sys.argv[1:] or ["training", "parity", "learning", "fields", "space"]
+    which = sys.argv[1:] or ["training", "parity", "learning", "fields", "space", "dust"]
     for w in which:
         globals()[f"fig_{w}"]()

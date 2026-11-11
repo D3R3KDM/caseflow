@@ -20,8 +20,8 @@
       <text x="28" y="116">steady state in ~1 ms per layout</text>
       <text x="16" y="136">· 3D heat = P_cpu · k_cpu + P_gpu · k_gpu</text>
       <text x="16" y="156">· 32 layouts re-ranked live</text>
-      <text x="16" y="176" fill="#c3b2ff">· AI first: a new layout's prediction at once,</text>
-      <text x="28" y="192" fill="#c3b2ff">Verify: the simulation and the difference</text>
+      <text x="16" y="176" fill="#c3b2ff">· AI first: every layout's prediction at once;</text>
+      <text x="28" y="192" fill="#c3b2ff">Simulation: the simulated case beside it</text>
       <text x="16" y="212" fill="#c3b2ff">· all 6561 predicted layouts ranked (worker)</text>
     </g>
     <rect x="16" y="228" width="268" height="58" fill="rgba(99,224,255,0.06)" stroke="#2f7fa3"/>
@@ -43,12 +43,13 @@
       <text x="16" y="144">GET  /api/job/{id}  → progress</text>
       <text x="16" y="164" fill="#c3b2ff">POST /api/ai        → predicted bank</text>
       <text x="16" y="184" fill="#c3b2ff">GET  /api/ai/info   → model card</text>
+      <text x="16" y="204" fill="#c3b2ff">POST /api/ai/dust   → dust in its airflow</text>
     </g>
-    <text x="16" y="216" fill="#8b98a9" font-size="11.5">a cached bank returns at once; a new</text>
-    <text x="16" y="232" fill="#8b98a9" font-size="11.5">layout runs (~90 s) only on Verify, one job</text>
-    <text x="16" y="248" fill="#8b98a9" font-size="11.5">at a time; the network answers in ~0.1 s</text>
-    <text x="16" y="264" fill="#8b98a9" font-size="11.5">and refuses builds unlike its training</text>
-    <text x="16" y="280" fill="#8b98a9" font-size="11.5">data (other parts or fan models)</text>
+    <text x="16" y="228" fill="#8b98a9" font-size="11.5">a cached bank returns at once; a new</text>
+    <text x="16" y="244" fill="#8b98a9" font-size="11.5">layout runs (~90 s) only when asked, one job</text>
+    <text x="16" y="260" fill="#8b98a9" font-size="11.5">at a time; the network answers in ~0.1 s</text>
+    <text x="16" y="276" fill="#8b98a9" font-size="11.5">and refuses builds unlike its training</text>
+    <text x="16" y="292" fill="#8b98a9" font-size="11.5">data (other parts or fan models)</text>
   </g>
 
   <!-- engine -->
@@ -103,8 +104,8 @@
       <text x="532" y="90" fill="#8b98a9" font-family="IBM Plex Mono, Consolas, monospace" font-size="10">/api/ai · ai_space.py</text>
       <rect x="772" y="38" width="224" height="56" fill="rgba(144,133,233,0.08)" stroke="#5b5299"/>
       <text x="784" y="58" fill="#dde9f3" font-weight="700">4 · check</text>
-      <text x="784" y="76" fill="#8b98a9">Verify simulates what the app shows,</text>
-      <text x="784" y="90" fill="#8b98a9">with the difference (AI window)</text>
+      <text x="784" y="76" fill="#8b98a9">Simulation: the simulated case beside</text>
+      <text x="784" y="90" fill="#8b98a9">the AI's, with the difference</text>
     </g>
     <g stroke="#9085e9" stroke-width="1.4" fill="none">
       <path d="M238 66 H264" marker-end="url(#v)"/>

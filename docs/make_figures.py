@@ -418,12 +418,14 @@ def fig_dust():
 
 
 # ----------------------------------------------------------------------------- 10. annotated interface
-UI_MARKS = [(1, 374, 88), (2, 392, 168), (3, 402, 520), (4, 1004, 152), (5, 1006, 516), (6, 1284, 330), (7, 584, 28), (8, 266, 862), (9, 742, 380), (10, 104, 402)]
+# on docs/screens/caseflow_all.png: the default view with the Dust and Ranking screens on, so that every screen shows
+UI_MARKS = [(1, 374, 88), (2, 392, 200), (3, 400, 550), (4, 1004, 160), (5, 1006, 546), (6, 1284, 338), (7, 584, 28), (8, 234, 862),
+            (9, 742, 384), (10, 106, 424), (11, 1272, 28)]
 
 
 def fig_ui():
     from PIL import Image, ImageDraw, ImageFont
-    src = ROOT / "docs" / "screens" / "caseflow_main.png"
+    src = ROOT / "docs" / "screens" / "caseflow_all.png"
     im = Image.open(src).convert("RGB")
     dr = ImageDraw.Draw(im, "RGBA")
     font = ImageFont.truetype(matplotlib.font_manager.findfont("DejaVu Sans:bold"), 17)
