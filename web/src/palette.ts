@@ -9,7 +9,7 @@ export const C = {
   lead: 0xd8d8d8,          // leader lines and anchors of the floating screens
   intake: 0x2fa8a9,
   exhaust: 0xd9773a,
-  dust: 0xc9bda8,
+  dust: 0xc49a5a,          // ochre: settled dust, apart from the air (heat ramp) and the fans (teal / copper)
 }
 export const CSS_IN = '#2fa8a9'
 export const CSS_OUT = '#d9773a'
@@ -17,7 +17,7 @@ export const CSS_OUT = '#d9773a'
 /** Air temperature above room, t in [0, 1]: a sequential ramp whose lightness rises with heat - cool air a quiet light
  * slate that still reads on the dark scene, hot air glowing: slate -> warm grey -> orange -> amber -> pale yellow. */
 const STOPS: [number, string][] = [
-  [0.0, '#8592a3'],
+  [0.0, '#7f93ad'],
   [0.35, '#b7a28e'],
   [0.6, '#e39552'],
   [0.82, '#f6bd6c'],

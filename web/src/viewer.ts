@@ -21,6 +21,7 @@ export function createViewer(container: HTMLElement, bg: number): Viewer {
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.05
+  renderer.localClippingEnabled = true          // the scan that draws the simulated twin (Scene.tsx)
   container.appendChild(renderer.domElement)
   const controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true

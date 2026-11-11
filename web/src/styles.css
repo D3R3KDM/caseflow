@@ -329,3 +329,21 @@ input[type='range'] { accent-color: var(--fill); width: 100%; }
 .verify:hover { background: #ffffff; }
 .sim-now { color: var(--ink); }
 .toast .textbtn { padding: 0; }
+
+/* ---------- side by side: the AI's case on the left, the simulation's on the right ---------- */
+.src-chip { border: 1px solid var(--line2); border-radius: 999px; color: var(--ink2); font: 600 10px var(--text); letter-spacing: 0.1em; padding: 4px 11px; }
+.src-chip b { color: var(--violet); font-weight: 600; }
+.cc-g { display: grid; grid-template-columns: auto 1fr 1fr; align-items: baseline; gap: 5px 12px; }
+.cc-h { font: 600 9px var(--text); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink3); text-align: right; }
+.cc-h.ai { color: var(--violet); }
+.cc-l { max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--ink2); }
+.cc-g b { text-align: right; font: 500 13px var(--text); color: var(--ink); font-variant-numeric: tabular-nums; }
+.cc-g b.big { font: 600 26px/1.1 var(--display); }
+.cc-g b.ai { color: var(--violet); }
+.cc-foot { display: flex; align-items: center; gap: 10px; min-height: 17px; margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 11px; color: var(--ink2); }
+.cc-foot b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.cc-foot b.ok { color: var(--cyan); }
+.cc-foot b.meh { color: var(--ink); }
+.cc-foot b.bad { color: var(--amber); }
+.cc-bar { flex: 1; height: 3px; overflow: hidden; border-radius: 2px; background: rgba(255, 255, 255, 0.1); }
+.cc-bar b { display: block; height: 100%; background: var(--fill); transition: width 0.6s; }

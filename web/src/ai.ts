@@ -3,7 +3,7 @@
  *
  * A layout code has one digit per mount (0 off, 1 in, 2 out) in the order of AiSpace.mounts; each mount carries the
  * fan model the network was trained with there. */
-import type { Bank, BankLevel } from './scenario'
+import type { Bank, BankLevel, DustStats } from './scenario'
 import type { Build, FanSlot, Mode } from './types'
 
 export interface AiTest {
@@ -23,6 +23,10 @@ export interface AiSpace {
 }
 /** Where a predicted bank's layout stands for the network. */
 export type Seen = 'train' | 'test' | 'new'
+
+/** Dust tracked in the network's airflow (POST /api/ai/dust): the simulation's particles, size and seed in the predicted air
+ * velocity, per level; deposit points in mm. */
+export interface AiDust { key: string; levels: { dust: DustStats | null; dust_points: number[][] }[]; seconds: number }
 
 const MODES: Mode[] = ['off', 'in', 'out']
 

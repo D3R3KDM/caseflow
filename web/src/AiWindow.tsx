@@ -9,7 +9,8 @@ export interface AiHere {
   ai: ScenarioResult | null; phys: ScenarioResult | null; seen: Seen | null
   why: string | null                       // why there is no prediction (other parts, the engine is off, ...)
   progress: number | null                  // the simulation's progress while it runs
-  canVerify: boolean                       // never simulated: the simulation can be run to check
+  simReady: boolean                        // the simulation is cached: comparing takes seconds, not about 90 s
+  comparing: boolean                       // the 3D view shows the AI's case and the simulation's side by side
 }
 
 const SEEN: Record<Seen, string> = { train: 'In the training set', test: 'Held-out test layout', new: 'New to the network' }
@@ -31,8 +32,8 @@ export function ModelCard({ info }: { info: AiInfo | null }) {
   )
 }
 
-/** This layout: the network's prediction against the simulation, and which one the 3D view shows. */
-export function AiHereTab({ here, src, setSrc, onVerify }: { here: AiHere; src: 'physics' | 'ai'; setSrc: (s: 'physics' | 'ai') => void; onVerify: () => void }) {
+/** This layout: the network's prediction against the simulation; the button puts the two side by side in 3D. */
+export function AiHereTab({ here, onCompare }: { here: AiHere; onCompare: () => void }) {
   const { ai, phys } = here
   if (here.why) return <p className="fine">No AI prediction: {here.why}.</p>
   if (!ai) return <p className="fine">Asking the network…</p>
@@ -51,16 +52,8 @@ export function AiHereTab({ here, src, setSrc, onVerify }: { here: AiHere; src: 
           {row('GPU °C', ai.gpu.temp_c, phys?.gpu.temp_c ?? null)}
         </tbody>
       </table>
-      {phys ? (
-        <div className="ai-src">
-          <span className="lbl">3D view</span>
-          <span className="seg3">{(['physics', 'ai'] as const).map((k) => <button key={k} className={src === k ? 'on' : ''} onClick={() => setSrc(k)}>{k === 'ai' ? 'AI' : 'Simulation'}</button>)}</span>
-        </div>
-      ) : here.progress != null ? (
-        <button className="run" disabled>Simulating {Math.round(here.progress * 100)}%</button>
-      ) : here.canVerify ? (
-        <button className="run" onClick={onVerify}>Verify · simulate ~90 s</button>
-      ) : null}
+      {here.comparing ? <button className="run" disabled>{here.progress != null ? `Simulating ${Math.round(here.progress * 100)}%` : 'Side by side in 3D'}</button>
+        : <button className="run" onClick={onCompare}>{here.progress != null ? `Simulating ${Math.round(here.progress * 100)}% · show` : here.simReady || phys ? 'Compare in 3D' : 'Simulate and compare · ~90 s'}</button>}
     </div>
   )
 }

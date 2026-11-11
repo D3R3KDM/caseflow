@@ -1,9 +1,9 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import Schematic, { type SchFan } from './Schematic'
 import type { CaseFanState, DustStats, PartState, ScenarioResult } from './scenario'
 import { WHERE, type Geometry, type RankRow } from './types'
 
-/** Frame of a floating holographic screen: glow border, corner brackets, scanlines, sweep. */
+/** Frame of a floating screen: a flat card with a title strip. */
 export function Holo({ tag, sub, badge, width, flashKey, children }: { tag: string; sub?: ReactNode; badge?: ReactNode; width: number; flashKey?: string; children: ReactNode }) {
   return (
     <div className="holo" style={{ width } as CSSProperties} key={flashKey}>
@@ -122,13 +122,45 @@ export function AirPanel({ res, fans, refRes }: { res: ScenarioResult; fans: { s
 /** Dust: how fast outside dust settles inside, relative to your layout, and where it lands. */
 export function DustPanel({ rel, stats, compare, note }: { rel: number | null; stats: DustStats | null | undefined; compare: boolean; note?: string }) {
   if (note) return <div className="fine">{note}</div>
-  if (!stats || rel == null) return <div className="fine">No dust run for this layout.</div>
+  if (!stats) return <div className="fine">No dust run for this layout.</div>
   return (
     <div className="dp">
-      <div className="dp-big"><b>×{rel.toFixed(2)}</b><span>dust{compare ? ' vs your layout' : ''}</span></div>
+      <div className="dp-big">{rel != null
+        ? <><b>×{rel.toFixed(2)}</b><span>dust{compare ? ' vs your layout' : ''}</span></>
+        : <><b>{Math.round(stats.deposited_frac * 100)}%</b><span>of the dust that gets in settles</span></>}</div>
       {stats.by_part.slice(0, 3).map((p) => (
         <div key={p.name} className="dp-r"><span>{p.name}</span><i><b style={{ width: `${Math.min(100, p.share * 250)}%` }} /></i><span className="mono">{(p.share * 100).toFixed(0)}%</span></div>
       ))}
+    </div>
+  )
+}
+
+/** One quantity in a compare card: the AI's value and the simulation's (null: not there yet). */
+export interface CmpRow { label: string; ai: number | null; sim: number | null; fmt: (v: number) => string }
+
+/** The AI's answer next to the simulation's while the two cases stand side by side: the first row large, then how far
+ * apart they are. progress: the simulation running (0..1); sim values stay hidden until its scan has drawn the twin. */
+export function CompareCard({ rows, progress, diff }: { rows: CmpRow[]; progress: number | null; diff: { text: string; cls: string } | null }) {
+  const p = progress != null ? Math.round(progress * 100) : null
+  return (
+    <div className="cc">
+      <div className="cc-g">
+        <span />
+        <span className="cc-h ai">AI</span>
+        <span className="cc-h">Simulation</span>
+        {rows.map((r, i) => (
+          <Fragment key={r.label}>
+            <span className="cc-l">{r.label}</span>
+            <b className={'ai' + (i === 0 ? ' big' : '')}>{r.ai != null ? r.fmt(r.ai) : '…'}</b>
+            <b className={i === 0 ? 'big' : ''}>{r.sim != null ? r.fmt(r.sim) : p != null ? '' : '…'}</b>
+          </Fragment>
+        ))}
+      </div>
+      <div className="cc-foot">
+        {p != null
+          ? <><i className="cc-bar"><b style={{ width: `${p}%` }} /></i><span className="mono">simulating {p}%</span></>
+          : diff ? <span>difference <b className={diff.cls}>{diff.text}</b></span> : <span>&nbsp;</span>}
+      </div>
     </div>
   )
 }
