@@ -75,7 +75,7 @@ export function PartPanel({ part, st, refSt }: { part: 'cpu' | 'gpu'; st: PartSt
         <dl className="pp-kv">
           <dt>air in</dt><dd>+{st.intake_rise_c.toFixed(1)}°</dd>
           <dt>power</dt><dd className={st.throttled ? 'warnline' : ''}>{st.watts.toFixed(0)} W</dd>
-          <dt>fans</dt><dd>{stopped ? 'stopped' : `${rpm(st.fan_rpm)} rpm`}</dd>
+          <dt>fan rpm</dt><dd>{stopped ? 'off' : rpm(st.fan_rpm)}</dd>
         </dl>
       </div>
       {(st.throttled || refSt) && (

@@ -436,11 +436,11 @@ export default function App() {
             isOn={(r) => !!viewBuild && layoutId(r.build) === layoutId(viewBuild)} />
         </Holo>) },
       { id: 'cpu', title: 'CPU', pos: [-1.6, 1.08, 0.5], yaw: 0.06, anchor: 'cpu', content: (
-        <Holo tag="CPU" badge={aiTag} sub={cpu?.name.replace('AMD ', '').replace('Intel ', '') ?? 'CPU'} width={250} flashKey={'cpu' + flash}>
+        <Holo tag="CPU" badge={aiTag} sub={cpu?.name.replace('AMD ', '').replace('Intel ', '') ?? 'CPU'} width={262} flashKey={'cpu' + flash}>
           <PartPanel part="cpu" st={res.cpu} refSt={compare ? refRes?.cpu ?? null : null} />
         </Holo>) },
       { id: 'gpu', title: 'GPU', pos: [-1.6, -0.78, 0.6], yaw: 0.06, anchor: 'gpu', content: (
-        <Holo tag="GPU" badge={aiTag} sub={gpu?.name.replace('NVIDIA GeForce ', '').replace(' Founders Edition', ' FE') ?? 'GPU'} width={250} flashKey={'gpu' + flash}>
+        <Holo tag="GPU" badge={aiTag} sub={gpu?.name.replace('NVIDIA GeForce ', '').replace(' Founders Edition', ' FE') ?? 'GPU'} width={262} flashKey={'gpu' + flash}>
           <PartPanel part="gpu" st={res.gpu} refSt={compare ? refRes?.gpu ?? null : null} />
         </Holo>) },
       { id: 'air', title: 'Airflow', pos: [1.6, 1.08, 0.5], yaw: -0.06, anchor: 'intake', content: (
