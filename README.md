@@ -19,6 +19,8 @@ That is the build's **bank** (about 90 s on an RTX 5080, cached). From it, CaseF
 
 It then tries **every** way to place your spare fans and ranks them for the scenario you set.
 
+A **3D U-Net** trained on CaseFlow's own simulations predicts a layout's 3D airflow and heat in about **0.1 s** instead of 90 s. The app shows a new layout's prediction at once and replaces it with the simulation when that finishes, and the network ranks all **6561** ways to fill the case's 8 fan mounts ([Neural surrogate](#neural-surrogate-ai)).
+
 ## Result for the reference build
 
 The reference build is a Lian Li LANCOOL 207 with an RTX 5080 Founders Edition, a Thermalright Peerless Assassin 120 SE and a Ryzen 7 9700X:
@@ -98,7 +100,7 @@ python -m uvicorn server.app:app --host 127.0.0.1 --port 8600     # or: bash scr
 cd web && npm install && npm run dev                              # http://localhost:5190
 ```
 
-With the engine running, any of the 32 layouts opens in 3D at once (their banks are cached), and an edited layout is simulated in about 90 s.
+With the engine running, any of the 32 layouts opens in 3D at once (their banks are cached), and an edited layout shows the network's prediction at once and is simulated in about 90 s.
 
 ```bash
 python engine/optimize.py          # a bank for all 32 layouts (~50 min on an RTX 5080, resumable)
@@ -106,6 +108,13 @@ python scripts/precompute.py       # the web app's offline data
 python scripts/scenario_table.py   # every preset at several room temperatures, for your layout
 python scripts/validate_bank.py    # instant solve against full simulations (~4 min)
 python -m pytest tests             # fast checks (no GPU), incl. the browser solver against the Python one
+
+# neural surrogate
+python scripts/gen_surrogate_data.py --target 150   # training data: 150 layouts (~3 h, resumable)
+python scripts/train_surrogate.py                   # train and score on the held-out layouts (~35 min)
+python scripts/ai_space.py                          # predict all 6561 layouts for the web app (~7 min)
+python scripts/ai_check.py                          # simulate the layouts the network picks
+python scripts/train_surrogate.py --frac 0.5 --tag half   # learning curve: fewer training layouts, same test
 ```
 
 ## How it works
@@ -136,6 +145,45 @@ python -m pytest tests             # fast checks (no GPU), incl. the browser sol
 - The grid uses a higher viscosity than real air, for stability. Buoyancy is not modelled, and the room outside stays at its set temperature, so hot exhaust is never drawn back in.
 - Trust the differences between layouts more than the absolute temperatures.
 
+## Neural surrogate (AI)
+
+A simulation takes about 90 s. The 8 fan mounts, each off / in / out, give 3⁸ = **6561 layouts**, about a week of GPU time. So CaseFlow trains a **3D U-Net** on its own simulations to predict a layout's 3D fields in about **0.1 s**. The simulation stays the reference: the app shows the network's answer at once, then the simulation's, with the difference.
+
+![The 3D U-Net](docs/media/unet.svg)
+
+| | |
+|---|---|
+| **Data** | 150 layouts: the 32 of the search, the no-fan case and 117 random ones (fixed seed), each at 3 case-fan speeds: 400 training samples. Fan models per mount as on the reference PC. Every 7th random layout (16) is **held out** as a test. `scripts/gen_surrogate_data.py`, 4.1 h of GPU time, resumable. 34 of the random layouts (exhaust fans next to the small rear vent) blow up the LBM; they are rerun with a velocity limiter (4.5 m/s) and flagged. |
+| **Network** | `engine/surrogate.py`. Input: 80 × 40 × 80 voxels × 8 channels (solid, outside air, fan cells, the fans' air velocity, CPU / GPU heat zones) + coordinates. 3D U-Net: residual 3×3×3 conv blocks with group norm and GELU, four halvings to 5 × 3 × 5 (the deepest features see the whole case) and back with skip connections; 13.5 M weights. Output: air velocity and the rise per watt of CPU and GPU power as log1p(k / 5 mK/W). The fans' operating points stay analytical. |
+| **Training** | Squared error on the air in the case, plus the rises at the CPU and GPU intakes (they set the part temperatures). AdamW, one-cycle, bf16, 300 epochs, 35 min on an RTX 5080. `scripts/train_surrogate.py` |
+| **Test** | 16 held-out layouts × 6 scenarios: mean error **CPU 0.44 °C, GPU 0.28 °C** (worst 2.5 / 1.3 °C, on layouts unlike most training layouts, e.g. no front fans). Guessing the training layouts' average gives 1.04 / 0.74 °C. Air speed RMSE 0.20 m/s; intake rise within 10 %. |
+| **In the app** | A new layout appears at once as the AI's prediction (AI tags, a header chip); the simulation replaces it when done. The **AI** window compares the two, switches the 3D view between them, and ranks all 6561 predicted layouts (`scripts/ai_space.py`, ~7 min) for the scenario on screen. Builds unlike the training data (other parts or fan models) get no prediction. |
+
+![Network against simulation on held-out layouts](docs/media/fig_ai_parity.png)
+
+![A held-out layout: simulation, network, difference](docs/media/fig_ai_fields.png)
+
+**Search.** The network ranks all 6561 layouts in the browser in seconds; `scripts/ai_check.py` simulates what it picks. In the CPU-heavy game at 23 °C, its top layouts and its best layout for each fan count are within 0.5 °C of the simulation, including the ones it never trained on.
+
+Its best of all 6561 runs CPU 64.6 / GPU 48.2 °C in the simulation, against 65.4 / 49.1 °C for the best of the 32-layout search and 65.6 / 49.7 °C for the reference layout:
+
+- **The layout:** front fans out, top-front out, top-mid in.
+- **Why it works:** cool air drops onto the CPU cooler's intake, and the GPU's exhaust leaves through the front.
+- **The catch:** it means reversing the stock front fans for 1–1.5 °C, and the simulation has no buoyancy. The recommendation above stands.
+- **Fan count:** four well-placed fans reach the best; more do not help.
+
+![All 6561 layouts](docs/media/fig_ai_space.png)
+
+**Learning curve.** Retrained on a quarter (34) and a half (67) of the training layouts, same 16 test layouts:
+
+- CPU error: 0.69 → 0.68 → 0.44 °C.
+- GPU error: 0.47 → 0.42 → 0.28 °C.
+- Intake rise error: 20 % → 16 % → 10 %.
+
+More simulated layouts are the direct way to a more accurate network, at about 2.5 h of GPU time per 100 layouts.
+
+![Learning curve](docs/media/fig_ai_learning.png)
+
 ## Layout
 
 ```
@@ -146,12 +194,15 @@ engine/
   bank.py         a build at three case-fan speeds → bank (summary + 8-bit 3D fields), cached in data/banks
   scenario.py     fan curves, cooler conductance and the steady state of a bank in a scenario
   optimize.py     32-layout search: a bank each, ranked per scenario
-server/app.py     FastAPI: /api/health, /library, /default_build, /bank, /job/{id}
+  surrogate.py    neural surrogate: 3D U-Net, encoding, its design space (6561 layouts), bank prediction
+server/app.py     FastAPI: /api/health, /library, /default_build, /bank, /job/{id}, /ai, /ai/info
 scripts/          precompute.py (offline data), scenario_table.py, validate_bank.py, serve.sh,
-                  check_convergence.py, sanity_check.py, sensitivity.py (checks)
-data/             parts library, search result (optimize.json), validation.json; banks/ (cache, not in git)
-web/              Vite + React + three.js app; src/scenario.ts is the browser's solver
-tests/            engine, bank and scenario checks
+                  check_convergence.py, sanity_check.py, sensitivity.py (checks),
+                  gen_surrogate_data.py, train_surrogate.py, ai_space.py, ai_check.py (neural surrogate)
+data/             parts library, search result (optimize.json), validation.json; banks/ (cache, not in git);
+                  surrogate/ (dataset, trained network, training history, test scores, AI check)
+web/              Vite + React + three.js app; src/scenario.ts is the browser's solver, src/AiWindow.tsx the AI window
+tests/            engine, bank, scenario and surrogate checks
 docs/             guide, figures, screenshots, video
 ```
 
@@ -170,5 +221,6 @@ Glass windows, from the dock at the bottom:
 - **Fan curves**: drag the points of the case, CPU and GPU curves; a ring shows where each fan runs now.
 - **Trends**: temperature against room temperature and against load, with the curves and with the fans held.
 - **Configure**: parts, and every fan: direction, model, curve or fixed duty. **Method**: how it is computed.
+- **AI**: the network against the simulation for the layout on screen, which one the 3D view shows, and the model card; and all 6561 predicted layouts ranked for the scenario on screen.
 
-**Click any case fan** in 3D to flip it or turn it off, or click an empty mount to add a fan. A searched layout opens at once; a new one is simulated (about 90 s). The view is through the glass, front on the right, as the PC stands on a desk.
+**Click any case fan** in 3D to flip it or turn it off, or click an empty mount to add a fan (the case's stock fan for that mount). A searched layout opens at once; a new one shows the network's prediction at once (marked AI) and is simulated (about 90 s). The view is through the glass, front on the right, as the PC stands on a desk.

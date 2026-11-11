@@ -74,10 +74,41 @@ await page.mouse.move(720, 430)
 for (let i = 0; i < 6; i++) { await page.mouse.wheel(0, -60); await wait(120) }
 await wait(1600)
 
+// ---------- AI: the network answers at once, the simulation then checks it (its wait shown as a time-lapse) ----------
+await dock('AI'); await wait(2400)                                                      // your layout: AI against physics
+await page.locator('.ai-src button', { hasText: 'AI' }).click(); await wait(2600)       // the 3D view shows the network's airflow
+await page.locator('.ai-src button', { hasText: 'Physics' }).click(); await wait(1400)
+await page.locator('.tabs3 button', { hasText: 'layouts' }).click(); await wait(4200)   // all 6561 layouts, ranked for this scenario
+{
+  const t = await box(page.locator('.ai-all .tr-plot svg').first())
+  for (let i = 0; i <= 16; i++) { await page.mouse.move(t.x + 40 + (i / 16) * (t.width - 110), t.y + t.height / 2); await wait(80) }
+  await wait(800)
+}
+await page.locator('.tabs3 button', { hasText: 'This layout' }).click(); await wait(600)
+await dock('Configure'); await wait(1000)
+await page.locator('.mt', { hasText: 'top-mid' }).locator('.seg3 button', { hasText: 'off' }).click()   // a layout never simulated
+await wait(3000)                                                                        // the network's answer, at once
+const SPEED = 10
+const lapse = [frames.length]
+await page.evaluate((k) => {
+  const d = document.createElement('div')
+  d.id = 'lapse'
+  d.textContent = `▶▶ ${k}× · the simulation checks the AI`
+  Object.assign(d.style, { position: 'fixed', right: '24px', bottom: '84px', zIndex: 3000, padding: '6px 12px', font: '12px IBM Plex Mono, monospace',
+    letterSpacing: '0.1em', color: '#c3b2ff', border: '1px solid rgba(195,178,255,.6)', background: 'rgba(7,12,19,.75)' })
+  document.body.appendChild(d)
+}, SPEED)
+await page.locator('.toast', { hasText: 'SIMULATING' }).waitFor({ state: 'detached', timeout: 300000 })
+lapse.push(frames.length)
+await page.evaluate(() => document.getElementById('lapse')?.remove())
+await wait(3500)                                                                        // physics in place, the difference in the window
+await dock('Configure'); await wait(1200)
+
 await cdp.send('Page.stopScreencast')
 await wait(300)
 const NL = String.fromCharCode(10)
-const lines = frames.map((f, i) => `file 'frames/${f.name}'${NL}duration ${Math.max(0.01, (frames[i + 1]?.t ?? f.t + 0.04) - f.t).toFixed(4)}`)
+const fast = (i) => (i >= lapse[0] && i < (lapse[1] ?? lapse[0]) ? SPEED : 1)
+const lines = frames.map((f, i) => `file 'frames/${f.name}'${NL}duration ${Math.max(0.002, ((frames[i + 1]?.t ?? f.t + 0.04) - f.t) / fast(i)).toFixed(4)}`)
 lines.push(`file 'frames/${frames[frames.length - 1].name}'`)
 fs.writeFileSync(path.join(outDir, 'frames.txt'), lines.join(NL))
 await browser.close()
