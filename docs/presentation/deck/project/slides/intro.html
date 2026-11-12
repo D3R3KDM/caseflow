@@ -1,47 +1,33 @@
-<section id="intro" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<section id="intro" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
 <div style="position:absolute;left:64px;top:64px;width:28px;height:28px;border-left:2px solid #131517;border-top:2px solid #131517"></div>
 <div style="position:absolute;right:64px;top:64px;width:28px;height:28px;border-right:2px solid #131517;border-top:2px solid #131517"></div>
 <div style="position:absolute;left:64px;bottom:64px;width:28px;height:28px;border-left:2px solid #131517;border-bottom:2px solid #131517"></div>
 <div style="position:absolute;right:64px;bottom:64px;width:28px;height:28px;border-right:2px solid #131517;border-bottom:2px solid #131517"></div>
-<div style="display:flex;flex-direction:column;gap:12px;padding:0 0 24px;border-bottom:1px solid #C9CEC4">
+<div style="display:flex;flex-direction:column;gap:12px">
 <p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">Introduction</p>
-<h2 style="font-size:56px;font-weight:600;line-height:1.1;letter-spacing:-1px">My PC, as a wind tunnel</h2>
+<h2 style="font-size:64px;font-weight:600;line-height:1.1;letter-spacing:-1px">A PC is a box of heat</h2>
 </div>
-<div style="display:flex;flex-direction:row;gap:56px;align-items:start">
-<div style="width:760px;display:flex;flex-direction:column;gap:16px">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:2px;color:#5E636A">BACKGROUND</p>
-<p style="font-size:26px;line-height:1.4"><b>A PC is a box of heat:</b> my graphics card and CPU can turn more than 400 W into heat.</p>
-<p style="font-size:26px;line-height:1.4"><b>Fans carry it out,</b> but where they are mounted decides where the air goes, and how hot the parts get.</p>
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:2px;color:#5E636A;padding:12px 0 0">WHAT I BUILT</p>
-<div style="display:flex;flex-direction:column;gap:0px">
-<div style="display:flex;flex-direction:row;gap:16px;align-items:start;padding:0 0 10px;border-bottom:1px solid #C9CEC4">
-<p style="flex:none;width:48px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:26px;color:#6E3CE6">01</p>
-<p style="font-size:26px;line-height:1.35">A GPU airflow simulator of my exact case</p>
+<div style="display:flex;flex-direction:row;gap:96px;align-items:center;flex:1">
+<div style="width:640px;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:200px;font-weight:600;line-height:1;letter-spacing:-6px;color:#B5591F">400 W</p>
+<p style="font-size:36px;line-height:1.3;color:#464B50">of heat from my graphics card and CPU</p>
 </div>
-<div style="display:flex;flex-direction:row;gap:16px;align-items:start;padding:10px 0;border-bottom:1px solid #C9CEC4">
-<p style="flex:none;width:48px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:26px;color:#6E3CE6">02</p>
-<p style="font-size:26px;line-height:1.35">A 3D U-Net that predicts it in 0.1 s</p>
+<div style="flex:1;display:flex;flex-direction:column">
+<div style="display:flex;flex-direction:row;gap:32px;align-items:baseline;padding:28px 0;border-top:1px solid #D2D6CE">
+<p style="flex:none;width:56px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:28px;color:#6E3CE6">01</p>
+<div style="display:flex;flex-direction:column;gap:6px"><p style="font-size:44px;font-weight:600;line-height:1.15">Simulator</p><p style="font-size:30px;line-height:1.3;color:#464B50">my exact case, on the GPU</p></div>
 </div>
-<div style="display:flex;flex-direction:row;gap:16px;align-items:start;padding:10px 0;border-bottom:1px solid #C9CEC4">
-<p style="flex:none;width:48px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:26px;color:#6E3CE6">03</p>
-<p style="font-size:26px;line-height:1.35">A web app that shows both in 3D</p>
+<div style="display:flex;flex-direction:row;gap:32px;align-items:baseline;padding:28px 0;border-top:1px solid #D2D6CE">
+<p style="flex:none;width:56px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:28px;color:#6E3CE6">02</p>
+<div style="display:flex;flex-direction:column;gap:6px"><p style="font-size:44px;font-weight:600;line-height:1.15">3D U-Net</p><p style="font-size:30px;line-height:1.3;color:#464B50">predicts it in 0.1 s</p></div>
 </div>
+<div style="display:flex;flex-direction:row;gap:32px;align-items:baseline;padding:28px 0;border-top:1px solid #D2D6CE">
+<p style="flex:none;width:56px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:28px;color:#6E3CE6">03</p>
+<div style="display:flex;flex-direction:column;gap:6px"><p style="font-size:44px;font-weight:600;line-height:1.15">Web app</p><p style="font-size:30px;line-height:1.3;color:#464B50">shows both in 3D</p></div>
 </div>
 </div>
-<div style="flex:1;display:flex;flex-direction:column;gap:16px">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:2px;color:#5E636A">MY PC · EVERYTHING IS A SETTING, NOTHING IS READ FROM IT</p>
-<table style="font-size:26px;color:#131517">
-<tr><th style="width:26%;text-align:left;color:#5E636A;font-weight:500">Part</th><th style="width:74%;text-align:left;color:#5E636A;font-weight:500">Model</th></tr>
-<tr><td>Case</td><td>Lian Li LANCOOL 207</td></tr>
-<tr><td>Graphics</td><td>RTX 5080 Founders Edition · 360 W</td></tr>
-<tr><td>CPU</td><td>Ryzen 7 9700X · 88 W</td></tr>
-<tr><td>Cooler</td><td>Thermalright Peerless Assassin 120 SE</td></tr>
-<tr><td>Stock fans</td><td>2 × 140 mm front, 2 × 120 mm bottom, in</td></tr>
-<tr><td>My fans</td><td>3 × 120 mm: top-mid, top-rear, rear, out</td></tr>
-</table>
 </div>
-</div>
-<p style="position:absolute;left:128px;bottom:64px;width:1300px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">1 The problem · 2 The app · 3 How it works · 4 Results · 5 Process</p>
-<p style="position:absolute;right:128px;bottom:64px;width:300px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">02 / 16</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1300px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">1 Problem · 2 App · 3 How it works · 4 Results · 5 Process</p>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">02</p>
 <aside>First, the background. A gaming PC is a box of heat: my graphics card and CPU can turn more than 400 watts into heat. Fans carry it out, but where they are mounted decides where the air goes and how hot the parts get. My case has eight fan mounts: four stock fans, and three spare fans of my own. So I built three things: a GPU airflow simulator of my exact case, a 3D neural network that learns from it, and a web app that shows both in 3D. The talk has five parts.</aside>
 </section>

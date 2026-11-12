@@ -1,45 +1,23 @@
-<section id="system" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<section id="system" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
 <div style="position:absolute;left:64px;top:64px;width:28px;height:28px;border-left:2px solid #131517;border-top:2px solid #131517"></div>
 <div style="position:absolute;right:64px;top:64px;width:28px;height:28px;border-right:2px solid #131517;border-top:2px solid #131517"></div>
 <div style="position:absolute;left:64px;bottom:64px;width:28px;height:28px;border-left:2px solid #131517;border-bottom:2px solid #131517"></div>
 <div style="position:absolute;right:64px;bottom:64px;width:28px;height:28px;border-right:2px solid #131517;border-bottom:2px solid #131517"></div>
-<div style="display:flex;flex-direction:column;gap:12px;padding:0 0 24px;border-bottom:1px solid #C9CEC4">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">Part 3 · How it works · System and code</p>
-<h2 style="font-size:56px;font-weight:600;line-height:1.1;letter-spacing:-1px">A GPU engine, a small service, a web app</h2>
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">3 · How it works</p>
+<h2 style="font-size:64px;font-weight:600;line-height:1.1;letter-spacing:-1px">Engine, service, app</h2>
 </div>
-<div style="display:flex;flex-direction:row;gap:48px;align-items:start">
-<div style="width:520px;display:flex;flex-direction:column;gap:0px">
-<div style="display:flex;flex-direction:column;gap:4px;background:#FAFBF8;border:1px solid #D2D6CE;padding:16px 24px">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#6E3CE6">01 ENGINE</p>
-<p style="font-size:26px;line-height:1.35">Python + PyTorch on my GPU: air, heat, dust, the U-Net</p>
+<div style="display:flex;flex-direction:row;gap:72px;align-items:center;flex:1">
+<div style="flex:1;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:6px;padding:0 0 24px;border-bottom:1px solid #D2D6CE"><p style="font-size:44px;font-weight:600;line-height:1.15">Engine</p><p style="font-size:30px;color:#464B50">Python + PyTorch, on the GPU</p></div>
+<div style="display:flex;flex-direction:column;gap:6px;padding:0 0 24px;border-bottom:1px solid #D2D6CE"><p style="font-size:44px;font-weight:600;line-height:1.15">Service</p><p style="font-size:30px;color:#464B50">FastAPI</p></div>
+<div style="display:flex;flex-direction:column;gap:6px;padding:0 0 24px;border-bottom:1px solid #D2D6CE"><p style="font-size:44px;font-weight:600;line-height:1.15">App</p><p style="font-size:30px;color:#464B50">React + three.js</p></div>
 </div>
-<div style="display:flex;flex-direction:column;gap:4px;background:#FAFBF8;border:1px solid #D2D6CE;border-top:none;padding:16px 24px">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#6E3CE6">02 BANKS</p>
-<p style="font-size:26px;line-height:1.35">Each layout simulated once, cached at 3 fan speeds</p>
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:28px;color:#5E636A">≈ 9,100 lines · 25 tests</p>
 </div>
-<div style="display:flex;flex-direction:column;gap:4px;background:#FAFBF8;border:1px solid #D2D6CE;border-top:none;padding:16px 24px">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#6E3CE6">03 SERVICE</p>
-<p style="font-size:26px;line-height:1.35">FastAPI: simulations as jobs, the network in 0.1 s</p>
+<img src="/_blob/253be75ea7301622af90606af7c9ee9b" alt="The repository: a file tree with line counts per folder (engine 1,757, web/src 4,249 lines and more), and real code: the lattice-Boltzmann collide and stream step from engine/lbm.py and the 3D U-Net from engine/surrogate.py" style="width:1060px;height:596px;object-fit:contain">
 </div>
-<div style="display:flex;flex-direction:column;gap:4px;background:#131517;border:1px solid #131517;padding:16px 24px">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#A98BFF">04 APP</p>
-<p style="font-size:26px;line-height:1.35;color:#EEF0EB">React · three.js · the temperature solver</p>
-</div>
-<div style="display:flex;flex-direction:column;gap:4px;border:1px dashed #8A8F94;padding:16px 24px">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">OFFLINE TOO</p>
-<p style="font-size:26px;line-height:1.35">My layout’s bank ships with the app</p>
-</div>
-</div>
-<img src="/_blob/253be75ea7301622af90606af7c9ee9b" alt="The repository: a file tree with line counts per folder (engine 1,757, web/src 4,249 lines and more), and real code: the lattice-Boltzmann collide and stream step from engine/lbm.py and the 3D U-Net from engine/surrogate.py" style="width:1096px;height:617px;object-fit:contain;border:1px solid #D2D6CE">
-</div>
-<p style="position:absolute;left:128px;bottom:64px;width:1300px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">≈ 9,100 lines · Python + TypeScript · 25 tests · 44 commits</p>
-<p style="position:absolute;right:128px;bottom:64px;width:300px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">06 / 16</p>
-<div style="position:absolute;right:128px;top:128px;width:224px;height:34px;display:flex;flex-direction:row;gap:6px">
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">1</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">2</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;background:#131517;color:#EEF0EB;border:1px solid #131517">3</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">4</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">5</p>
-</div>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">06</p>
 <aside>So how does it work? That is part three. There are three pieces. The engine, in Python and PyTorch, runs on my GPU and simulates a layout once; the result is cached. A small FastAPI service runs simulations as jobs and serves the network. And a React and three.js web app does the rest, including solving the temperatures. On the right is the real code: about 9,100 lines.</aside>
 </section>

@@ -1,60 +1,28 @@
-<section id="accuracy" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<section id="accuracy" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
 <div style="position:absolute;left:64px;top:64px;width:28px;height:28px;border-left:2px solid #131517;border-top:2px solid #131517"></div>
 <div style="position:absolute;right:64px;top:64px;width:28px;height:28px;border-right:2px solid #131517;border-top:2px solid #131517"></div>
 <div style="position:absolute;left:64px;bottom:64px;width:28px;height:28px;border-left:2px solid #131517;border-bottom:2px solid #131517"></div>
 <div style="position:absolute;right:64px;bottom:64px;width:28px;height:28px;border-right:2px solid #131517;border-bottom:2px solid #131517"></div>
-<div style="display:flex;flex-direction:column;gap:12px;padding:0 0 24px;border-bottom:1px solid #C9CEC4">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">Part 4 · Results · Accuracy</p>
-<h2 style="font-size:56px;font-weight:600;line-height:1.1;letter-spacing:-1px">Half a degree on layouts it never saw</h2>
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">4 · Results</p>
+<h2 style="font-size:64px;font-weight:600;line-height:1.1;letter-spacing:-1px">0.44 °C on layouts it never saw</h2>
 </div>
-<div style="display:flex;flex-direction:row;gap:64px;align-items:start">
-<div style="width:1040px;display:flex;flex-direction:column;gap:30px">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">MEAN ERROR · 16 HELD-OUT LAYOUTS × 6 SCENARIOS · LOWER IS BETTER</p>
-<div style="display:flex;flex-direction:row;align-items:center;gap:20px">
-<p style="width:340px;font-size:28px;color:#464B50">CPU · average layout</p>
-<div style="width:520px;height:44px;background:#C9CEC4"></div>
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:26px;color:#131517">1.04 °C</p>
+<div style="display:flex;flex-direction:row;gap:96px;align-items:center;flex:1">
+<div style="width:1000px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:14px"><p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:26px;letter-spacing:2px;color:#5E636A">CPU</p><div style="display:flex;flex-direction:row;align-items:center;gap:24px"><p style="flex:none;width:200px;font-size:30px;color:#464B50">guess</p><div style="width:562px;height:52px;background:#C9CEC4"></div><p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:30px;color:#131517">1.04 °C</p></div><div style="display:flex;flex-direction:row;align-items:center;gap:24px"><p style="flex:none;width:200px;font-size:30px;font-weight:600;color:#131517">3D U-Net</p><div style="width:238px;height:52px;background:#6E3CE6"></div><p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:30px;font-weight:600;color:#6E3CE6">0.44 °C</p></div></div>
+<div style="display:flex;flex-direction:column;gap:14px"><p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:26px;letter-spacing:2px;color:#5E636A">GPU</p><div style="display:flex;flex-direction:row;align-items:center;gap:24px"><p style="flex:none;width:200px;font-size:30px;color:#464B50">guess</p><div style="width:400px;height:52px;background:#C9CEC4"></div><p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:30px;color:#131517">0.74 °C</p></div><div style="display:flex;flex-direction:row;align-items:center;gap:24px"><p style="flex:none;width:200px;font-size:30px;font-weight:600;color:#131517">3D U-Net</p><div style="width:151px;height:52px;background:#6E3CE6"></div><p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:30px;font-weight:600;color:#6E3CE6">0.28 °C</p></div></div>
 </div>
-<div style="display:flex;flex-direction:row;align-items:center;gap:20px">
-<p style="width:340px;font-size:28px;font-weight:600;color:#131517">CPU · 3D U-Net</p>
-<div style="width:220px;height:44px;background:#6E3CE6"></div>
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:26px;font-weight:600;color:#6E3CE6">0.44 °C</p>
+<div style="flex:1;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:10px">
+<p style="font-size:80px;font-weight:600;line-height:1;letter-spacing:-2px;color:#131517">0.01 °C</p>
+<p style="font-size:30px;line-height:1.3;color:#464B50">on its training layouts: memorized</p>
 </div>
-<div style="display:flex;flex-direction:row;align-items:center;gap:20px">
-<p style="width:340px;font-size:28px;color:#464B50">GPU · average layout</p>
-<div style="width:370px;height:44px;background:#C9CEC4"></div>
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:26px;color:#131517">0.74 °C</p>
-</div>
-<div style="display:flex;flex-direction:row;align-items:center;gap:20px">
-<p style="width:340px;font-size:28px;font-weight:600;color:#131517">GPU · 3D U-Net</p>
-<div style="width:140px;height:44px;background:#6E3CE6"></div>
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:26px;font-weight:600;color:#6E3CE6">0.28 °C</p>
-</div>
-<p style="font-size:24px;line-height:1.5;color:#464B50;padding:20px 0 0;border-top:1px solid #C9CEC4">Average layout = the simplest guess: the training layouts’ mean, the same for every layout. Error = |network − simulation| for the CPU and GPU temperature.</p>
-</div>
-<div style="flex:1;display:flex;flex-direction:column;gap:28px">
-<div style="display:flex;flex-direction:column;gap:4px;padding:0 0 20px;border-bottom:1px solid #C9CEC4">
-<p style="font-size:56px;font-weight:600;line-height:1.1">0.01 °C</p>
-<p style="font-size:26px;line-height:1.4;color:#464B50">on its 134 training layouts: memory, not a test</p>
-</div>
-<div style="display:flex;flex-direction:column;gap:4px;padding:0 0 20px;border-bottom:1px solid #C9CEC4">
-<p style="font-size:56px;font-weight:600;line-height:1.1">2.5 °C</p>
-<p style="font-size:26px;line-height:1.4;color:#464B50">worst case: a layout with no front fans, at full stress</p>
-</div>
-<div style="display:flex;flex-direction:column;gap:4px">
-<p style="font-size:56px;font-weight:600;line-height:1.1;color:#6E3CE6">900×</p>
-<p style="font-size:26px;line-height:1.4;color:#464B50">faster: 0.1 s instead of 90 s</p>
+<div style="display:flex;flex-direction:column;gap:10px">
+<p style="font-size:80px;font-weight:600;line-height:1;letter-spacing:-2px;color:#131517">2.5 °C</p>
+<p style="font-size:30px;line-height:1.3;color:#464B50">worst case</p>
 </div>
 </div>
 </div>
-<p style="position:absolute;left:128px;bottom:64px;width:1300px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">CPU: 74 % of the cases within 0.5 °C, 84 % within 1 °C</p>
-<p style="position:absolute;right:128px;bottom:64px;width:300px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">11 / 16</p>
-<div style="position:absolute;right:128px;top:128px;width:224px;height:34px;display:flex;flex-direction:row;gap:6px">
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">1</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">2</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">3</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;background:#131517;color:#EEF0EB;border:1px solid #131517">4</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">5</p>
-</div>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">11</p>
 <aside>Part four: results. On the sixteen test layouts, in six scenarios, the network is off by 0.44 degrees for the CPU and 0.28 for the GPU. A guess from the average layout is off by 1.04 and 0.74. The worst case is 2.5 degrees, on a layout with no front fans, which are rare in the training data. And on its own training layouts it matches to 0.01 degrees, but that is memory, not a test.</aside>
 </section>

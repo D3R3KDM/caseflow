@@ -1,39 +1,18 @@
-<section id="engineering" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<section id="engineering" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
 <div style="position:absolute;left:64px;top:64px;width:28px;height:28px;border-left:2px solid #131517;border-top:2px solid #131517"></div>
 <div style="position:absolute;right:64px;top:64px;width:28px;height:28px;border-right:2px solid #131517;border-top:2px solid #131517"></div>
 <div style="position:absolute;left:64px;bottom:64px;width:28px;height:28px;border-left:2px solid #131517;border-bottom:2px solid #131517"></div>
 <div style="position:absolute;right:64px;bottom:64px;width:28px;height:28px;border-right:2px solid #131517;border-bottom:2px solid #131517"></div>
-<div style="display:flex;flex-direction:column;gap:12px;padding:0 0 24px;border-bottom:1px solid #C9CEC4">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">Backup · Engineering</p>
-<h2 style="font-size:56px;font-weight:600;line-height:1.1;letter-spacing:-1px">Making it fast, small and checked</h2>
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">Backup</p>
+<h2 style="font-size:64px;font-weight:600;line-height:1.1;letter-spacing:-1px">Fast, small, checked</h2>
 </div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
-<div style="display:flex;flex-direction:column;gap:6px;background:#FAFBF8;border:1px solid #D2D6CE;padding:24px 28px">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#6E3CE6">CACHE</p>
-<p style="font-size:26px;line-height:1.4">Each layout is simulated once; its bank is 8-bit 3D fields, about 6 MB</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px;background:#FAFBF8;border:1px solid #D2D6CE;padding:36px 40px"><p style="font-size:80px;font-weight:600;line-height:1;letter-spacing:-2px">6 MB</p><p style="font-size:32px;line-height:1.3;color:#464B50">per cached layout</p></div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FAFBF8;border:1px solid #D2D6CE;padding:36px 40px"><p style="font-size:80px;font-weight:600;line-height:1;letter-spacing:-2px">10⁻⁶</p><p style="font-size:32px;line-height:1.3;color:#464B50">browser solver vs. Python</p></div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FAFBF8;border:1px solid #D2D6CE;padding:36px 40px"><p style="font-size:80px;font-weight:600;line-height:1;letter-spacing:-2px">8</p><p style="font-size:32px;line-height:1.3;color:#464B50">layouts kept in memory</p></div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FAFBF8;border:1px solid #D2D6CE;padding:36px 40px"><p style="font-size:80px;font-weight:600;line-height:1;letter-spacing:-2px">25</p><p style="font-size:32px;line-height:1.3;color:#464B50">tests, no GPU needed</p></div>
 </div>
-<div style="display:flex;flex-direction:column;gap:6px;background:#FAFBF8;border:1px solid #D2D6CE;padding:24px 28px">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#6E3CE6">BROWSER SOLVER</p>
-<p style="font-size:26px;line-height:1.4">A line-by-line port of the Python solver; a test checks they agree to 10⁻⁶</p>
-</div>
-<div style="display:flex;flex-direction:column;gap:6px;background:#FAFBF8;border:1px solid #D2D6CE;padding:24px 28px">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#6E3CE6">LIVE DUST</p>
-<p style="font-size:26px;line-height:1.4">The engine’s particles, ported to the browser; a test checks the same share settles, within 1 point</p>
-</div>
-<div style="display:flex;flex-direction:column;gap:6px;background:#FAFBF8;border:1px solid #D2D6CE;padding:24px 28px">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#6E3CE6">MEMORY</p>
-<p style="font-size:26px;line-height:1.4">The page keeps the last 8 layouts: that fixed a 4 GB browser-tab crash</p>
-</div>
-<div style="display:flex;flex-direction:column;gap:6px;background:#FAFBF8;border:1px solid #D2D6CE;padding:24px 28px">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#6E3CE6">OFFLINE</p>
-<p style="font-size:26px;line-height:1.4">My layout’s bank ships with the app: every slider works without the engine</p>
-</div>
-<div style="display:flex;flex-direction:column;gap:6px;background:#FAFBF8;border:1px solid #D2D6CE;padding:24px 28px">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#6E3CE6">SETTINGS ONLY</p>
-<p style="font-size:26px;line-height:1.4">Nothing is read from the PC: room, load, curves and parts are all settings</p>
-</div>
-</div>
-<p style="position:absolute;left:128px;bottom:64px;width:1300px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">tests/ · 25 checks, no GPU needed</p>
-<p style="position:absolute;right:128px;bottom:64px;width:300px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">B2</p>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">B2</p>
 <aside>Only if asked: engineering. Every layout is simulated once and cached as 8-bit 3D fields. The browser runs a line-by-line port of the temperature solver, and a test checks that it agrees with the Python version to one part in a million. The live dust is a port of the engine’s particles, also checked by a test. The page keeps only the last eight layouts, which fixed a 4-gigabyte browser crash, and it works offline with my layout.</aside>
 </section>

@@ -1,38 +1,29 @@
-<section id="solver" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<section id="solver" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
 <div style="position:absolute;left:64px;top:64px;width:28px;height:28px;border-left:2px solid #131517;border-top:2px solid #131517"></div>
 <div style="position:absolute;right:64px;top:64px;width:28px;height:28px;border-right:2px solid #131517;border-top:2px solid #131517"></div>
 <div style="position:absolute;left:64px;bottom:64px;width:28px;height:28px;border-left:2px solid #131517;border-bottom:2px solid #131517"></div>
 <div style="position:absolute;right:64px;bottom:64px;width:28px;height:28px;border-right:2px solid #131517;border-bottom:2px solid #131517"></div>
-<div style="display:flex;flex-direction:column;gap:12px;padding:0 0 24px;border-bottom:1px solid #C9CEC4">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">Backup · The solver</p>
-<h2 style="font-size:56px;font-weight:600;line-height:1.1;letter-spacing:-1px">Inside the lattice-Boltzmann solver</h2>
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">Backup</p>
+<h2 style="font-size:64px;font-weight:600;line-height:1.1;letter-spacing:-1px">Inside the solver: lattice Boltzmann</h2>
 </div>
-<div style="display:flex;flex-direction:row;gap:64px;align-items:start">
-<img src="/_blob/a10ff312212e90ba7d02845ffdd34ff2" alt="D3Q19: every cell keeps 19 particle populations, one at rest, 6 moving to the faces and 12 to the edges of the cell" style="width:620px;height:550px;object-fit:contain;border:1px solid #D2D6CE">
-<div style="flex:1;display:flex;flex-direction:column;gap:0px">
-<div style="display:flex;flex-direction:column;gap:4px;padding:0 0 16px;border-bottom:1px solid #C9CEC4">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#6E3CE6">D3Q19</p>
-<p style="font-size:26px;line-height:1.35">19 particle populations per cell: they collide, then stream to the neighbors</p>
+<div style="display:flex;flex-direction:row;gap:72px;align-items:center;flex:1">
+<img src="/_blob/a10ff312212e90ba7d02845ffdd34ff2" alt="D3Q19: every cell keeps 19 particle populations, one at rest, 6 moving to the faces and 12 to the edges of the cell" style="width:620px;height:550px;object-fit:contain">
+<div style="flex:1;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:10px">
+<p style="font-size:80px;font-weight:600;line-height:1;letter-spacing:-2px;color:#131517">19</p>
+<p style="font-size:30px;line-height:1.3;color:#464B50">directions per cell (D3Q19)</p>
 </div>
-<div style="display:flex;flex-direction:column;gap:4px;padding:16px 0;border-bottom:1px solid #C9CEC4">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#6E3CE6">COLLISION</p>
-<p style="font-size:26px;line-height:1.35">BGK relaxation with a Smagorinsky turbulence model</p>
+<div style="display:flex;flex-direction:column;gap:10px">
+<p style="font-size:64px;font-weight:600;line-height:1;letter-spacing:-2px;color:#131517">collide → stream</p>
+<p style="font-size:30px;line-height:1.3;color:#464B50">every step, every cell</p>
 </div>
-<div style="display:flex;flex-direction:column;gap:4px;padding:16px 0;border-bottom:1px solid #C9CEC4">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#6E3CE6">BOUNDARIES</p>
-<p style="font-size:26px;line-height:1.35">Walls bounce back · fans are cells with a set air velocity · the room around the case is open</p>
-</div>
-<div style="display:flex;flex-direction:column;gap:4px;padding:16px 0;border-bottom:1px solid #C9CEC4">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#6E3CE6">FANS</p>
-<p style="font-size:26px;line-height:1.35">Each runs at its operating point against the case pressure</p>
-</div>
-<div style="display:flex;flex-direction:column;gap:4px;padding:16px 0 0">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#6E3CE6">CHECKS</p>
-<p style="font-size:26px;line-height:1.35">Heat out = 99.9 % of heat in · converged to 0.1 °C · 34 extreme layouts needed a 4.5 m/s limiter</p>
+<div style="display:flex;flex-direction:column;gap:10px">
+<p style="font-size:80px;font-weight:600;line-height:1;letter-spacing:-2px;color:#6E3CE6">99.9 %</p>
+<p style="font-size:30px;line-height:1.3;color:#464B50">of the heat leaves the case</p>
 </div>
 </div>
 </div>
-<p style="position:absolute;left:128px;bottom:64px;width:1300px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">engine/lbm.py · engine/sim.py · engine/thermal.py</p>
-<p style="position:absolute;right:128px;bottom:64px;width:300px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">B1</p>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">B1</p>
 <aside>Only if asked: the solver. Each cell keeps 19 particle populations. Every step, they collide, relaxing toward equilibrium with a Smagorinsky turbulence model, and then stream to the neighboring cells. Walls bounce them back, fan cells have a set air velocity, and the layer around the case is open to the room. Each fan runs at its operating point against the case pressure. Checks: 99.9 percent of the heat leaves through the openings, and the temperatures converge to a tenth of a degree.</aside>
 </section>

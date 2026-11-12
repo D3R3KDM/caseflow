@@ -1,45 +1,27 @@
-<section id="simulate" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<section id="simulate" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
 <div style="position:absolute;left:64px;top:64px;width:28px;height:28px;border-left:2px solid #131517;border-top:2px solid #131517"></div>
 <div style="position:absolute;right:64px;top:64px;width:28px;height:28px;border-right:2px solid #131517;border-top:2px solid #131517"></div>
 <div style="position:absolute;left:64px;bottom:64px;width:28px;height:28px;border-left:2px solid #131517;border-bottom:2px solid #131517"></div>
 <div style="position:absolute;right:64px;bottom:64px;width:28px;height:28px;border-right:2px solid #131517;border-bottom:2px solid #131517"></div>
-<div style="display:flex;flex-direction:column;gap:12px;padding:0 0 24px;border-bottom:1px solid #C9CEC4">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">Part 3 · How it works · Step 1: simulate one layout</p>
-<h2 style="font-size:56px;font-weight:600;line-height:1.1;letter-spacing:-1px">A wind tunnel for my case, on the GPU</h2>
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">3 · Step 1</p>
+<h2 style="font-size:64px;font-weight:600;line-height:1.1;letter-spacing:-1px">Simulate one layout</h2>
 </div>
-<div style="display:flex;flex-direction:row;gap:56px;align-items:start">
-<div style="flex:1;display:flex;flex-direction:column;gap:0px">
-<div style="display:flex;flex-direction:row;gap:20px;align-items:start;padding:0 0 18px;border-bottom:1px solid #C9CEC4">
-<p style="flex:none;width:56px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:28px;color:#6E3CE6">01</p>
-<p style="font-size:28px;line-height:1.35"><b>Voxels.</b> The case becomes 80 × 40 × 80 cells of 6 mm.</p>
+<div style="display:flex;flex-direction:row;gap:72px;align-items:center;flex:1">
+<div style="flex:1;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:28px">
+<div style="display:flex;flex-direction:row;gap:28px;align-items:baseline"><p style="flex:none;width:48px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:28px;color:#6E3CE6">01</p><p style="flex:none;width:150px;font-size:44px;font-weight:600">Grid</p><p style="font-size:30px;color:#464B50">80 × 40 × 80 cells of 6 mm</p></div>
+<div style="display:flex;flex-direction:row;gap:28px;align-items:baseline"><p style="flex:none;width:48px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:28px;color:#6E3CE6">02</p><p style="flex:none;width:150px;font-size:44px;font-weight:600">Air</p><p style="font-size:30px;color:#464B50">lattice Boltzmann, on the GPU</p></div>
+<div style="display:flex;flex-direction:row;gap:28px;align-items:baseline"><p style="flex:none;width:48px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:28px;color:#6E3CE6">03</p><p style="flex:none;width:150px;font-size:44px;font-weight:600">Heat</p><p style="font-size:30px;color:#464B50">°C per watt</p></div>
+<div style="display:flex;flex-direction:row;gap:28px;align-items:baseline"><p style="flex:none;width:48px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:28px;color:#6E3CE6">04</p><p style="flex:none;width:150px;font-size:44px;font-weight:600">Dust</p><p style="font-size:30px;color:#464B50">40,000 particles</p></div>
 </div>
-<div style="display:flex;flex-direction:row;gap:20px;align-items:start;padding:18px 0;border-bottom:1px solid #C9CEC4">
-<p style="flex:none;width:56px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:28px;color:#6E3CE6">02</p>
-<p style="font-size:28px;line-height:1.35"><b>Air.</b> My lattice-Boltzmann solver, three case-fan speeds in one GPU batch.</p>
-</div>
-<div style="display:flex;flex-direction:row;gap:20px;align-items:start;padding:18px 0;border-bottom:1px solid #C9CEC4">
-<p style="flex:none;width:56px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:28px;color:#6E3CE6">03</p>
-<p style="font-size:28px;line-height:1.35"><b>Heat.</b> How much warmer the air gets per watt of CPU and of GPU power.</p>
-</div>
-<div style="display:flex;flex-direction:row;gap:20px;align-items:start;padding:18px 0;border-bottom:1px solid #C9CEC4">
-<p style="flex:none;width:56px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:28px;color:#6E3CE6">04</p>
-<p style="font-size:28px;line-height:1.35"><b>Dust.</b> 40,000 particles of 20 µm drift with the air and stick where they land.</p>
-</div>
-<div style="display:flex;flex-direction:row;gap:20px;align-items:baseline;padding:22px 0 0">
-<p style="font-size:56px;font-weight:600;line-height:1.1;color:#6E3CE6">≈ 90 s</p>
-<p style="font-size:26px;line-height:1.4;color:#464B50">per layout on the RTX 5080</p>
+<div style="display:flex;flex-direction:column;gap:10px">
+<p style="font-size:80px;font-weight:600;line-height:1;letter-spacing:-2px;color:#131517">90 s</p>
+<p style="font-size:30px;line-height:1.3;color:#464B50">per layout</p>
 </div>
 </div>
-<img src="/_blob/392cf42bbed123c33fea2346170b59bf" alt="Simulated slices through the graphics card, seen through the glass: air speed and air temperature for my layout (CPU 65.6 °C, GPU 49.7 °C) and for the worst of the 32 layouts (CPU 67.0 °C, GPU 52.3 °C), where warmer air reaches the parts" style="width:612px;height:600px;object-fit:contain;border:1px solid #D2D6CE">
+<img src="/_blob/392cf42bbed123c33fea2346170b59bf" alt="Simulated slices through the graphics card, seen through the glass: air speed and air temperature for my layout (CPU 65.6 °C, GPU 49.7 °C) and for the worst of the 32 layouts (CPU 67.0 °C, GPU 52.3 °C), where warmer air reaches the parts" style="width:620px;height:608px;object-fit:contain">
 </div>
-<p style="position:absolute;left:128px;bottom:64px;width:1300px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">Right: my layout (top) and the worst of the 32 (bottom), sliced through the graphics card</p>
-<p style="position:absolute;right:128px;bottom:64px;width:300px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">07 / 16</p>
-<div style="position:absolute;right:128px;top:128px;width:224px;height:34px;display:flex;flex-direction:row;gap:6px">
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">1</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">2</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;background:#131517;color:#EEF0EB;border:1px solid #131517">3</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">4</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">5</p>
-</div>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">07</p>
 <aside>Step one: simulate one layout. The case becomes a grid of 80 by 40 by 80 cells, each 6 millimeters. My lattice Boltzmann solver computes the airflow at three fan speeds at once on the GPU. Then the heat: how much warmer the air gets for every watt of CPU or GPU power. And the dust: forty thousand particles that drift with the air and stick where they land. All of that takes about 90 seconds. On the right: my layout, and the worst one.</aside>
 </section>

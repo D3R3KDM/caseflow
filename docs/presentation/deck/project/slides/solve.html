@@ -1,37 +1,29 @@
-<section id="solve" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<section id="solve" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
 <div style="position:absolute;left:64px;top:64px;width:28px;height:28px;border-left:2px solid #131517;border-top:2px solid #131517"></div>
 <div style="position:absolute;right:64px;top:64px;width:28px;height:28px;border-right:2px solid #131517;border-top:2px solid #131517"></div>
 <div style="position:absolute;left:64px;bottom:64px;width:28px;height:28px;border-left:2px solid #131517;border-bottom:2px solid #131517"></div>
 <div style="position:absolute;right:64px;bottom:64px;width:28px;height:28px;border-right:2px solid #131517;border-bottom:2px solid #131517"></div>
-<div style="display:flex;flex-direction:column;gap:12px;padding:0 0 24px;border-bottom:1px solid #C9CEC4">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">Part 3 · How it works · Step 2: any room, load and fan curve</p>
-<h2 style="font-size:56px;font-weight:600;line-height:1.1;letter-spacing:-1px">Fans and temperatures agree in a millisecond</h2>
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">3 · Step 2</p>
+<h2 style="font-size:64px;font-weight:600;line-height:1.1;letter-spacing:-1px">Any room and load, solved in 1 ms</h2>
 </div>
-<div style="display:flex;flex-direction:row;gap:56px;align-items:start">
-<img src="/_blob/38beb9faddb2255ad434a9c74db30136" alt="Left: the default fan curves, duty against temperature, for the case fans, the CPU cooler fans and the GPU fans, with where each runs now. Right: the CPU temperature the fans would produce against the assumed temperature; the steady state is where it crosses the diagonal, 65.6 °C, against 65.3 °C measured" style="width:1000px;height:484px;object-fit:contain;border:1px solid #D2D6CE">
-<div style="flex:1;display:flex;flex-direction:column;gap:28px">
-<div style="display:flex;flex-direction:column;gap:4px;padding:0 0 20px;border-bottom:1px solid #C9CEC4">
-<p style="font-size:56px;font-weight:600;line-height:1.1">per watt</p>
-<p style="font-size:26px;line-height:1.4;color:#464B50">Heat is linear in power: the bank stores the rise per watt, at 3 fan speeds</p>
+<div style="display:flex;flex-direction:row;gap:72px;align-items:center;flex:1">
+<img src="/_blob/38beb9faddb2255ad434a9c74db30136" alt="Left: the default fan curves, duty against temperature, for the case fans, the CPU cooler fans and the GPU fans, with where each runs now. Right: the CPU temperature the fans would produce against the assumed temperature; the steady state is where it crosses the diagonal, 65.6 °C, against 65.3 °C measured" style="width:1100px;height:533px;object-fit:contain">
+<div style="flex:1;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:10px">
+<p style="font-size:80px;font-weight:600;line-height:1;letter-spacing:-2px;color:#131517">65.6 °C</p>
+<p style="font-size:30px;line-height:1.3;color:#464B50">model, CPU</p>
 </div>
-<div style="display:flex;flex-direction:column;gap:4px;padding:0 0 20px;border-bottom:1px solid #C9CEC4">
-<p style="font-size:56px;font-weight:600;line-height:1.1;color:#6E3CE6">≈ 1 ms</p>
-<p style="font-size:26px;line-height:1.4;color:#464B50">for the browser to find where fan curves and temperatures agree</p>
+<div style="display:flex;flex-direction:column;gap:10px">
+<p style="font-size:80px;font-weight:600;line-height:1;letter-spacing:-2px;color:#131517">65.3 °C</p>
+<p style="font-size:30px;line-height:1.3;color:#464B50">my real PC</p>
 </div>
-<div style="display:flex;flex-direction:column;gap:4px">
-<p style="font-size:56px;font-weight:600;line-height:1.1">≤ 0.51 °C</p>
-<p style="font-size:26px;line-height:1.4;color:#464B50">from a full re-simulation at the solved fan speeds</p>
+<div style="display:flex;flex-direction:column;gap:10px">
+<p style="font-size:64px;font-weight:600;line-height:1;letter-spacing:-2px;color:#6E3CE6">≤ 0.5 °C</p>
+<p style="font-size:30px;line-height:1.3;color:#464B50">vs. a full re-simulation</p>
 </div>
 </div>
 </div>
-<p style="position:absolute;left:128px;bottom:64px;width:1300px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">Model 65.6 °C · my real PC 65.3 °C · CPU-heavy game, 23 °C room</p>
-<p style="position:absolute;right:128px;bottom:64px;width:300px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">08 / 16</p>
-<div style="position:absolute;right:128px;top:128px;width:224px;height:34px;display:flex;flex-direction:row;gap:6px">
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">1</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">2</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;background:#131517;color:#EEF0EB;border:1px solid #131517">3</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">4</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">5</p>
-</div>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">08</p>
 <aside>Step two makes it interactive. Heat is linear in power, so I store the temperature rise per watt, at three fan speeds. But the fans follow their curves, and their speed depends on the temperature. So the browser solves for the point where both agree. Here that is 65.6 degrees; my real PC measured 65.3. It takes about a millisecond, and it stays within half a degree of a full re-simulation.</aside>
 </section>

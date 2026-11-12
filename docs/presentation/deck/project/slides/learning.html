@@ -1,40 +1,25 @@
-<section id="learning" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<section id="learning" data-transition="fade" style="background:#EEF0EB;color:#131517;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
 <div style="position:absolute;left:64px;top:64px;width:28px;height:28px;border-left:2px solid #131517;border-top:2px solid #131517"></div>
 <div style="position:absolute;right:64px;top:64px;width:28px;height:28px;border-right:2px solid #131517;border-top:2px solid #131517"></div>
 <div style="position:absolute;left:64px;bottom:64px;width:28px;height:28px;border-left:2px solid #131517;border-bottom:2px solid #131517"></div>
 <div style="position:absolute;right:64px;bottom:64px;width:28px;height:28px;border-right:2px solid #131517;border-bottom:2px solid #131517"></div>
-<div style="display:flex;flex-direction:column;gap:12px;padding:0 0 24px;border-bottom:1px solid #C9CEC4">
-<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">Part 4 · Results · More data, and dust</p>
-<h2 style="font-size:56px;font-weight:600;line-height:1.1;letter-spacing:-1px">More simulated layouts, a better network</h2>
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#6E3CE6">4 · Results</p>
+<h2 style="font-size:64px;font-weight:600;line-height:1.1;letter-spacing:-1px">More layouts, a better network</h2>
 </div>
-<div style="display:flex;flex-direction:row;gap:56px;align-items:start">
-<div style="width:1080px;display:flex;flex-direction:column;gap:20px">
-<img src="/_blob/5b9c216fdb9a2779fcb6bf033d526d25" alt="Learning curve, the same 16 test layouts: with 34, 67 and 134 training layouts the CPU error falls 0.69, 0.68, 0.44 °C and the GPU error 0.47, 0.42, 0.28 °C, while guessing the average layout stays near 1.0 and 0.7 °C; the error of the air entering the coolers falls 20, 16, 10 %" style="width:1080px;height:426px;object-fit:contain;border:1px solid #D2D6CE">
-<p style="font-size:26px;line-height:1.4;color:#464B50">Retrained on a quarter, a half and all of the training layouts; the 16 test layouts stay the same.</p>
+<div style="display:flex;flex-direction:row;gap:72px;align-items:center;flex:1">
+<img src="/_blob/5b9c216fdb9a2779fcb6bf033d526d25" alt="Learning curve, the same 16 test layouts: with 34, 67 and 134 training layouts the CPU error falls 0.69, 0.68, 0.44 °C and the GPU error 0.47, 0.42, 0.28 °C, while guessing the average layout stays near 1.0 and 0.7 °C; the error of the air entering the coolers falls 20, 16, 10 %" style="width:1100px;height:434px;object-fit:contain">
+<div style="flex:1;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:10px">
+<p style="font-size:72px;font-weight:600;line-height:1;letter-spacing:-2px;color:#6E3CE6">20 → 10 %</p>
+<p style="font-size:30px;line-height:1.3;color:#464B50">error at the cooler intakes</p>
 </div>
-<div style="flex:1;display:flex;flex-direction:column;gap:28px">
-<div style="display:flex;flex-direction:column;gap:4px;padding:0 0 20px;border-bottom:1px solid #C9CEC4">
-<p style="font-size:56px;font-weight:600;line-height:1.1;color:#6E3CE6">20 → 10 %</p>
-<p style="font-size:26px;line-height:1.4;color:#464B50">error of the air entering the coolers, 34 → 134 layouts</p>
-</div>
-<div style="display:flex;flex-direction:column;gap:4px;padding:0 0 20px;border-bottom:1px solid #C9CEC4">
-<p style="font-size:56px;font-weight:600;line-height:1.1">1.9 pts</p>
-<p style="font-size:26px;line-height:1.4;color:#464B50">dust that settles: in the network’s air vs. the simulation’s</p>
-</div>
-<div style="display:flex;flex-direction:column;gap:4px">
-<p style="font-size:56px;font-weight:600;line-height:1.1">0.94</p>
-<p style="font-size:26px;line-height:1.4;color:#464B50">rank correlation of the dust rate, 16 test layouts</p>
+<div style="display:flex;flex-direction:column;gap:10px">
+<p style="font-size:72px;font-weight:600;line-height:1;letter-spacing:-2px;color:#131517">1.9 pts</p>
+<p style="font-size:30px;line-height:1.3;color:#464B50">dust: AI’s air vs. simulation</p>
 </div>
 </div>
 </div>
-<p style="position:absolute;left:128px;bottom:64px;width:1300px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">About 2.5 h of GPU per 100 more layouts</p>
-<p style="position:absolute;right:128px;bottom:64px;width:300px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">12 / 16</p>
-<div style="position:absolute;right:128px;top:128px;width:224px;height:34px;display:flex;flex-direction:row;gap:6px">
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">1</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">2</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">3</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;background:#131517;color:#EEF0EB;border:1px solid #131517">4</p>
-<p style="width:40px;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;line-height:1.4;text-align:center;color:#8A8F94;border:1px solid #C9CEC4">5</p>
-</div>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;text-align:right;font-family:'IBM Plex Mono', 'Courier New', monospace;font-size:24px;color:#5E636A">12</p>
 <aside>Two more checks. Trained on a quarter, a half, and all of the layouts, the error at the cooler intakes falls from 20 to 16 to 10 percent. So more simulated layouts are the direct way to a better network. And dust: the network predicts no dust, but the simulator’s particles in the network’s air land within two percentage points of the simulation.</aside>
 </section>
